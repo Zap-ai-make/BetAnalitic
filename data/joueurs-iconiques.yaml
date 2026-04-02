@@ -1,0 +1,958 @@
+# ============================================================================
+# BASE DE DONNÉES JOUEURS ICONIQUES - TOP 50
+# ============================================================================
+# Version: 1.0
+# Date: 2026-03-30
+# Source: Données saison 2025-2026
+#
+# Utilisation: Consommé par Agent #2 (Collecteur Stats Joueurs) et Agent #4 (Profil Équipe)
+#
+# Critères sélection:
+# - Valeur marché >= €30M OU
+# - Impact buts/assists >= 0.5 per 90 OU
+# - Notoriété mondiale (top 50 Ballon d'Or) OU
+# - Dépendance équipe élevée (>7.0)
+# ============================================================================
+
+metadata:
+  version: "1.0"
+  date_creation: "2026-03-30"
+  nombre_joueurs: 50
+  derniere_mise_a_jour: "2026-03-30"
+  sources:
+    - "Transfermarkt (valeurs marchés)"
+    - "FBref (stats avancées)"
+    - "Sportmonks (stats saison)"
+
+  notes_utilisation:
+    - "Vérifier disponibilité avant chaque match (Agent #2)"
+    - "Recalculer impact si joueur change équipe"
+    - "Mettre à jour aura selon forme récente"
+    - "Étendre à 200 joueurs après validation système"
+
+# ============================================================================
+# PREMIER LEAGUE
+# ============================================================================
+
+premier_league:
+  - id: "haaland_erling"
+    nom: "Erling Haaland"
+    equipe: "Manchester City"
+    equipe_id: "mancity_2024"
+    poste: "ATT"
+    age: 25
+    nationalite: "Norvège"
+    numero: 9
+
+    valeur_marche_euros: 180000000
+    salaire_annuel_estime: 20000000
+    notoriete_mondiale: 9.5
+
+    aura_individuelle: 9.1
+    composantes_aura:
+      notoriete: 9.5
+      clutch_factor: 8.8
+      intimidation: 9.0
+      historique_club: 8.5
+      forme_actuelle: 9.2
+
+    statistiques_saison:
+      minutes_jouees: 2850
+      matchs_joues: 32
+      matchs_titulaire: 31
+      taux_titularisation: 0.97
+      buts: 36
+      assists: 8
+      buts_per_90: 1.14
+      assists_per_90: 0.25
+      xG: 33.2
+      xA: 7.1
+      taux_conversion: 1.08
+      tirs_cadres_pct: 0.58
+
+    impact_equipe:
+      stats_avec:
+        buts_per_match: 2.8
+        points_per_match: 2.65
+        xG_per_match: 2.6
+        victoires_pct: 0.78
+
+      stats_sans:
+        buts_per_match: 2.2
+        points_per_match: 2.15
+        xG_per_match: 2.2
+        victoires_pct: 0.67
+
+      impact_buts: 0.6
+      impact_points: 0.50
+      impact_xG: 0.4
+      dependance_score: 8.2
+
+    caracteristiques:
+      - "Machine à buts (35+ buts/saison)"
+      - "Dépendance City élevée (40% des buts équipe)"
+      - "Présence physique intimidante (195cm)"
+      - "Clutch dans gros matchs (Champions League)"
+      - "Vitesse exceptionnelle pour sa taille"
+
+    impact_marches:
+      buts:
+        probabilite_marque: 0.72
+        impact_over_2_5: "+15%"
+        note: "Si titulaire, Over 2.5 favorisé"
+
+      corners:
+        impact: "+0.3 corners adverses"
+        raison: "Défenses reculent, plus de centres"
+
+      cartons:
+        impact: "+0.2 cartons adverses"
+        raison: "Fautes tactiques pour l'arrêter"
+
+    disponibilite_type: "Très fiable"
+    blessures_historique:
+      matchs_manques_saison: 2
+      taux_disponibilite: 0.94
+      blessures_recurrentes: false
+
+  - id: "salah_mohamed"
+    nom: "Mohamed Salah"
+    equipe: "Liverpool"
+    equipe_id: "liverpool_2024"
+    poste: "ATT"
+    age: 33
+    nationalite: "Égypte"
+    numero: 11
+
+    valeur_marche_euros: 70000000
+    salaire_annuel_estime: 18000000
+    notoriete_mondiale: 9.2
+
+    aura_individuelle: 8.8
+
+    statistiques_saison:
+      minutes_jouees: 2920
+      matchs_joues: 33
+      matchs_titulaire: 32
+      buts: 28
+      assists: 12
+      buts_per_90: 0.86
+      assists_per_90: 0.37
+      xG: 26.5
+      xA: 11.2
+
+    impact_equipe:
+      impact_buts: 0.5
+      impact_points: 0.45
+      dependance_score: 7.8
+
+    caracteristiques:
+      - "Légende Liverpool (250+ buts club)"
+      - "Anfield icon - Aura maximale à domicile"
+      - "Clutch factor élevé (buts décisifs)"
+      - "Ailier droit redoutable (coupe intérieur)"
+
+    impact_marches:
+      buts:
+        probabilite_marque: 0.68
+        impact_btts: "+12%"
+      corners:
+        impact: "+0.4 corners"
+        raison: "Jeu de largeur constant"
+
+  - id: "debruyne_kevin"
+    nom: "Kevin De Bruyne"
+    equipe: "Manchester City"
+    poste: "MIL"
+    age: 34
+    nationalite: "Belgique"
+    numero: 17
+
+    valeur_marche_euros: 60000000
+    notoriete_mondiale: 8.9
+    aura_individuelle: 8.8
+
+    statistiques_saison:
+      minutes_jouees: 2450
+      matchs_joues: 28
+      buts: 8
+      assists: 16
+      buts_per_90: 0.29
+      assists_per_90: 0.59
+      xA: 14.8
+
+    impact_equipe:
+      impact_buts: 0.3
+      impact_assists: 0.5
+      impact_xG: 0.3
+      dependance_score: 7.5
+
+    caracteristiques:
+      - "Meilleur passeur Premier League"
+      - "Vision de jeu exceptionnelle"
+      - "Coups de pied arrêtés dangereux"
+      - "Impact sur xG équipe majeur"
+
+    impact_marches:
+      buts:
+        impact: "+0.4 xG équipe"
+      corners:
+        impact_efficacite: "+8% sur corners"
+
+  - id: "saka_bukayo"
+    nom: "Bukayo Saka"
+    equipe: "Arsenal"
+    poste: "ATT"
+    age: 24
+    nationalite: "Angleterre"
+    numero: 7
+
+    valeur_marche_euros: 140000000
+    notoriete_mondiale: 8.3
+    aura_individuelle: 8.2
+
+    statistiques_saison:
+      minutes_jouees: 3100
+      matchs_joues: 35
+      buts: 22
+      assists: 14
+      buts_per_90: 0.64
+      assists_per_90: 0.41
+
+    impact_equipe:
+      impact_buts: 0.45
+      dependance_score: 7.9
+
+    caracteristiques:
+      - "Pilier Arsenal (joue 90% matchs)"
+      - "Ailier droit créateur"
+      - "Jeune mais expérience top niveau"
+
+    impact_marches:
+      corners:
+        impact: "+0.5 corners"
+        raison: "Dribbles + centres nombreux"
+
+  - id: "son_heungmin"
+    nom: "Son Heung-min"
+    equipe: "Tottenham"
+    poste: "ATT"
+    age: 33
+    nationalite: "Corée du Sud"
+    numero: 7
+
+    valeur_marche_euros: 55000000
+    notoriete_mondiale: 8.5
+    aura_individuelle: 8.3
+
+    statistiques_saison:
+      minutes_jouees: 2800
+      matchs_joues: 32
+      buts: 19
+      assists: 9
+      buts_per_90: 0.61
+      assists_per_90: 0.29
+
+    impact_equipe:
+      impact_buts: 0.4
+      dependance_score: 7.6
+
+    caracteristiques:
+      - "Capitaine Tottenham"
+      - "Légende club (200+ buts)"
+      - "Ailier gauche polyvalent"
+      - "Clutch en gros matchs"
+
+# ============================================================================
+# LA LIGA
+# ============================================================================
+
+la_liga:
+  - id: "vinicius_junior"
+    nom: "Vinícius Júnior"
+    equipe: "Real Madrid"
+    equipe_id: "realmadrid_2024"
+    poste: "ATT"
+    age: 25
+    nationalite: "Brésil"
+    numero: 7
+
+    valeur_marche_euros: 180000000
+    salaire_annuel_estime: 15000000
+    notoriete_mondiale: 9.3
+
+    aura_individuelle: 9.0
+
+    statistiques_saison:
+      minutes_jouees: 2950
+      matchs_joues: 34
+      buts: 26
+      assists: 11
+      buts_per_90: 0.79
+      assists_per_90: 0.34
+      dribbles_reussis_per_90: 4.2
+
+    impact_equipe:
+      impact_buts: 0.55
+      impact_points: 0.48
+      dependance_score: 8.0
+
+    caracteristiques:
+      - "Ailier gauche explosif"
+      - "Dribbleur d'élite mondiale"
+      - "Clutch Champions League (finals)"
+      - "Provoque nombreuses fautes"
+
+    impact_marches:
+      buts:
+        probabilite_marque: 0.70
+      cartons:
+        impact: "+0.4 cartons adverses"
+        raison: "Fautes pour l'arrêter systématiques"
+      corners:
+        impact: "+0.3 corners"
+
+  - id: "bellingham_jude"
+    nom: "Jude Bellingham"
+    equipe: "Real Madrid"
+    poste: "MIL"
+    age: 22
+    nationalite: "Angleterre"
+    numero: 5
+
+    valeur_marche_euros: 200000000
+    notoriete_mondiale: 9.0
+    aura_individuelle: 8.7
+
+    statistiques_saison:
+      minutes_jouees: 3050
+      matchs_joues: 35
+      buts: 19
+      assists: 8
+      buts_per_90: 0.56
+      assists_per_90: 0.24
+
+    impact_equipe:
+      impact_buts: 0.42
+      impact_points: 0.50
+      dependance_score: 7.8
+
+    caracteristiques:
+      - "Milieu box-to-box complet"
+      - "Arrivées dans surface dévastatrices"
+      - "Leadership malgré jeune âge"
+      - "Phénomène mondial 22 ans"
+
+    impact_marches:
+      buts:
+        impact: "+0.35 buts Real Madrid"
+        note: "Buts depuis milieu terrain"
+
+  - id: "mbappe_kylian"
+    nom: "Kylian Mbappé"
+    equipe: "Real Madrid"
+    poste: "ATT"
+    age: 27
+    nationalite: "France"
+    numero: 9
+
+    valeur_marche_euros: 180000000
+    notoriete_mondiale: 9.8
+    aura_individuelle: 9.5
+
+    statistiques_saison:
+      minutes_jouees: 2750
+      matchs_joues: 31
+      buts: 32
+      assists: 7
+      buts_per_90: 1.05
+      assists_per_90: 0.23
+      vitesse_pointe_kmh: 35.2
+
+    impact_equipe:
+      impact_buts: 0.65
+      impact_points: 0.55
+      dependance_score: 8.5
+
+    caracteristiques:
+      - "Vitesse exceptionnelle"
+      - "Finisseur d'élite"
+      - "Star mondiale (Ballon d'Or 2025)"
+      - "Intimidation adversaires maximale"
+
+    impact_marches:
+      buts:
+        probabilite_marque: 0.78
+        impact_over: "+18%"
+      cartons:
+        impact: "+0.3 cartons adverses"
+
+  - id: "lewandowski_robert"
+    nom: "Robert Lewandowski"
+    equipe: "Barcelona"
+    poste: "ATT"
+    age: 37
+    nationalite: "Pologne"
+    numero: 9
+
+    valeur_marche_euros: 20000000
+    notoriete_mondiale: 8.8
+    aura_individuelle: 8.5
+
+    statistiques_saison:
+      minutes_jouees: 2650
+      matchs_joues: 30
+      buts: 24
+      assists: 5
+      buts_per_90: 0.82
+
+    impact_equipe:
+      impact_buts: 0.48
+      dependance_score: 7.4
+
+    caracteristiques:
+      - "Finisseur légendaire (600+ buts carrière)"
+      - "Placement exceptionnel"
+      - "Expérience énorme gros matchs"
+      - "Vieillissant mais encore efficace"
+
+  - id: "pedri"
+    nom: "Pedri González"
+    equipe: "Barcelona"
+    poste: "MIL"
+    age: 23
+    nationalite: "Espagne"
+    numero: 8
+
+    valeur_marche_euros: 100000000
+    notoriete_mondiale: 8.2
+    aura_individuelle: 7.9
+
+    statistiques_saison:
+      minutes_jouees: 2550
+      matchs_joues: 29
+      buts: 6
+      assists: 9
+      passes_per_90: 78.5
+      passes_reussies_pct: 0.91
+
+    impact_equipe:
+      impact_xG: 0.25
+      impact_possession: "+3%"
+      dependance_score: 7.2
+
+    caracteristiques:
+      - "Cerveau du jeu Barça"
+      - "Vision exceptionnelle"
+      - "Contrôle possession"
+
+# ============================================================================
+# BUNDESLIGA
+# ============================================================================
+
+bundesliga:
+  - id: "musiala_jamal"
+    nom: "Jamal Musiala"
+    equipe: "Bayern Munich"
+    poste: "MIL_ATT"
+    age: 22
+    nationalite: "Allemagne"
+    numero: 42
+
+    valeur_marche_euros: 130000000
+    notoriete_mondiale: 8.4
+    aura_individuelle: 8.3
+
+    statistiques_saison:
+      minutes_jouees: 2850
+      matchs_joues: 32
+      buts: 18
+      assists: 14
+      buts_per_90: 0.57
+      assists_per_90: 0.44
+      dribbles_reussis_per_90: 3.8
+
+    impact_equipe:
+      impact_buts: 0.38
+      dependance_score: 7.5
+
+    caracteristiques:
+      - "Dribbleur technique exceptionnel"
+      - "Polyvalence positionnelle"
+      - "Futur superstar mondiale"
+      - "Créativité constante"
+
+  - id: "kane_harry"
+    nom: "Harry Kane"
+    equipe: "Bayern Munich"
+    poste: "ATT"
+    age: 32
+    nationalite: "Angleterre"
+    numero: 9
+
+    valeur_marche_euros: 90000000
+    notoriete_mondiale: 9.0
+    aura_individuelle: 8.7
+
+    statistiques_saison:
+      minutes_jouees: 2950
+      matchs_joues: 33
+      buts: 38
+      assists: 10
+      buts_per_90: 1.16
+      assists_per_90: 0.31
+
+    impact_equipe:
+      impact_buts: 0.62
+      dependance_score: 8.1
+
+    caracteristiques:
+      - "Buteur prolific (45+ buts/saison)"
+      - "Finition clinique"
+      - "Leadership capitaine"
+      - "S'adapte parfaitement Bundesliga"
+
+  - id: "wirtz_florian"
+    nom: "Florian Wirtz"
+    equipe: "Bayer Leverkusen"
+    poste: "MIL_ATT"
+    age: 22
+    nationalite: "Allemagne"
+    numero: 10
+
+    valeur_marche_euros: 150000000
+    notoriete_mondiale: 8.5
+    aura_individuelle: 8.2
+
+    statistiques_saison:
+      minutes_jouees: 2700
+      matchs_joues: 31
+      buts: 16
+      assists: 13
+      buts_per_90: 0.53
+      assists_per_90: 0.43
+
+    impact_equipe:
+      impact_buts: 0.40
+      dependance_score: 7.7
+
+    caracteristiques:
+      - "Créateur génial"
+      - "Technique pure"
+      - "Vision de jeu exceptionnelle"
+      - "Avenir immense"
+
+# ============================================================================
+# SERIE A
+# ============================================================================
+
+serie_a:
+  - id: "osimhen_victor"
+    nom: "Victor Osimhen"
+    equipe: "Napoli"
+    poste: "ATT"
+    age: 27
+    nationalite: "Nigeria"
+    numero: 9
+
+    valeur_marche_euros: 110000000
+    notoriete_mondiale: 8.2
+    aura_individuelle: 8.0
+
+    statistiques_saison:
+      minutes_jouees: 2550
+      matchs_joues: 29
+      buts: 23
+      assists: 4
+      buts_per_90: 0.81
+
+    impact_equipe:
+      impact_buts: 0.52
+      dependance_score: 7.8
+
+    caracteristiques:
+      - "Vitesse + puissance"
+      - "Buteur prolifique"
+      - "Présence physique"
+
+  - id: "lautaro_martinez"
+    nom: "Lautaro Martínez"
+    equipe: "Inter Milan"
+    poste: "ATT"
+    age: 28
+    nationalite: "Argentine"
+    numero: 10
+
+    valeur_marche_euros: 110000000
+    notoriete_mondiale: 8.4
+    aura_individuelle: 8.1
+
+    statistiques_saison:
+      minutes_jouees: 2800
+      matchs_joues: 32
+      buts: 27
+      assists: 6
+      buts_per_90: 0.87
+
+    impact_equipe:
+      impact_buts: 0.50
+      dependance_score: 7.7
+
+    caracteristiques:
+      - "Finisseur technique"
+      - "Capitaine Inter"
+      - "Champion du monde"
+      - "Clutch en finales"
+
+  - id: "leao_rafael"
+    nom: "Rafael Leão"
+    equipe: "AC Milan"
+    poste: "ATT"
+    age: 26
+    nationalite: "Portugal"
+    numero: 10
+
+    valeur_marche_euros: 90000000
+    notoriete_mondiale: 8.0
+    aura_individuelle: 7.8
+
+    statistiques_saison:
+      minutes_jouees: 2650
+      matchs_joues: 30
+      buts: 14
+      assists: 11
+      buts_per_90: 0.48
+      assists_per_90: 0.37
+
+    impact_equipe:
+      impact_buts: 0.35
+      dependance_score: 7.3
+
+    caracteristiques:
+      - "Ailier gauche explosif"
+      - "Dribbles dévastateurs"
+      - "Vitesse exceptionnelle"
+
+# ============================================================================
+# LIGUE 1
+# ============================================================================
+
+ligue_1:
+  - id: "barcola_bradley"
+    nom: "Bradley Barcola"
+    equipe: "Paris Saint-Germain"
+    poste: "ATT"
+    age: 22
+    nationalite: "France"
+    numero: 29
+
+    valeur_marche_euros: 60000000
+    notoriete_mondiale: 7.5
+    aura_individuelle: 7.6
+
+    statistiques_saison:
+      minutes_jouees: 2450
+      matchs_joues: 28
+      buts: 16
+      assists: 8
+      buts_per_90: 0.59
+
+    impact_equipe:
+      impact_buts: 0.38
+      dependance_score: 7.1
+
+    caracteristiques:
+      - "Jeune phénomène français"
+      - "Vitesse impressionnante"
+      - "Ailier gauche prometteur"
+
+  - id: "dembele_ousmane"
+    nom: "Ousmane Dembélé"
+    equipe: "Paris Saint-Germain"
+    poste: "ATT"
+    age: 28
+    nationalite: "France"
+    numero: 10
+
+    valeur_marche_euros: 50000000
+    notoriete_mondiale: 8.2
+    aura_individuelle: 7.9
+
+    statistiques_saison:
+      minutes_jouees: 2550
+      matchs_joues: 29
+      buts: 12
+      assists: 15
+      buts_per_90: 0.42
+      assists_per_90: 0.53
+
+    impact_equipe:
+      impact_buts: 0.30
+      impact_assists: 0.45
+      dependance_score: 7.0
+
+    caracteristiques:
+      - "Dribbleur talentueux"
+      - "Pied gauche + droit"
+      - "Créateur dangereux"
+
+  - id: "lacazette_alexandre"
+    nom: "Alexandre Lacazette"
+    equipe: "Lyon"
+    poste: "ATT"
+    age: 34
+    nationalite: "France"
+    numero: 10
+
+    valeur_marche_euros: 10000000
+    notoriete_mondiale: 7.2
+    aura_individuelle: 7.4
+
+    statistiques_saison:
+      minutes_jouees: 2350
+      matchs_joues: 27
+      buts: 18
+      assists: 5
+      buts_per_90: 0.69
+
+    impact_equipe:
+      impact_buts: 0.45
+      dependance_score: 7.5
+
+    caracteristiques:
+      - "Légende Lyon (enfant du club)"
+      - "Capitaine et leader"
+      - "Finisseur expérimenté"
+      - "Aura locale maximale"
+
+# ============================================================================
+# JOUEURS SPÉCIAUX (Gardiens, Milieux Défensifs)
+# ============================================================================
+
+gardiens_elite:
+  - id: "courtois_thibaut"
+    nom: "Thibaut Courtois"
+    equipe: "Real Madrid"
+    poste: "GK"
+    age: 32
+    nationalite: "Belgique"
+    numero: 1
+
+    valeur_marche_euros: 35000000
+    notoriete_mondiale: 8.5
+    aura_individuelle: 8.6
+
+    statistiques_saison:
+      minutes_jouees: 2700
+      matchs_joues: 30
+      clean_sheets: 16
+      clean_sheets_rate: 0.53
+      saves_per_90: 2.8
+      save_percentage: 78.5
+      goals_prevented: 6.2
+      punch_rate: 0.35
+      catch_rate: 0.65
+      commandement_surface: 9.2
+
+    impact_equipe:
+      impact_buts_concedes: -0.20
+      impact_corners: -0.2
+
+    caracteristiques:
+      - "Gardien d'élite mondiale"
+      - "Réflexes exceptionnels"
+      - "Commandement surface excellent"
+      - "Capte bien (catch_rate 0.65) → Moins corners ⭐"
+
+    impact_marches:
+      buts:
+        impact: "-0.20 buts concédés Real"
+      corners:
+        impact: "-0.2 corners concédés"
+        raison: "Capte au lieu de boxer"
+
+  - id: "alisson_becker"
+    nom: "Alisson Becker"
+    equipe: "Liverpool"
+    poste: "GK"
+    age: 33
+    nationalite: "Brésil"
+    numero: 1
+
+    valeur_marche_euros: 35000000
+    notoriete_mondiale: 8.4
+    aura_individuelle: 8.5
+
+    statistiques_saison:
+      minutes_jouees: 2850
+      matchs_joues: 32
+      clean_sheets: 18
+      saves_per_90: 2.5
+      save_percentage: 76.8
+      goals_prevented: 5.8
+      punch_rate: 0.38
+      catch_rate: 0.62
+
+    impact_equipe:
+      impact_buts_concedes: -0.18
+      impact_corners: -0.15
+
+    caracteristiques:
+      - "Gardien complet"
+      - "Distribution excellente"
+      - "Commandement solide"
+
+milieux_defensifs_cles:
+  - id: "rodri_hernandez"
+    nom: "Rodri Hernández"
+    equipe: "Manchester City"
+    poste: "MIL_DEF"
+    age: 29
+    nationalite: "Espagne"
+    numero: 16
+
+    valeur_marche_euros: 130000000
+    notoriete_mondiale: 8.6
+    aura_individuelle: 8.4
+
+    statistiques_saison:
+      minutes_jouees: 3100
+      matchs_joues: 35
+      buts: 9
+      assists: 7
+      tackles_per_90: 2.1
+      interceptions_per_90: 1.8
+      passes_per_90: 89.2
+      passes_reussies_pct: 0.93
+
+    impact_equipe:
+      stats_avec_rodri:
+        victoires_pct: 0.87
+        points_per_match: 2.71
+      stats_sans_rodri:
+        victoires_pct: 0.62
+        points_per_match: 2.05
+      impact_points: 0.66
+      dependance_score: 8.5
+
+    caracteristiques:
+      - "Cerveau défensif City"
+      - "CRITIQUE: 87% victoires avec, 62% sans ⭐⭐⭐"
+      - "Dépendance équipe énorme"
+      - "Ballon d'Or 2024"
+
+    impact_marches:
+      global:
+        note: "Si absent: City performance -25%"
+        impact_buts: "-0.3 si absent"
+        impact_defense: "+0.4 buts concédés si absent"
+
+  - id: "rice_declan"
+    nom: "Declan Rice"
+    equipe: "Arsenal"
+    poste: "MIL_DEF"
+    age: 26
+    nationalite: "Angleterre"
+    numero: 41
+
+    valeur_marche_euros: 120000000
+    notoriete_mondiale: 7.8
+    aura_individuelle: 7.7
+
+    statistiques_saison:
+      minutes_jouees: 3050
+      matchs_joues: 34
+      buts: 6
+      assists: 5
+      tackles_per_90: 2.5
+      interceptions_per_90: 2.1
+
+    impact_equipe:
+      impact_points: 0.35
+      dependance_score: 7.2
+
+    caracteristiques:
+      - "Milieu box-to-box physique"
+      - "Récupérateur solide"
+      - "Apport offensif croissant"
+
+# ============================================================================
+# STATISTIQUES GLOBALES
+# ============================================================================
+
+statistiques_base:
+  total_joueurs: 50
+
+  repartition_postes:
+    attaquants: 28
+    milieux: 15
+    gardiens: 2
+    defenseurs: 0  # À ajouter si nécessaire
+
+  repartition_ligues:
+    premier_league: 15
+    la_liga: 10
+    bundesliga: 8
+    serie_a: 9
+    ligue_1: 8
+
+  valeur_totale_euros: 4850000000
+  valeur_moyenne_euros: 97000000
+
+  dependance_moyenne: 7.6
+  aura_moyenne: 8.2
+
+  top_3_dependance:
+    - nom: "Rodri"
+      dependance: 8.5
+    - nom: "Mbappé"
+      dependance: 8.5
+    - nom: "Haaland"
+      dependance: 8.2
+
+  top_3_aura:
+    - nom: "Mbappé"
+      aura: 9.5
+    - nom: "Haaland"
+      aura: 9.1
+    - nom: "Vinícius Jr"
+      aura: 9.0
+
+# ============================================================================
+# NOTES UTILISATION AGENTS
+# ============================================================================
+
+utilisation_agents:
+  agent_2_collecteur_joueurs:
+    - "Charger ce fichier au démarrage"
+    - "Vérifier disponibilité temps réel (blessures, suspensions)"
+    - "Mettre à jour stats saison quotidiennement"
+    - "Si joueur iconique absent: Flag MAJEUR"
+
+  agent_4_profil_equipe:
+    - "Utiliser impact_equipe pour ajuster prédictions"
+    - "Si dependance >= 8.0 ET absent: Réduire confiance -10 à -12%"
+    - "Aura individuelle contribue à aura_equipe"
+
+  calculs_impact:
+    formule_simple: |
+      Si joueur_iconique.disponibilite == "absent":
+        ajustement_buts_equipe = -joueur.impact_buts
+        ajustement_confiance = -10% si dependance >= 8.0
+
+  extension_future:
+    phase_2: "Étendre à 200 joueurs (top 4 par équipe)"
+    phase_3: "Système auto-détection nouveaux iconiques"
+    phase_4: "ML pour prédire impact joueurs émergents"
+
+# ============================================================================
+# PROCHAINES MISES À JOUR
+# ============================================================================
+
+todo:
+  - "Ajouter 20 joueurs supplémentaires (atteindre top 70)"
+  - "Inclure défenseurs iconiques (Van Dijk, Rüdiger, Saliba)"
+  - "Mettre à jour stats après chaque journée"
+  - "Ajouter impact corners pour attaquants physiques"
+  - "Tracker forme récente (5 derniers matchs)"
+  - "Système alertes blessures automatique"

@@ -1,0 +1,1152 @@
+# ============================================================================
+# SYSTÈME DE DÉTECTION VALUE - AGENT #6
+# ============================================================================
+# Cerveau décisionnel du système multi-agents
+#
+# PHILOSOPHIE SHARP BETTING:
+# - On ne parie QUE quand on a un EDGE mathématique
+# - VALUE = Probabilité réelle > Probabilité implicite bookmaker
+# - Kelly Criterion pour sizing optimal
+# - Discipline absolue: pas d'émotions, QUE des maths
+#
+# INPUT: Agent #4 (probabilités ajustées) + Agent #5 (cotes bookmakers)
+# OUTPUT: Décisions BET/NO BET + Sizing Kelly + Score confiance
+# ============================================================================
+
+# ============================================================================
+# DÉFINITION DE LA VALUE
+# ============================================================================
+concept_value:
+
+  definition: |
+    VALUE existe quand notre estimation de probabilité réelle
+    est SUPÉRIEURE à la probabilité implicite de la cote bookmaker.
+
+    C'est la SEULE raison valable de parier.
+
+  formule_probabilite_implicite:
+    calcul: "1 / cote_decimale"
+    exemple_1:
+      cote: 2.00
+      proba_implicite: "1 / 2.00 = 50%"
+    exemple_2:
+      cote: 1.80
+      proba_implicite: "1 / 1.80 = 55.6%"
+    exemple_3:
+      cote: 3.50
+      proba_implicite: "1 / 3.50 = 28.6%"
+
+  formule_edge:
+    calcul: "(proba_reelle - proba_implicite) / proba_implicite * 100"
+    interpretation:
+      edge_positif: "VALUE détectée → Parier"
+      edge_negatif: "PAS de value → Ne PAS parier"
+      edge_nul: "Fair odds → Ne PAS parier (marge nulle)"
+
+  exemple_concret:
+    match: "Man City vs Brighton"
+    marche: "City victoire"
+    cote_bookmaker: 1.40
+    proba_implicite: "1 / 1.40 = 71.4%"
+    notre_estimation: "78% (Rodri titulaire, Brighton 3 défenseurs blessés)"
+    edge_calcule: "(78% - 71.4%) / 71.4% = +9.2%"
+    decision: "✅ BET - Value de +9.2%"
+
+  anti_exemple:
+    match: "Man City vs Brighton"
+    marche: "City victoire"
+    cote_bookmaker: 1.30
+    proba_implicite: "1 / 1.30 = 76.9%"
+    notre_estimation: "78% (mêmes conditions)"
+    edge_calcule: "(78% - 76.9%) / 76.9% = +1.4%"
+    decision: "❌ NO BET - Edge trop faible (<3% seuil minimum)"
+
+# ============================================================================
+# SEUILS DE VALUE PAR NIVEAU DE CONFIANCE
+# ============================================================================
+seuils_value:
+
+  description: |
+    Plus notre confiance est élevée, plus on peut accepter un edge faible.
+    Moins on est confiant, plus on exige un edge important.
+
+  niveau_confiance_elite:
+    criteres:
+      - "Data complète sur 10+ matchs récents"
+      - "Tous joueurs clés classifiés avec confiance >0.9"
+      - "Edges multiples identifiés (2+ edges cumulés)"
+      - "Contexte stable (pas de surprise compos)"
+    seuil_edge_minimum: 3.0
+    exemples_situations:
+      - "Rodri titulaire Man City (edge validé 87% vs 62%)"
+      - "Alisson catcher + Van Dijk (edge corners -0.35)"
+      - "Mbappé dribbleur vs défense cartonneuse"
+
+  niveau_confiance_haute:
+    criteres:
+      - "Data complète récente"
+      - "Joueurs clés classifiés confiance >0.8"
+      - "1-2 edges identifiés"
+      - "Quelques incertitudes mineures"
+    seuil_edge_minimum: 5.0
+    exemples_situations:
+      - "Edge unique fort (ex: catcher seul)"
+      - "Composition confirmée mais pas d'historique récent"
+
+  niveau_confiance_moyenne:
+    criteres:
+      - "Data partielle ou moins récente"
+      - "Joueurs clés classifiés confiance 0.6-0.8"
+      - "Edge théorique mais peu validé"
+      - "Incertitudes notables"
+    seuil_edge_minimum: 8.0
+    exemples_situations:
+      - "Nouveau joueur sans historique suffisant"
+      - "Système tactique inhabituel"
+      - "Edge basé sur extrapolation"
+
+  niveau_confiance_faible:
+    criteres:
+      - "Data incomplète"
+      - "Joueurs clés classification douteuse"
+      - "Nombreuses incertitudes"
+    seuil_edge_minimum: 12.0
+    note: "En pratique, on évite de parier avec confiance faible"
+
+  tableau_decision:
+    regles: |
+      IF edge >= seuil_confiance:
+        THEN: BET (avec Kelly sizing)
+      ELSE:
+        THEN: NO BET
+
+    exemples:
+      - confiance: "Elite"
+        edge: 4.0
+        seuil: 3.0
+        decision: "✅ BET"
+
+      - confiance: "Haute"
+        edge: 4.0
+        seuil: 5.0
+        decision: "❌ NO BET (edge insuffisant)"
+
+      - confiance: "Elite"
+        edge: 9.0
+        seuil: 3.0
+        decision: "✅ BET (edge excellent)"
+
+      - confiance: "Moyenne"
+        edge: 7.0
+        seuil: 8.0
+        decision: "❌ NO BET"
+
+# ============================================================================
+# KELLY CRITERION - SIZING OPTIMAL
+# ============================================================================
+kelly_criterion:
+
+  philosophie: |
+    Le Kelly Criterion calcule la taille OPTIMALE du pari
+    pour maximiser la croissance long-terme de la bankroll
+    tout en minimisant le risque de ruine.
+
+    C'est la SEULE méthode mathématiquement prouvée pour le sizing.
+
+  formule_complete:
+    equation: "f = (bp - q) / b"
+    variables:
+      f: "Fraction de bankroll à miser"
+      b: "Cote décimale - 1 (gain net)"
+      p: "Probabilité réelle de gagner (notre estimation)"
+      q: "Probabilité de perdre (1 - p)"
+
+  formule_simplifiee:
+    equation: "f = (p * cote - 1) / (cote - 1)"
+    utilisation: "Plus pratique pour calculs rapides"
+
+  exemple_calcul_1:
+    contexte: "Man City victoire"
+    cote: 1.40
+    b: "1.40 - 1 = 0.40"
+    p: 0.78
+    q: 0.22
+    calcul: "f = (0.40 * 0.78 - 0.22) / 0.40"
+    resultat: "f = (0.312 - 0.22) / 0.40 = 0.23 = 23%"
+    interpretation: "Kelly suggère miser 23% de la bankroll"
+
+  exemple_calcul_2:
+    contexte: "Liverpool OVER 2.5 buts"
+    cote: 2.10
+    p: 0.55
+    q: 0.45
+    calcul: "f = (0.55 * 2.10 - 1) / (2.10 - 1)"
+    resultat: "f = (1.155 - 1) / 1.10 = 0.141 = 14.1%"
+    interpretation: "Kelly suggère miser 14.1% de la bankroll"
+
+  fractional_kelly:
+    description: |
+      Le Full Kelly est TRÈS agressif et volatile.
+      Les professionnels utilisent du Fractional Kelly pour réduire variance.
+
+    recommandations:
+      quarter_kelly:
+        fraction: "25% du Kelly"
+        usage: "Conservateur, bankroll protection"
+        avantage: "Variance réduite de 94%"
+        inconvenient: "Croissance plus lente"
+
+      third_kelly:
+        fraction: "33% du Kelly"
+        usage: "Équilibré, recommandé pour débuter"
+        avantage: "Bon compromis croissance/risque"
+
+      half_kelly:
+        fraction: "50% du Kelly"
+        usage: "Modéré, growth acceptable"
+        avantage: "Variance réduite de 75%"
+        inconvenient: "Croissance réduite de 25%"
+
+      full_kelly:
+        fraction: "100% du Kelly"
+        usage: "Agressif, professionnels expérimentés"
+        avantage: "Croissance maximale théorique"
+        inconvenient: "Variance ÉNORME, drawdowns sévères"
+
+  notre_strategie:
+    recommandation: "1/3 KELLY (33%)"
+    justification:
+      - "Réduit variance significativement"
+      - "Protège contre erreurs estimation"
+      - "Croissance long-terme solide"
+      - "Psychologiquement supportable"
+
+  plafonds_securite:
+    max_absolu_par_pari: "5% bankroll"
+    justification: |
+      Même si Kelly suggère plus, JAMAIS dépasser 5% sur un seul pari.
+      Protection contre erreurs grossières d'estimation.
+
+    max_exposition_totale: "20% bankroll"
+    justification: |
+      Somme de tous paris en cours ne doit jamais excéder 20% bankroll.
+      Protection contre corrélation cachée entre paris.
+
+  exemple_complet_sizing:
+    bankroll: 1000
+    kelly_full: "23%"
+    notre_strategie: "1/3 Kelly = 23% / 3 = 7.67%"
+    plafond_5pct: "5%"
+    mise_finale: "50€ (5% de 1000€)"
+    explication: "Kelly suggère 7.67% mais on plafonne à 5% sécurité"
+
+# ============================================================================
+# EDGES EXPLOITABLES PAR MARCHÉ
+# ============================================================================
+edges_par_marche:
+
+  # CORNERS
+  # -------
+  corners_total:
+    edge_1_catcher:
+      description: "Gardien catcher réduit corners équipe"
+      impact: "-0.2 corners"
+      confiance: "Haute (validé Liverpool, Arsenal)"
+      detection:
+        condition: "gardien.has_tag('catcher') AND catch_rate >0.65"
+        ajustement_proba: "-0.2 corners sur total équipe"
+      exemple_concret:
+        match: "Liverpool vs Everton"
+        ligne_bookmaker: "Corners Liverpool 5.5"
+        alisson_catcher: "catch_rate 0.71"
+        ajustement: "-0.2 corners"
+        ligne_ajustee: "5.3 corners attendus"
+        cote_under_5_5: 2.10
+        proba_implicite: "47.6%"
+        notre_proba: "55%"
+        edge: "+15.5%"
+        decision: "✅ BET UNDER 5.5 corners Liverpool"
+
+    edge_2_puncher:
+      description: "Gardien puncher augmente corners équipe"
+      impact: "+0.15 corners"
+      confiance: "Moyenne (moins validé que catcher)"
+      detection:
+        condition: "gardien.has_tag('puncher') AND punch_rate >0.65"
+        ajustement_proba: "+0.15 corners sur total équipe"
+
+    edge_3_pivot_cible:
+      description: "Attaquant pivot cible génère corners adverses"
+      impact: "+0.3 corners adverses"
+      confiance: "Moyenne (connu mais sous-estimé)"
+      detection:
+        condition: "attaquant.has_tag('pivot_cible') AND duels_aeriens >65%"
+        ajustement_proba: "+0.3 corners adverses"
+
+    combinaison_edges:
+      exemple:
+        match: "Arsenal (Raya catcher 68%) vs Aston Villa (Watkins pivot)"
+        edge_raya: "-0.2 corners Arsenal"
+        edge_watkins: "+0.3 corners Arsenal (défense)"
+        effet_net: "+0.1 corners Arsenal"
+        ligne_bookmaker: "5.5"
+        ligne_ajustee: "5.6"
+        interpretation: "Léger biais OVER mais insuffisant pour bet"
+
+  # CARTONS
+  # -------
+  cartons_total:
+    edge_1_dribbleur_explosif:
+      description: "Dribbleurs subissent fautes → Cartons adverses ⭐"
+      impact: "+0.4 cartons adverses"
+      confiance: "HAUTE - Edge majeur sous-exploité"
+      detection:
+        condition: "attaquant.has_tag('dribbleur_explosif') AND fautes_subies >2.5/90"
+        ajustement_proba: "+0.4 cartons adverses"
+      exemple_concret:
+        match: "PSG (Mbappé) vs Marseille"
+        ligne_bookmaker: "Total cartons 4.5"
+        mbappe_stats:
+          dribbles_reussis: 5.2
+          fautes_subies: 3.1
+          vitesse_pointe: 36
+        tags: ["dribbleur_explosif", "vitesse_exceptionnelle"]
+        ajustement: "+0.4 cartons (Mbappé provoque)"
+        ligne_ajustee: "4.9 cartons attendus"
+        cote_over_4_5: 1.90
+        proba_implicite: "52.6%"
+        notre_proba: "61%"
+        edge: "+16%"
+        decision: "✅ BET OVER 4.5 cartons"
+
+    edge_2_destructeur:
+      description: "Milieu destructeur commet fautes"
+      impact: "+0.3 cartons propres"
+      confiance: "Moyenne (bien connu bookmakers)"
+      detection:
+        condition: "milieu.has_tag('destructeur') AND fautes >2.0/90"
+        ajustement_proba: "+0.3 cartons équipe"
+
+    edge_3_arbitre:
+      description: "Historique arbitre"
+      impact: "Variable ±0.5 cartons"
+      confiance: "Haute (data fiable)"
+      detection:
+        condition: "arbitre.cartons_moyens vs moyenne_ligue"
+        ajustement_proba: "écart à moyenne * 0.8"
+      exemple:
+        arbitre: "Anthony Taylor"
+        moyenne_ligue: "4.2 cartons/match"
+        moyenne_taylor: "5.1 cartons/match"
+        ecart: "+0.9"
+        ajustement: "+0.72 cartons (0.9 * 0.8)"
+
+  # BUTS & RÉSULTAT
+  # ---------------
+  buts_total:
+    edge_1_sentinelle_absent:
+      description: "Absence Rodri-type = GROS impact ⭐⭐⭐"
+      impact: "+0.4 buts concédés, -0.3 buts marqués"
+      confiance: "TRÈS HAUTE - Edge validé"
+      detection:
+        condition: "milieu_sentinelle.absent AND dependance_score >8.0"
+        ajustement_proba: "+0.4 xG adversaire, -0.3 xG équipe"
+      exemple_concret:
+        match: "Man City (sans Rodri) vs Bournemouth"
+        ligne_bookmaker: "City -1.5 @ 1.50"
+        proba_implicite_city: "66.7%"
+        ajustement_rodri_absent:
+          impact_buts_city: "-0.3"
+          impact_buts_contre: "+0.4"
+          impact_points: "-0.6"
+        notre_proba_city: "54%"
+        edge_bournemouth: "+23.5%"
+        decision: "✅ BET Bournemouth +1.5 @ 2.50 (GROSSE value)"
+
+    edge_2_finisseur_elite:
+      description: "Finisseur clinique elite + créateur"
+      impact: "+0.5 buts équipe (avec synergie)"
+      confiance: "Haute"
+      detection:
+        condition: "attaquant.has_tag('finisseur_clinique') AND attaquant.niveau='elite_mondiale' AND equipe.has_tag('createur_passes')"
+        ajustement_proba: "+0.5 xG équipe"
+      exemple:
+        match: "Man City (Haaland + De Bruyne) vs Brighton"
+        xG_base_city: 2.1
+        synergie_haaland_kdb: "+0.5"
+        xG_ajuste: 2.6
+        ligne_over_2_5: 1.60
+        notre_proba: "72%"
+        proba_implicite: "62.5%"
+        edge: "+15.2%"
+        decision: "✅ BET OVER 2.5 buts"
+
+    edge_3_defense_haute_vs_vitesse:
+      description: "Défense haute vs attaquants vitesse = danger"
+      impact: "+0.4 buts attaquants rapides"
+      confiance: "Haute"
+      detection:
+        condition: "defense.ligne_haute >65m AND attaquant_adverse.has_tag('vitesse_exceptionnelle')"
+        ajustement_proba: "+0.4 xG attaquants rapides"
+      exemple:
+        match: "Arsenal (ligne haute 68m) vs Liverpool (Salah vitesse 35km/h)"
+        ajustement: "+0.4 xG Liverpool"
+        marche: "Liverpool BTTS"
+        decision: "Favorable Liverpool marquer"
+
+  # RÉSULTAT EXACT
+  # --------------
+  resultat_match:
+    edge_1_equilibre_forces:
+      description: "Quand équipes équilibrées, X sous-évalué"
+      impact: "+5% probabilité X"
+      confiance: "Moyenne"
+      detection:
+        condition: "ABS(proba_1 - proba_2) < 10%"
+        ajustement: "+5% sur X"
+
+    edge_2_domination_ecrasante:
+      description: "Très gros favoris, large victoire sous-évaluée"
+      impact: "Décalage vers victoires larges"
+      confiance: "Moyenne"
+      detection:
+        condition: "proba_victoire >75% AND edge_qualite >2.0"
+        ajustement: "Favoriser -1.5, -2.5 handicaps"
+
+# ============================================================================
+# FILTRES DE CONFIANCE - QUAND NE PAS PARIER
+# ============================================================================
+filtres_confiance:
+
+  description: |
+    Situations où on S'ABSTIENT même si edge mathématique apparent.
+    Protection contre pièges et fausses value.
+
+  filtre_1_donnees_incomplete:
+    regle: "Si data critique manquante → NO BET"
+    exemples:
+      - "Composition non confirmée (<3h du match)"
+      - "Joueur clé statut incertain (blessure douteuse)"
+      - "Stats insuffisantes (nouveau joueur <5 matchs)"
+    justification: "Edge basé sur hypothèses = fausse value"
+
+  filtre_2_confiance_classification:
+    regle: "Si confiance_classification <0.70 → NO BET"
+    exemple:
+      joueur: "Nouveau transfert Ligue 1 vers PL"
+      classification: "Tags basés stats Ligue 1"
+      confiance: 0.65
+      decision: "❌ NO BET - Attendre validation PL"
+
+  filtre_3_correlation_cachee:
+    regle: "Si paris multiples sur événements corrélés → Réduire sizing"
+    exemples:
+      - "OVER 2.5 buts + BTTS sur même match (corrélés)"
+      - "City victoire + Liverpool victoire (indépendants mais budget total limité)"
+    ajustement: "Sizing total <20% bankroll"
+
+  filtre_4_variance_elevee:
+    regle: "Si marché haute variance → Augmenter seuil edge"
+    marches_haute_variance:
+      - "Score exact (+30% seuil edge)"
+      - "Premier buteur (+40% seuil edge)"
+      - "Nombre de corners exact (+35% seuil edge)"
+    justification: "Variance mange edge sur échantillons moyens"
+
+  filtre_5_cote_extreme:
+    regle: "Si cote <1.20 ou >5.00 → Scepticisme élevé"
+    cotes_basses:
+      probleme: "Edge % élevé requis pour profit significatif"
+      exemple: "Cote 1.15 → Besoin edge >10% pour value réelle"
+    cotes_hautes:
+      probleme: "Variance énorme, erreur estimation critique"
+      exemple: "Cote 5.00 → Notre estimation fiable à 25% vs 20%?"
+
+  filtre_6_mouvement_cote_suspect:
+    regle: "Si cote bouge massivement contre nous → Investiguer"
+    exemple:
+      cote_initiale: "City 1.50"
+      cote_actuelle: "City 1.80"
+      mouvement: "+20%"
+      causes_possibles:
+        - "Info blessure non publique"
+        - "Sharp money sur adversaire"
+        - "Nous avons raté quelque chose"
+      decision: "⚠️ PAUSE - Vérifier avant bet"
+
+  filtre_7_piege_bookmaker:
+    description: "Lignes inhabituelles = piège potentiel"
+    exemples:
+      - "Ligne corners 2 points hors norme historique"
+      - "Cote résultat 30% plus généreuse qu'autres bookmakers"
+      - "Marché ouvert puis fermé puis rouvert différent"
+    decision: "❌ NO BET - Si trop beau pour être vrai, probablement faux"
+
+# ============================================================================
+# ALGORITHME DE DÉCISION COMPLET
+# ============================================================================
+algorithme_decision:
+
+  description: |
+    Processus Agent #6 pour chaque opportunité potentielle.
+    Input: Proba Agent #4 + Cotes Agent #5
+    Output: BET/NO BET + Sizing + Confiance
+
+  etape_1_calcul_edge:
+    input:
+      proba_reelle: "De Agent #4"
+      cote_bookmaker: "De Agent #5"
+    processus: |
+      proba_implicite = 1 / cote_bookmaker
+      edge = (proba_reelle - proba_implicite) / proba_implicite * 100
+    output:
+      edge_pct: "Pourcentage d'edge"
+
+  etape_2_evaluation_confiance:
+    input:
+      sources_edges: "Liste edges détectés"
+      qualite_data: "Complétude données"
+      confiance_classification: "Moyenne confiance tags joueurs"
+    processus: |
+      IF all_data_complete AND confiance_classification >0.9 AND edges_multiples:
+        niveau_confiance = "Elite"
+      ELIF most_data_complete AND confiance_classification >0.8:
+        niveau_confiance = "Haute"
+      ELIF partial_data AND confiance_classification >0.6:
+        niveau_confiance = "Moyenne"
+      ELSE:
+        niveau_confiance = "Faible"
+    output:
+      niveau_confiance: "Elite/Haute/Moyenne/Faible"
+      seuil_edge_requis: "Basé sur niveau"
+
+  etape_3_filtres_confiance:
+    processus: |
+      FOR filtre IN filtres_confiance:
+        IF filtre.condition == TRUE:
+          RETURN NO_BET (raison: filtre.description)
+    output:
+      passe_filtres: "Boolean"
+      raison_rejet: "Si filtres échouent"
+
+  etape_4_comparaison_seuil:
+    processus: |
+      IF edge < seuil_edge_requis:
+        RETURN NO_BET (raison: "Edge insuffisant")
+      ELSE:
+        PROCEED to sizing
+    output:
+      decision_preliminaire: "BET/NO_BET"
+
+  etape_5_kelly_sizing:
+    processus: |
+      kelly_full = (proba_reelle * cote - 1) / (cote - 1)
+      kelly_fraction = kelly_full / 3  # 1/3 Kelly stratégie
+      mise_proposee = bankroll * kelly_fraction
+
+      IF mise_proposee > 0.05 * bankroll:
+        mise_finale = 0.05 * bankroll  # Plafond 5%
+      ELSE:
+        mise_finale = mise_proposee
+    output:
+      mise_finale: "Montant en €"
+      pct_bankroll: "Pourcentage"
+
+  etape_6_verification_exposition:
+    processus: |
+      exposition_actuelle = SUM(mises_en_cours)
+      exposition_apres = exposition_actuelle + mise_finale
+
+      IF exposition_apres > 0.20 * bankroll:
+        RETURN NO_BET (raison: "Exposition totale >20%")
+    output:
+      exposition_ok: "Boolean"
+
+  etape_7_output_final:
+    format: |
+      {
+        "decision": "BET / NO_BET",
+        "match_id": "man_city_vs_brighton_2024_03_30",
+        "marche": "Man City victoire",
+        "cote": 1.40,
+        "probabilite_reelle": 0.78,
+        "probabilite_implicite": 0.714,
+        "edge": 9.2,
+        "niveau_confiance": "Elite",
+        "seuil_requis": 3.0,
+        "kelly_full": 0.23,
+        "kelly_fraction": 0.077,
+        "mise_recommandee": 77,
+        "pct_bankroll": 7.7,
+        "mise_plafonnee": 50,
+        "pct_plafonne": 5.0,
+        "edges_detectes": [
+          "Rodri titulaire (+0.7 points)",
+          "Brighton 3 défenseurs blessés (-0.4 points)"
+        ],
+        "confiance_score": 9.2,
+        "raison": "Edge solide (9.2%), confiance Elite, Rodri impact validé",
+        "timestamp": "2024-03-30T09:45:00Z"
+      }
+
+# ============================================================================
+# EXEMPLES COMPLETS DÉCISION
+# ============================================================================
+exemples_decisions:
+
+  exemple_1_bet_accepte:
+    contexte:
+      match: "Liverpool vs Everton"
+      marche: "UNDER 5.5 corners Liverpool"
+      heure: "9h45 (composition confirmée)"
+
+    input_agent4:
+      corners_attendus_liverpool: 5.3
+      confiance: 0.91
+      edges_detectes:
+        - "Alisson catcher (catch_rate 0.71): -0.2 corners"
+        - "Everton défense basse (bloc 5-4-1): -0.15 corners"
+
+    input_agent5:
+      cote_under_5_5: 2.10
+      proba_implicite: 0.476
+
+    processus_agent6:
+      step1_proba:
+        distribution_corners: "Poisson lambda=5.3"
+        proba_under_5_5: 0.55
+
+      step2_edge:
+        calcul: "(0.55 - 0.476) / 0.476 * 100"
+        edge: 15.5
+
+      step3_confiance:
+        data_complete: true
+        confiance_classification: 0.91
+        edges_valides: 2
+        niveau: "Elite"
+        seuil_requis: 3.0
+
+      step4_filtres:
+        donnees_completes: "✅ Pass"
+        composition_confirmee: "✅ Pass"
+        correlation: "✅ Pass (aucun autre pari Liverpool)"
+        cote_raisonnable: "✅ Pass (2.10)"
+
+      step5_comparaison:
+        edge: 15.5
+        seuil: 3.0
+        decision: "✅ Edge largement supérieur"
+
+      step6_kelly:
+        kelly_full: "(0.55 * 2.10 - 1) / (2.10 - 1) = 0.05 = 5%"
+        kelly_third: "5% / 3 = 1.67%"
+        bankroll: 1000
+        mise_proposee: 16.7
+        plafond_5pct: 50
+        mise_finale: 16.7
+
+      step7_exposition:
+        exposition_actuelle: 35
+        exposition_apres: 51.7
+        limite_20pct: 200
+        status: "✅ Pass"
+
+    output_final:
+      decision: "✅ BET"
+      mise: 16.7
+      edge: 15.5
+      confiance_score: 9.1
+      raison: "Edge élevé (15.5%), confiance Elite (9.1/10), edge Alisson validé"
+
+  exemple_2_bet_refuse_edge_insuffisant:
+    contexte:
+      match: "Arsenal vs Tottenham"
+      marche: "Arsenal victoire"
+
+    input_agent4:
+      proba_arsenal: 0.58
+      confiance: 0.85
+
+    input_agent5:
+      cote_arsenal: 1.75
+      proba_implicite: 0.571
+
+    processus_agent6:
+      edge_calcule: "(0.58 - 0.571) / 0.571 * 100 = 1.6%"
+      niveau_confiance: "Haute (conf 0.85, data complète)"
+      seuil_requis: 5.0
+      comparaison: "1.6% < 5.0%"
+
+    output_final:
+      decision: "❌ NO BET"
+      raison: "Edge 1.6% insuffisant (seuil 5.0% confiance Haute)"
+      note: "Quasi fair odds, bookmaker bien calibré"
+
+  exemple_3_bet_refuse_filtre_donnees:
+    contexte:
+      match: "Man City vs Brighton"
+      marche: "City -1.5"
+      probleme: "Rodri statut incertain (blessure genou)"
+
+    input_agent4:
+      scenario_rodri_joue:
+        proba_city: 0.78
+        edge: 12.0
+      scenario_rodri_absent:
+        proba_city: 0.62
+        edge: -8.0
+
+    processus_agent6:
+      filtre_donnees_incomplete:
+        condition: "Joueur clé statut incertain"
+        decision: "❌ NO BET"
+        raison: "Impact Rodri MASSIF (+0.7 pts), incertitude inacceptable"
+
+    output_final:
+      decision: "❌ NO BET"
+      raison: "Données critiques manquantes (statut Rodri incertain)"
+      note: "Attendre annonce compo (H-1h30)"
+
+  exemple_4_bet_accepte_edge_majeur:
+    contexte:
+      match: "PSG vs Marseille"
+      marche: "OVER 4.5 cartons total"
+      contexte_special: "Derby, tensions historiques, arbitre strict"
+
+    input_agent4:
+      cartons_attendus: 5.8
+      confiance: 0.88
+      edges_detectes:
+        - "Mbappé dribbleur explosif (fautes subies 3.1): +0.4 cartons"
+        - "Marseille milieu destructeur (Rongier): +0.3 cartons"
+        - "Arbitre Turpin (moyenne 5.6 vs 4.2 ligue): +0.7 cartons"
+        - "Contexte derby (historique +1.2 cartons): +1.2 cartons"
+
+    input_agent5:
+      cote_over_4_5: 1.90
+      proba_implicite: 0.526
+
+    processus_agent6:
+      proba_over_4_5: 0.68
+      edge_calcule: "(0.68 - 0.526) / 0.526 * 100 = 29.3%"
+      niveau_confiance: "Haute (edges multiples validés)"
+      seuil_requis: 5.0
+      decision: "✅ Edge MAJEUR (29.3%)"
+      kelly_third: "12.4%"
+      mise_plafonnee: "5% (50€ sur 1000€)"
+
+    output_final:
+      decision: "✅ BET FORT"
+      mise: 50
+      edge: 29.3
+      confiance_score: 8.8
+      raison: "Cumul 4 edges validés (Mbappé + arbitre + derby + Rongier)"
+      note: "⭐ Opportunité excellente"
+
+  exemple_5_bet_refuse_exposition:
+    contexte:
+      match: "Arsenal vs Chelsea"
+      marche: "BTTS"
+      probleme: "Déjà 3 paris en cours (18% bankroll exposée)"
+
+    input_agent4:
+      proba_btts: 0.72
+      edge: 18.0
+      confiance: 0.89
+
+    processus_agent6:
+      edge_excellent: "✅ 18% edge"
+      confiance: "✅ Elite"
+      filtres_data: "✅ Pass"
+      kelly_sizing: "4.2% bankroll = 42€"
+
+      exposition_actuelle: 180
+      exposition_apres: 222
+      limite_20pct: 200
+
+      filtre_exposition:
+        condition: "222€ > 200€ (limite 20%)"
+        decision: "❌ NO BET"
+
+    output_final:
+      decision: "❌ NO BET"
+      raison: "Exposition totale dépasserait 20% (222€ > 200€)"
+      note: "Excellent edge mais discipline sizing prioritaire"
+      alternative: "Réévaluer si un pari en cours se termine"
+
+# ============================================================================
+# SCORING & PRIORISATION DES OPPORTUNITÉS
+# ============================================================================
+scoring_opportunites:
+
+  description: |
+    Si plusieurs opportunités détectées simultanément,
+    comment prioriser quand budget/exposition limité?
+
+  criteres_scoring:
+
+    edge_pct:
+      poids: 40
+      calcul: "edge_pct * 4"
+      exemple:
+        edge_10pct: "10 * 4 = 40 points"
+        edge_20pct: "20 * 4 = 80 points (plafonné 100)"
+
+    confiance:
+      poids: 30
+      calcul: "confiance_score * 3"
+      exemple:
+        confiance_9: "9 * 3 = 27 points"
+        confiance_7: "7 * 3 = 21 points"
+
+    kelly_sizing:
+      poids: 20
+      calcul: "(kelly_pct / 5%) * 20"
+      justification: "Plus Kelly suggère gros, plus opportunité forte"
+      exemple:
+        kelly_5pct: "(5 / 5) * 20 = 20 points"
+        kelly_2pct: "(2 / 5) * 20 = 8 points"
+
+    liquidite_marche:
+      poids: 10
+      calcul: "liquidite_score * 10"
+      justification: "Marchés liquides = moins risque ligne piège"
+      exemple:
+        marche_principal: "1.0 * 10 = 10 points (résultat, O/U buts)"
+        marche_secondaire: "0.6 * 10 = 6 points (corners, cartons)"
+        marche_exotique: "0.3 * 10 = 3 points (score exact)"
+
+  formule_score_total:
+    equation: "score = edge_points + confiance_points + kelly_points + liquidite_points"
+    maximum: 100
+    minimum: 0
+
+  interpretation_scores:
+    elite_90_100:
+      description: "Opportunité exceptionnelle ⭐⭐⭐"
+      action: "BET PRIORITAIRE (si exposition permet)"
+      frequence: "Rare (1-2 par semaine)"
+
+    excellent_75_89:
+      description: "Très bonne opportunité ⭐⭐"
+      action: "BET FORT"
+      frequence: "Occasionnel (3-5 par semaine)"
+
+    bon_60_74:
+      description: "Bonne opportunité ⭐"
+      action: "BET STANDARD"
+      frequence: "Régulier (5-10 par semaine)"
+
+    acceptable_50_59:
+      description: "Opportunité acceptable"
+      action: "BET si exposition faible, sinon skip"
+      frequence: "Fréquent (10-15 par semaine)"
+
+    marginal_40_49:
+      description: "Opportunité marginale"
+      action: "NO BET (sauf circonstances spéciales)"
+      frequence: "Très fréquent"
+
+  exemple_priorisation:
+    situation: "3 opportunités simultanées, exposition permet 2 paris"
+
+    opportunite_A:
+      match: "Liverpool corners"
+      edge: 15.5
+      confiance: 9.1
+      kelly: 1.67
+      liquidite: 0.8
+      score_calcule: "62 + 27.3 + 6.7 + 8 = 104 → 100 (plafonné)"
+      priorite: 1
+
+    opportunite_B:
+      match: "PSG cartons"
+      edge: 29.3
+      confiance: 8.8
+      kelly: 5.0
+      liquidite: 0.6
+      score_calcule: "100 + 26.4 + 20 + 6 = 152 → 100 (plafonné)"
+      priorite: 1
+
+    opportunite_C:
+      match: "Arsenal BTTS"
+      edge: 8.0
+      confiance: 7.2
+      kelly: 2.1
+      liquidite: 1.0
+      score_calcule: "32 + 21.6 + 8.4 + 10 = 72"
+      priorite: 3
+
+    decision:
+      paris_acceptes: ["Opportunite_A", "Opportunite_B"]
+      paris_refuses: ["Opportunite_C"]
+      raison: "Scores A et B = 100 (max), C = 72 (bon mais moins prioritaire)"
+
+# ============================================================================
+# GESTION BANKROLL & PROTECTION
+# ============================================================================
+gestion_bankroll:
+
+  philosophie: |
+    La bankroll est notre capital de guerre.
+    SURVIVRE est plus important que CROÎTRE vite.
+    "Il faut être présent pour gagner."
+
+  regles_absolues:
+
+    regle_1_never_all_in:
+      description: "JAMAIS miser >5% sur un seul pari"
+      justification: "Protection contre erreur catastrophique"
+      exemple_violation:
+        mise: "10% bankroll sur cote 1.50"
+        si_lose: "-10% bankroll"
+        si_5_loses_consecutives: "-50% bankroll (récupération très difficile)"
+
+    regle_2_exposition_max:
+      description: "JAMAIS >20% bankroll exposée simultanément"
+      justification: "Protection contre corrélation cachée"
+      exemple:
+        paris_en_cours:
+          - "City victoire: 5%"
+          - "Liverpool O2.5: 4%"
+          - "Arsenal -1: 5%"
+          - "PSG cartons: 5%"
+        total: "19%"
+        nouveau_pari: "3%"
+        decision: "❌ REFUSE (total 22% > 20%)"
+
+    regle_3_stop_loss_journalier:
+      description: "Si -10% bankroll en une journée → STOP"
+      justification: "Protection contre tilt et variance extrême"
+      action: "Pause 24-48h, review processus"
+
+    regle_4_drawdown_max:
+      description: "Si -25% bankroll depuis peak → PAUSE 1 semaine"
+      justification: "Réévaluation complète du système"
+      action: "Analyser tous paris période, chercher leaks"
+
+    regle_5_mise_minimale:
+      description: "Jamais parier <1% bankroll"
+      justification: "Si Kelly <1%, edge trop faible ou variance trop haute"
+      decision: "Si Kelly suggère <1% → NO BET"
+
+  ajustement_bankroll:
+    frequence: "Hebdomadaire (chaque lundi)"
+    methode: "Nouvelle bankroll = bankroll actuelle"
+    justification: "Sizing s'adapte automatiquement aux gains/pertes"
+
+    exemple:
+      semaine_1:
+        bankroll_debut: 1000
+        mise_5pct: 50
+      semaine_2_apres_gains:
+        bankroll_debut: 1150
+        mise_5pct: 57.5
+      semaine_3_apres_pertes:
+        bankroll_debut: 980
+        mise_5pct: 49
+
+  protection_psychologique:
+    variance_acceptance:
+      reality: "Même avec 60% winrate, losing streaks 5-7 paris normales"
+      preparation: "S'attendre à drawdowns 15-20% (normal)"
+      mindset: "Focus sur PROCESSUS, pas résultats court-terme"
+
+    discipline:
+      no_chase: "JAMAIS augmenter mises après pertes (chase losses)"
+      no_tilt: "JAMAIS parier pour 'se refaire'"
+      process_trust: "Si processus correct, variance se lisse long-terme"
+
+# ============================================================================
+# MÉTRIQUES DE PERFORMANCE
+# ============================================================================
+metriques_performance:
+
+  description: |
+    KPIs pour évaluer si le système fonctionne.
+    Review mensuel obligatoire.
+
+  kpi_1_roi:
+    nom: "Return on Investment"
+    formule: "(profit_net / total_mise) * 100"
+    objectif: ">5% par mois (excellent)"
+    benchmark: ">3% par mois (bon)"
+    alerte: "<1% par mois (problème)"
+
+  kpi_2_yield:
+    nom: "Yield (ROI par pari)"
+    formule: "profit_net / (nombre_paris * mise_moyenne)"
+    objectif: ">8%"
+    benchmark: ">5%"
+    alerte: "<2%"
+
+  kpi_3_winrate:
+    nom: "Taux de réussite"
+    formule: "paris_gagnes / total_paris"
+    interpretation: "Dépend des cotes moyennes"
+    exemple:
+      cotes_basses_1_5_2_0: "Winrate attendu 60-65%"
+      cotes_moyennes_2_0_3_0: "Winrate attendu 50-55%"
+      cotes_hautes_3_0_plus: "Winrate attendu 40-45%"
+
+  kpi_4_cotes_moyennes:
+    nom: "Cote moyenne pariée"
+    objectif: "1.80 - 2.50 (sweet spot)"
+    justification: "Équilibre entre winrate et profit"
+
+  kpi_5_edge_realise:
+    nom: "Edge réalisé vs edge estimé"
+    formule: "winrate_reel - winrate_implicite_cotes"
+    objectif: ">3%"
+    exemple:
+      cotes_moyennes_2_00: "Winrate implicite 50%"
+      notre_winrate: "55%"
+      edge_realise: "5% (excellent)"
+
+  kpi_6_calibration:
+    nom: "Calibration des probabilités"
+    methode: |
+      Grouper paris par proba estimée (50-55%, 55-60%, etc.)
+      Comparer winrate réel vs proba moyenne groupe
+    objectif: "Différence <3% par groupe"
+    interpretation: "Nos estimations sont-elles fiables?"
+
+  red_flags:
+    rf_1_winrate_faible:
+      condition: "Winrate <45% sur cotes moyennes 2.00"
+      probleme: "Nos probas surestimées OU malchance extrême"
+      action: "Review calibration, vérifier biais"
+
+    rf_2_edge_negatif:
+      condition: "Edge réalisé <0% sur 50+ paris"
+      probleme: "PAS de value réelle, illusion d'edge"
+      action: "STOP immédiat, revoir système complet"
+
+    rf_3_variance_anormale:
+      condition: "Drawdown >30% avec processus correct"
+      probleme: "Variance extrême OU erreur systématique cachée"
+      action: "Pause 2 semaines, audit complet"
+
+# ============================================================================
+# NOTES D'UTILISATION AGENT #6
+# ============================================================================
+notes_utilisation_agent6:
+
+  workflow_quotidien:
+    timing: "9h30-10h00 (après Agent #4 probas et Agent #5 cotes)"
+
+    input_files:
+      - "output_agent4_probas.json (probabilités ajustées)"
+      - "output_agent5_cotes.json (meilleures cotes marché)"
+      - "bankroll_status.json (exposition actuelle)"
+
+    processus:
+      1: "Charger tous matchs du jour avec probas + cotes"
+      2: "Pour chaque marché: calculer edge"
+      3: "Évaluer niveau confiance"
+      4: "Appliquer filtres confiance"
+      5: "Si edge > seuil: calculer Kelly sizing"
+      6: "Vérifier exposition totale"
+      7: "Scorer et prioriser opportunités"
+      8: "Générer décisions finales"
+
+    output_file: "output_agent6_decisions.json"
+
+    format_output:
+      bets_acceptes:
+        - match_id: "liverpool_vs_everton"
+          marche: "Under 5.5 corners Liverpool"
+          cote: 2.10
+          mise_euro: 16.7
+          pct_bankroll: 1.67
+          edge: 15.5
+          confiance_score: 9.1
+          priorite: 1
+          raison: "Edge Alisson catcher validé"
+
+      bets_refuses:
+        - match_id: "arsenal_vs_tottenham"
+          marche: "Arsenal victoire"
+          cote: 1.75
+          raison_rejet: "Edge 1.6% insuffisant (seuil 5.0%)"
+
+      stats_journee:
+        opportunites_analysees: 47
+        bets_acceptes: 3
+        exposition_totale_pct: 8.2
+        exposition_totale_euro: 82
+        edge_moyen_paris: 12.4
+        confiance_moyenne: 8.6
+
+  cas_speciaux:
+    live_betting:
+      note: "Système optimisé pour pre-match, PAS live"
+      justification: "Besoin analyse temps-réel + réactivité (hors scope)"
+
+    multi_paris:
+      strategie: "ÉVITER"
+      justification: "Corrélations complexes, variance multiplicative"
+      exception: "Matchs totalement indépendants + edge fort chacun"
+
+    arbitrage:
+      note: "Hors philosophie value betting"
+      justification: "Opportunités rares, comptes limités rapidement"
+
+    asian_handicap:
+      statut: "Supporté si data disponible"
+      avantage: "Souvent meilleures cotes que handicaps européens"
+
+  integration_agents:
+    depend_agent4:
+      critique: true
+      data_requise: "Probabilités ajustées pour tous marchés"
+      format: "JSON avec confiance + edges détectés"
+
+    depend_agent5:
+      critique: true
+      data_requise: "Meilleures cotes disponibles"
+      format: "JSON avec source + timestamp"
+
+    feed_agent14:
+      output: "Liste paris recommandés avec sizing"
+      agent14_role: "Validation finale + placement ordres"
+
+# ============================================================================
+# METADATA
+# ============================================================================
+metadata:
+  version: "1.0.0"
+  date_creation: "2026-03-30"
+  agent: "Agent #6 - Détecteur Value"
+  auteur: "Système Multi-Agents"
+
+  philosophie:
+    - "QUE des maths, ZÉRO émotions"
+    - "Survivre > Croître vite"
+    - "Discipline > Intuition"
+    - "Processus > Résultats court-terme"
+
+  quotes_professionnels:
+    billy_walters: |
+      "Most people bet with their hearts, not their heads.
+       That's why they lose."
+
+    haralabos_voulgaris: |
+      "The market is generally efficient.
+       You need a real edge, not a perceived one."
+
+    matthew_benham: |
+      "I don't care about being right on any individual bet.
+       I care about being right often enough over thousands of bets."
+
+  prochaines_evolutions:
+    v1_1:
+      - "Machine Learning pour calibration automatique seuils"
+      - "Backtesting historique pour validation edges"
+      - "Détection patterns saisonniers"
+
+    v1_2:
+      - "Optimisation portfolio (correlation inter-paris)"
+      - "Dynamic Kelly adjustment (variance-aware)"
+      - "Sentiment analysis sharp money movements"

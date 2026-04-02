@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+dist/
+*.egg-info/
+
+# Résultats tests
+results/
+*.csv
+*.json
+
+# Données sensibles
+data/backtest_100_matches.csv
+data/*.csv
+!data/backtest_template.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Credentials
+.env
+config/api_keys.json
