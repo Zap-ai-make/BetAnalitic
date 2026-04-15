@@ -1,0 +1,82 @@
+/* Tailwind v4 with design tokens */
+@import "tailwindcss";
+@import "../styles/tokens.css";
+
+@theme {
+  /* Background Colors */
+  --color-bg-primary: #0D0D0F;
+  --color-bg-secondary: #161618;
+  --color-bg-tertiary: #1E1E22;
+
+  /* Accent Colors */
+  --color-accent-cyan: #00D4FF;
+  --color-accent-orange: #FF6B35;
+  --color-accent-green: #00FF88;
+  --color-accent-gold: #FFD93D;
+  --color-accent-red: #FF4757;
+
+  /* Text Colors */
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #A0A0A8;
+  --color-text-tertiary: #606068;
+
+  /* State Colors */
+  --color-state-success: #00FF88;
+  --color-state-error: #FF4757;
+  --color-state-warning: #FFD93D;
+
+  /* Agent Colors */
+  --color-agent-scout: #00FF88;
+  --color-agent-insider: #FF6B35;
+  --color-agent-referee: #FFD93D;
+  --color-agent-tactic: #00D4FF;
+  --color-agent-context: #9B59B6;
+  --color-agent-momentum: #E91E63;
+  --color-agent-wall: #607D8B;
+  --color-agent-goal: #4CAF50;
+  --color-agent-corner: #FF9800;
+  --color-agent-card: #F44336;
+  --color-agent-crowd: #3F51B5;
+  --color-agent-live: #00BCD4;
+  --color-agent-debate: #FFEB3B;
+  --color-agent-debrief: #795548;
+
+  /* Font families */
+  --font-family-body: var(--font-inter), system-ui, sans-serif;
+  --font-family-display: var(--font-outfit), system-ui, sans-serif;
+  --font-family-mono: var(--font-jetbrains-mono), monospace;
+}
+
+@layer utilities {
+  @keyframes ripple {
+    0% { transform: scale(0.98); }
+    50% { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .animate-shimmer {
+    animation: shimmer 1.5s infinite;
+  }
+}
+
+/* Safe area insets for PWA */
+@layer base {
+  .safe-area-insets {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  @media all and (display-mode: standalone) {
+    .safe-area-insets {
+      padding-top: max(env(safe-area-inset-top), 44px);
+      padding-bottom: max(env(safe-area-inset-bottom), 34px);
+    }
+  }
+}

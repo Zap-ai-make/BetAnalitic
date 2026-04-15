@@ -1,0 +1,113 @@
+/**
+ * BetAnalytic Design Tokens
+ * CSS Custom Properties for the complete design system
+ *
+ * Token Categories:
+ * - Background Colors (3)
+ * - Accent Colors (5)
+ * - Text Colors (3)
+ * - Agent Colors (14)
+ * - Spacing Scale (7)
+ * - Border Radius (5)
+ * - Typography Sizes (7)
+ * - Font Weights (4)
+ * - Gradients (2)
+ */
+
+:root {
+  /* ============================================
+     BACKGROUND COLORS (3)
+     ============================================ */
+  --color-bg-primary: #0D0D0F;      /* Noir très foncé - fond principal */
+  --color-bg-secondary: #161618;    /* Gris foncé - fond secondaire */
+  --color-bg-tertiary: #1E1E22;     /* Gris ultra foncé - fond tertiaire */
+
+  /* ============================================
+     ACCENT COLORS (5)
+     ============================================ */
+  --color-accent-cyan: #00D4FF;     /* Cyan - accent principal */
+  --color-accent-orange: #FF6B35;   /* Orange - accent secondaire */
+  --color-accent-green: #00FF88;    /* Vert - success */
+  --color-accent-gold: #FFD93D;     /* Or - warning */
+  --color-accent-red: #FF4757;      /* Rouge - error */
+
+  /* ============================================
+     TEXT COLORS (3)
+     ============================================ */
+  --color-text-primary: #FFFFFF;    /* Blanc pur - texte principal */
+  --color-text-secondary: #A0A0A8;  /* Gris moyen - texte secondaire */
+  --color-text-tertiary: #606068;   /* Gris foncé - texte tertiaire */
+
+  /* ============================================
+     AGENT COLORS (14)
+     Couleurs spécifiques pour les 14 agents IA
+     ============================================ */
+  --color-agent-scout: #00FF88;         /* Scout - Vert Néon */
+  --color-agent-insider: #FF6B35;       /* Insider - Orange Vif */
+  --color-agent-referee: #FFD93D;       /* RefereeAnalyst - Jaune Or */
+  --color-agent-tactic: #00D4FF;        /* TacticMaster - Cyan Électrique */
+  --color-agent-context: #9B59B6;       /* ContextKing - Violet Royal */
+  --color-agent-momentum: #E91E63;      /* MomentumX - Rose Fuchsia */
+  --color-agent-wall: #607D8B;          /* WallMaster - Gris Acier */
+  --color-agent-goal: #4CAF50;          /* GoalMaster - Vert Terrain */
+  --color-agent-corner: #FF9800;        /* CornerKing - Orange Corner */
+  --color-agent-card: #F44336;          /* CardShark - Rouge Carton */
+  --color-agent-crowd: #3F51B5;         /* CrowdWatch - Bleu Indigo */
+  --color-agent-live: #00BCD4;          /* LivePulse - Turquoise */
+  --color-agent-debate: #FFEB3B;        /* DebateArena - Jaune Arène */
+  --color-agent-debrief: #795548;       /* Debrief - Marron Archive */
+
+  /* ============================================
+     SPACING SCALE (7)
+     Base unit: 4px
+     ============================================ */
+  --spacing-1: 4px;     /* 0.25rem */
+  --spacing-2: 8px;     /* 0.5rem */
+  --spacing-4: 16px;    /* 1rem */
+  --spacing-6: 24px;    /* 1.5rem */
+  --spacing-8: 32px;    /* 2rem */
+  --spacing-12: 48px;   /* 3rem */
+  --spacing-16: 64px;   /* 4rem */
+
+  /* ============================================
+     BORDER RADIUS (5)
+     ============================================ */
+  --radius-sm: 4px;       /* Small radius */
+  --radius-md: 8px;       /* Medium radius */
+  --radius-lg: 12px;      /* Large radius */
+  --radius-xl: 16px;      /* Extra large radius */
+  --radius-full: 9999px;  /* Fully rounded (pills, circles) */
+
+  /* ============================================
+     TYPOGRAPHY SIZES (7)
+     ============================================ */
+  --text-xs: 10px;      /* 0.625rem - Extra small */
+  --text-sm: 12px;      /* 0.75rem - Small */
+  --text-base: 14px;    /* 0.875rem - Base (corps de texte) */
+  --text-lg: 16px;      /* 1rem - Large */
+  --text-xl: 20px;      /* 1.25rem - Extra large */
+  --text-2xl: 24px;     /* 1.5rem - 2X large */
+  --text-3xl: 32px;     /* 2rem - 3X large (titres) */
+
+  /* ============================================
+     FONT WEIGHTS (4)
+     ============================================ */
+  --font-normal: 400;     /* Normal weight */
+  --font-medium: 500;     /* Medium weight */
+  --font-semibold: 600;   /* Semibold weight */
+  --font-bold: 700;       /* Bold weight */
+
+  /* ============================================
+     FONT FAMILIES
+     Defined via next/font in layout.tsx
+     ============================================ */
+  --font-body: var(--font-inter);                 /* Inter - Corps de texte */
+  --font-display: var(--font-outfit);             /* Outfit - Titres */
+  --font-mono: var(--font-jetbrains-mono);        /* JetBrains Mono - Stats/Code */
+
+  /* ============================================
+     GRADIENTS (2)
+     ============================================ */
+  --gradient-logo: linear-gradient(135deg, #00D4FF 0%, #FF6B35 100%);         /* Logo gradient */
+  --gradient-premium: linear-gradient(135deg, #FFD93D 0%, #FFB300 100%);      /* Premium gradient */
+}

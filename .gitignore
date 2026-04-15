@@ -1,25 +1,49 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+.nyc_output
+
+# Next.js
+.next/
+out/
 build/
+
+# Production
 dist/
-*.egg-info/
 
-# Résultats tests
-results/
-*.csv
-*.json
+# Misc
+.DS_Store
+*.pem
+Thumbs.db
 
-# Données sensibles
-data/backtest_100_matches.csv
-data/*.csv
-!data/backtest_template.csv
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Local env files
+.env
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Database
+*.db
+*.db-journal
+
+# token-savior
+token-savior/
+.mcp.json
 
 # IDE
 .vscode/
@@ -28,13 +52,10 @@ data/*.csv
 *.swo
 *~
 
-# OS
-.DS_Store
-Thumbs.db
+# Claude & BMad
+.claude/
+_bmad/
+_bmad-output/
 
-# Logs
-*.log
-
-# Credentials
-.env
-config/api_keys.json
+# Uploads
+public/uploads/

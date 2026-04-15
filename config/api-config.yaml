@@ -1,0 +1,140 @@
+# ============================================================================
+# CONFIGURATION APIs - COMBINEE GAGNANT
+# ============================================================================
+# Mode: HYBRIDE (API gratuite + Web Scraping complementaire)
+# ============================================================================
+
+# API PRINCIPALE - API-Football v3
+# Plan: Free (100 requetes/jour)
+# Documentation: https://www.api-football.com/documentation-v3
+api_football:
+  enabled: true
+  base_url: "https://v3.football.api-sports.io"
+  api_key: "a7d228f257ed715c540956407febf4fd"
+  plan: "free"
+  limite_quotidienne: 100
+  headers:
+    x-apisports-key: "a7d228f257ed715c540956407febf4fd"
+    x-rapidapi-host: "v3.football.api-sports.io"
+
+  # Endpoints utilises par nos agents
+  endpoints:
+    # Agent #01 - Data Matchs
+    fixtures: "/fixtures"                    # Matchs du jour + resultats
+    fixtures_h2h: "/fixtures/headtohead"     # Confrontations directes
+    fixtures_lineups: "/fixtures/lineups"    # Compositions
+    fixtures_statistics: "/fixtures/statistics"  # Stats du match (corners, cartons, tirs...)
+    fixtures_events: "/fixtures/events"      # Evenements (buts, cartons, remplacements)
+
+    # Agent #02 - Data Cotes
+    odds: "/odds"                            # Cotes bookmakers
+    odds_live: "/odds/live"                  # Cotes en direct
+
+    # Agent #03 - Data Contexte
+    fixtures_players: "/fixtures/players"    # Stats joueurs par match
+    injuries: "/injuries"                    # Blessures
+    predictions: "/predictions"              # Predictions API (a comparer avec les notres)
+
+    # Agents d'analyse
+    teams_statistics: "/teams/statistics"    # Stats equipe saison
+    players: "/players"                      # Stats joueurs saison
+    standings: "/standings"                  # Classements
+    coaches: "/coachs"                       # Infos coaches
+
+  # Budget requetes par session d'analyse (10 matchs max)
+  budget_requetes:
+    par_match:
+      fixtures_info: 1
+      fixtures_h2h: 1
+      fixtures_lineups: 1
+      fixtures_statistics: 1
+      fixtures_events: 1
+      odds: 1
+      injuries: 1
+      predictions: 1
+      # Total par match: ~8 requetes
+    donnees_generales:
+      standings: 5          # 5 top ligues
+      teams_statistics: 10  # Stats des 10 equipes analysees
+      # Total general: ~15 requetes
+    # Budget total pour 10 matchs: 8*10 + 15 = 95 requetes (sous la limite de 100)
+
+  # Ligues supportees (IDs API-Football)
+  leagues:
+    ligue_1: 61
+    la_liga: 140
+    premier_league: 39
+    serie_a: 135
+    bundesliga: 78
+    ligue_2: 62
+    champions_league: 2
+    europa_league: 3
+
+# ============================================================================
+# SOURCES WEB SCRAPING (complement a l'API)
+# ============================================================================
+# Utilisees quand l'API ne fournit pas certaines donnees
+# ou pour valider/enrichir les donnees API
+
+web_scraping:
+  # Stats avancees (xG, PPDA, progressive passes)
+  fbref:
+    url: "https://fbref.com"
+    usage: "Stats avancees xG, xGA, corners detailles"
+    frequence: "1x par semaine pour historique, jour J pour derniers matchs"
+    priorite: "haute"
+
+  # Informations temps reel
+  sofascore:
+    url: "https://www.sofascore.com"
+    usage: "Compositions confirmees, notes joueurs, momentum"
+    frequence: "jour J, 2-3h avant le match"
+    priorite: "haute"
+
+  # Resultats et calendrier
+  flashscore:
+    url: "https://www.flashscore.com"
+    usage: "Resultats en temps reel, calendrier, forme recente"
+    frequence: "jour J"
+    priorite: "moyenne"
+
+  # Cotes et mouvements
+  oddsportal:
+    url: "https://www.oddsportal.com"
+    usage: "Historique cotes, mouvements de ligne, CLV post-match"
+    frequence: "jour J pour cotes, H+2 pour CLV"
+    priorite: "haute"
+
+  # Actualites et intelligence
+  web_search:
+    usage: "Team news, blessures last-minute, conferences de presse"
+    frequence: "jour J, multiple fois"
+    priorite: "critique"
+
+# ============================================================================
+# STRATEGIE HYBRIDE
+# ============================================================================
+# Ordre de priorite pour chaque type de donnee:
+#
+# 1. MATCHS DU JOUR       -> API-Football (fiable, structure)
+# 2. COMPOSITIONS          -> API-Football + Sofascore (confirmation)
+# 3. STATS HISTORIQUES     -> API-Football + FBref (xG avance)
+# 4. COTES                 -> API-Football + Oddsportal (multi-book)
+# 5. BLESSURES             -> API-Football + WebSearch (last-minute)
+# 6. ARBITRES              -> API-Football (stats de base)
+# 7. xG AVANCE             -> FBref uniquement (pas dans API free)
+# 8. INTELLIGENCE WEB      -> WebSearch uniquement
+# 9. METEO                 -> WebSearch
+# 10. PUBLIC BETTING       -> Oddsportal + WebSearch
+
+# ============================================================================
+# PARAMETRES SYSTEME
+# ============================================================================
+systeme:
+  max_matchs_par_session: 10
+  saison_actuelle: "2025"  # API-Football utilise l'annee de debut de saison
+  timezone: "GMT"
+  langue: "fr"
+  mode_debug: false
+  sauvegarder_reponses_api: true  # Cache les reponses pour economiser les requetes
+  dossier_cache: "./data/api_cache/"
