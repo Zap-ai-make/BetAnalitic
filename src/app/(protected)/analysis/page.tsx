@@ -16,6 +16,7 @@ interface ConversationMessage {
   agentName?: string
   content: string
   timestamp: Date
+  confidence?: number // 0-100
 }
 
 export default function AnalysisPage() {
@@ -29,6 +30,7 @@ export default function AnalysisPage() {
   const [fullAnalysisProgress, setFullAnalysisProgress] = React.useState(0)
   const [showFullAnalysisConfirm, setShowFullAnalysisConfirm] = React.useState(false)
   const [showClearConfirm, setShowClearConfirm] = React.useState(false)
+  const [showComparison, setShowComparison] = React.useState(false)
 
   // Filter agents based on input
   const filteredAgents = React.useMemo(() => {
@@ -38,6 +40,16 @@ export default function AnalysisPage() {
       agent.name.toLowerCase().includes(query)
     )
   }, [agentInput])
+
+  // Get agent messages for comparison
+  const agentMessages = React.useMemo(() => {
+    return messages.filter((m) => m.type === "agent" && m.agentId)
+  }, [messages])
+
+  const uniqueAgentCount = React.useMemo(() => {
+    const uniqueIds = new Set(agentMessages.map((m) => m.agentId))
+    return uniqueIds.size
+  }, [agentMessages])
 
   React.useEffect(() => {
     setShowAgentSuggestions(
@@ -49,6 +61,31 @@ export default function AnalysisPage() {
     setSelectedAgent(agentId)
     setAgentInput(`@${agentName}`)
     setShowAgentSuggestions(false)
+  }
+
+  const getConfidenceStyle = (confidence: number) => {
+    if (confidence >= 80) {
+      return {
+        label: "Haute",
+        bgColor: "bg-green-500/20",
+        textColor: "text-green-500",
+        borderColor: "border-green-500/30",
+      }
+    } else if (confidence >= 50) {
+      return {
+        label: "Moyenne",
+        bgColor: "bg-yellow-500/20",
+        textColor: "text-yellow-500",
+        borderColor: "border-yellow-500/30",
+      }
+    } else {
+      return {
+        label: "Faible",
+        bgColor: "bg-orange-500/20",
+        textColor: "text-orange-500",
+        borderColor: "border-orange-500/30",
+      }
+    }
   }
 
   const handleInvokeAgent = async () => {
@@ -75,6 +112,7 @@ export default function AnalysisPage() {
         agentName: agent?.name,
         content: `${agent?.emoji} Analyse de vos ${matches.length} match(s) en cours... (Mode: ${mode})\n\nRéponse simulée de ${agent?.name}. L'intégration backend sera ajoutée prochainement.`,
         timestamp: new Date(),
+        confidence: Math.floor(Math.random() * 55) + 40, // Random 40-95
       }
       setMessages((prev) => [...prev, agentMessage])
       setIsInvoking(false)
@@ -128,6 +166,7 @@ export default function AnalysisPage() {
         agentName: agent.name,
         content: `${agent.emoji} Analyse ${agent.category} de vos ${matches.length} match(s)...\n\nRéponse simulée (mode ${mode}).`,
         timestamp: new Date(),
+        confidence: Math.floor(Math.random() * 55) + 40,
       }
 
       setMessages((prev) => [...prev, agentMessage])
@@ -145,6 +184,7 @@ export default function AnalysisPage() {
       agentName: "Synthèse",
       content: `🎓 Analyse complète terminée en ${duration}s\n\n✅ ${AGENTS.length} agents consultés\n📊 ${matches.length} match(s) analysés\n\nRésumé des insights clés (backend à implémenter)`,
       timestamp: new Date(),
+      confidence: Math.floor(Math.random() * 20) + 75, // Higher for summary: 75-95
     }
     setMessages((prev) => [...prev, summaryMessage])
 
@@ -405,6 +445,18 @@ export default function AnalysisPage() {
                 </>
               )}
 
+              {/* Compare Agents Button */}
+              {uniqueAgentCount >= 2 && (
+                <Button
+                  variant="outline"
+                  size="lg"
+                  onClick={() => setShowComparison(true)}
+                  className="w-full mt-4"
+                >
+                  🔄 Comparer les agents ({uniqueAgentCount})
+                </Button>
+              )}
+
               {/* Conversation Thread */}
               <div className="mt-6 space-y-3">
                 <h2 className="font-display font-semibold text-text-primary text-sm">
@@ -438,6 +490,22 @@ export default function AnalysisPage() {
                             <span className="font-display font-semibold text-text-primary text-sm">
                               {message.agentName}
                             </span>
+                            {message.confidence !== undefined && (() => {
+                              const style = getConfidenceStyle(message.confidence)
+                              return (
+                                <div
+                                  className={cn(
+                                    "px-2 py-0.5 rounded-full text-xs font-medium border",
+                                    style.bgColor,
+                                    style.textColor,
+                                    style.borderColor
+                                  )}
+                                  title={`Confiance: ${message.confidence}% - ${style.label} confiance basée sur les données disponibles`}
+                                >
+                                  {message.confidence}%
+                                </div>
+                              )
+                            })()}
                             <span className="text-xs text-text-tertiary ml-auto">
                               {message.timestamp.toLocaleTimeString("fr-FR", {
                                 hour: "2-digit",
@@ -533,6 +601,105 @@ export default function AnalysisPage() {
                   Vider tout
                 </Button>
               </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Agent Comparison Modal */}
+      {showComparison && agentMessages.length >= 2 && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowComparison(false)}
+          />
+          <div className="fixed inset-4 z-50 flex items-center justify-center">
+            <div className="bg-bg-secondary rounded-lg border border-bg-tertiary p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-display text-lg font-bold text-text-primary">
+                  Comparaison des Agents
+                </h3>
+                <button
+                  onClick={() => setShowComparison(false)}
+                  className="text-text-secondary hover:text-text-primary transition-colors"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {agentMessages.map((message) => {
+                  const agent = AGENTS.find((a) => a.id === message.agentId)
+                  const style = message.confidence
+                    ? getConfidenceStyle(message.confidence)
+                    : null
+
+                  return (
+                    <div
+                      key={message.id}
+                      className="bg-bg-primary rounded-lg border border-bg-tertiary p-4"
+                    >
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-2xl">{agent?.emoji}</span>
+                        <div className="flex-1">
+                          <div className="font-display font-semibold text-text-primary">
+                            {message.agentName}
+                          </div>
+                          <div className="text-xs text-text-tertiary">
+                            {agent?.category}
+                          </div>
+                        </div>
+                        {message.confidence !== undefined && style && (
+                          <div
+                            className={cn(
+                              "px-2 py-1 rounded-full text-xs font-medium border",
+                              style.bgColor,
+                              style.textColor,
+                              style.borderColor
+                            )}
+                          >
+                            {message.confidence}%
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-sm text-text-secondary whitespace-pre-wrap">
+                        {message.content}
+                      </p>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Agreement Indicator */}
+              {agentMessages.length >= 2 && (() => {
+                const confidences = agentMessages
+                  .filter((m) => m.confidence !== undefined)
+                  .map((m) => m.confidence!)
+                const avg =
+                  confidences.reduce((a, b) => a + b, 0) / confidences.length
+                const variance =
+                  confidences.reduce((sum, c) => sum + Math.pow(c - avg, 2), 0) /
+                  confidences.length
+                const stdDev = Math.sqrt(variance)
+
+                return (
+                  <div className="mt-4 p-4 bg-bg-tertiary rounded-lg">
+                    <div className="text-sm font-medium text-text-primary mb-2">
+                      Indicateur de consensus
+                    </div>
+                    <div className="text-xs text-text-secondary">
+                      {stdDev < 10
+                        ? "✅ Fort consensus - Les agents sont largement d'accord"
+                        : stdDev < 20
+                          ? "⚖️ Consensus modéré - Quelques différences d'opinions"
+                          : "⚠️ Opinions divergentes - Analyses significativement différentes"}
+                    </div>
+                    <div className="text-xs text-text-tertiary mt-1">
+                      Confiance moyenne: {avg.toFixed(1)}% (écart-type: {stdDev.toFixed(1)})
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
         </>
