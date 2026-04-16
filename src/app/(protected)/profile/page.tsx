@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "~/lib/utils"
@@ -30,6 +30,43 @@ export default function ProfilePage() {
   const router = useRouter()
   const [darkMode, setDarkMode] = React.useState(true)
   const [notifications, setNotifications] = React.useState(true)
+  const [isLoggingOut, setIsLoggingOut] = React.useState(false)
+
+  // Analysis preferences
+  const [expertiseLevel, setExpertiseLevel] = React.useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">("INTERMEDIATE")
+  const [analysisDepth, setAnalysisDepth] = React.useState<"QUICK" | "STANDARD" | "DETAILED">("STANDARD")
+
+  // Load preferences from localStorage
+  React.useEffect(() => {
+    const savedExpertiseLevel = localStorage.getItem("expertiseLevel") as typeof expertiseLevel | null
+    const savedAnalysisDepth = localStorage.getItem("analysisDepth") as typeof analysisDepth | null
+    if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
+    if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
+  }, [])
+
+  // Save preferences to localStorage
+  React.useEffect(() => {
+    localStorage.setItem("expertiseLevel", expertiseLevel)
+  }, [expertiseLevel])
+
+  React.useEffect(() => {
+    localStorage.setItem("analysisDepth", analysisDepth)
+  }, [analysisDepth])
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true)
+    try {
+      // Clear local storage
+      localStorage.clear()
+      // Clear session storage
+      sessionStorage.clear()
+      // Sign out and redirect to login
+      await signOut({ callbackUrl: "/login", redirect: true })
+    } catch (error) {
+      console.error("Logout failed:", error)
+      setIsLoggingOut(false)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -154,6 +191,39 @@ export default function ProfilePage() {
           </div>
         </div>
 
+        {/* Analysis Preferences Section */}
+        <div className="mb-6">
+          <h2 className="font-display font-semibold text-text-primary mb-3 flex items-center gap-2">
+            <span>🎯</span>
+            Préférences d&apos;Analyse
+          </h2>
+
+          <div className="space-y-2">
+            <SelectMenuItem
+              icon="📚"
+              label="Niveau d'Expertise"
+              value={expertiseLevel}
+              options={[
+                { value: "BEGINNER", label: "Débutant", subtitle: "Explications simples et détaillées" },
+                { value: "INTERMEDIATE", label: "Intermédiaire", subtitle: "Équilibre entre détail et concision" },
+                { value: "EXPERT", label: "Expert", subtitle: "Données denses, concepts avancés" },
+              ]}
+              onChange={(value) => setExpertiseLevel(value as typeof expertiseLevel)}
+            />
+            <SelectMenuItem
+              icon="📊"
+              label="Profondeur d'Analyse"
+              value={analysisDepth}
+              options={[
+                { value: "QUICK", label: "Rapide", subtitle: "Insights clés uniquement" },
+                { value: "STANDARD", label: "Standard", subtitle: "Analyse équilibrée" },
+                { value: "DETAILED", label: "Détaillée", subtitle: "Analyse complète et approfondie" },
+              ]}
+              onChange={(value) => setAnalysisDepth(value as typeof analysisDepth)}
+            />
+          </div>
+        </div>
+
         {/* Other Links */}
         <div className="space-y-2">
           <MenuItem
@@ -175,9 +245,11 @@ export default function ProfilePage() {
 
         {/* Logout */}
         <button
-          className="w-full mt-6 py-3 bg-bg-secondary rounded-xl text-accent-red font-medium text-sm hover:bg-bg-tertiary transition-colors"
+          onClick={handleLogout}
+          disabled={isLoggingOut}
+          className="w-full mt-6 py-3 bg-bg-secondary rounded-xl text-accent-red font-medium text-sm hover:bg-bg-tertiary transition-colors disabled:opacity-50"
         >
-          Se déconnecter
+          {isLoggingOut ? "Déconnexion..." : "Se déconnecter"}
         </button>
 
         {/* Version */}
@@ -258,5 +330,96 @@ function ToggleMenuItem({ icon, label, checked, onChange }: ToggleMenuItemProps)
         />
       </button>
     </div>
+  )
+}
+
+// Select Menu Item Component
+interface SelectMenuItemProps {
+  icon: string
+  label: string
+  value: string
+  options: Array<{ value: string; label: string; subtitle?: string }>
+  onChange: (value: string) => void
+}
+
+function SelectMenuItem({ icon, label, value, options, onChange }: SelectMenuItemProps) {
+  const [isOpen, setIsOpen] = React.useState(false)
+  const currentOption = options.find((opt) => opt.value === value)
+
+  return (
+    <>
+      <button
+        onClick={() => setIsOpen(true)}
+        className="w-full flex items-center justify-between p-4 bg-bg-secondary rounded-xl hover:bg-bg-tertiary transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-bg-tertiary rounded-lg flex items-center justify-center text-lg">
+            {icon}
+          </div>
+          <div className="text-left">
+            <p className="font-medium text-text-primary text-sm">{label}</p>
+            <p className="text-xs text-text-tertiary">{currentOption?.label}</p>
+          </div>
+        </div>
+        <ChevronRight className="w-5 h-5 text-text-tertiary" />
+      </button>
+
+      {/* Selection Modal */}
+      {isOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary rounded-t-2xl p-6 space-y-4 animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-display text-lg font-bold text-text-primary">
+                {label}
+              </h3>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="text-text-secondary hover:text-text-primary transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {options.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => {
+                    onChange(option.value)
+                    setIsOpen(false)
+                  }}
+                  className={cn(
+                    "w-full p-4 rounded-lg text-left transition-colors",
+                    value === option.value
+                      ? "bg-accent-cyan/20 border-2 border-accent-cyan"
+                      : "bg-bg-primary border-2 border-transparent hover:border-bg-tertiary"
+                  )}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-text-primary text-sm">
+                        {option.label}
+                      </p>
+                      {option.subtitle && (
+                        <p className="text-xs text-text-tertiary mt-1">
+                          {option.subtitle}
+                        </p>
+                      )}
+                    </div>
+                    {value === option.value && (
+                      <div className="text-accent-cyan text-lg">✓</div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </>
   )
 }

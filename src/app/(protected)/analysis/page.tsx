@@ -33,6 +33,18 @@ export default function AnalysisPage() {
   const [showComparison, setShowComparison] = React.useState(false)
   const [accuracyModalAgent, setAccuracyModalAgent] = React.useState<string | null>(null)
 
+  // User preferences
+  const [expertiseLevel, setExpertiseLevel] = React.useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">("INTERMEDIATE")
+  const [analysisDepth, setAnalysisDepth] = React.useState<"QUICK" | "STANDARD" | "DETAILED">("STANDARD")
+
+  // Load preferences from localStorage
+  React.useEffect(() => {
+    const savedExpertiseLevel = localStorage.getItem("expertiseLevel") as typeof expertiseLevel | null
+    const savedAnalysisDepth = localStorage.getItem("analysisDepth") as typeof analysisDepth | null
+    if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
+    if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
+  }, [])
+
   // Filter agents based on input
   const filteredAgents = React.useMemo(() => {
     if (!agentInput.startsWith("@")) return []
@@ -114,6 +126,40 @@ export default function AnalysisPage() {
     }
   }
 
+  const getPersonalizedResponse = (
+    agentEmoji: string,
+    agentName: string,
+    matchCount: number,
+    currentMode: typeof mode,
+    expertise: typeof expertiseLevel,
+    depth: typeof analysisDepth
+  ) => {
+    const baseIntro = `${agentEmoji} Analyse de vos ${matchCount} match(s)`
+
+    // Expertise level variations
+    let expertiseContext = ""
+    if (expertise === "BEGINNER") {
+      expertiseContext = "\n\n📚 Mode Débutant: Je vais vous expliquer simplement les concepts clés et leurs implications pour vos paris."
+    } else if (expertise === "EXPERT") {
+      expertiseContext = "\n\n🎯 Analyse Experte: xG, PPDA, variance, tendances avancées. Données denses."
+    }
+
+    // Analysis depth variations
+    let depthContext = ""
+    if (depth === "QUICK") {
+      depthContext = "\n\n⚡ Analyse Rapide: Points clés uniquement."
+    } else if (depth === "DETAILED") {
+      depthContext = "\n\n📊 Analyse Détaillée: Exploration approfondie de tous les facteurs."
+    }
+
+    // Mode variations
+    const modeContext = currentMode === "analytique"
+      ? "\n\n📈 Mode Analytique: Approche data-driven, statistiques objectives."
+      : "\n\n⚽ Mode Supporter: Perspective passionnée, contexte émotionnel."
+
+    return `${baseIntro}${expertiseContext}${depthContext}${modeContext}\n\n${agentName} (Mock): Réponse simulée. Backend à implémenter.`
+  }
+
   const handleInvokeAgent = async () => {
     if (!selectedAgent || matches.length === 0) return
 
@@ -136,7 +182,14 @@ export default function AnalysisPage() {
         type: "agent",
         agentId: selectedAgent,
         agentName: agent?.name,
-        content: `${agent?.emoji} Analyse de vos ${matches.length} match(s) en cours... (Mode: ${mode})\n\nRéponse simulée de ${agent?.name}. L'intégration backend sera ajoutée prochainement.`,
+        content: getPersonalizedResponse(
+          agent?.emoji ?? "",
+          agent?.name ?? "",
+          matches.length,
+          mode,
+          expertiseLevel,
+          analysisDepth
+        ),
         timestamp: new Date(),
         confidence: Math.floor(Math.random() * 55) + 40, // Random 40-95
       }
@@ -190,7 +243,14 @@ export default function AnalysisPage() {
         type: "agent",
         agentId: agent.id,
         agentName: agent.name,
-        content: `${agent.emoji} Analyse ${agent.category} de vos ${matches.length} match(s)...\n\nRéponse simulée (mode ${mode}).`,
+        content: getPersonalizedResponse(
+          agent.emoji,
+          agent.name,
+          matches.length,
+          mode,
+          expertiseLevel,
+          analysisDepth
+        ),
         timestamp: new Date(),
         confidence: Math.floor(Math.random() * 55) + 40,
       }
