@@ -30,6 +30,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const [darkMode, setDarkMode] = React.useState(true)
   const [notifications, setNotifications] = React.useState(true)
+  const [learnMode, setLearnMode] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
   // Analysis preferences
@@ -40,8 +41,10 @@ export default function ProfilePage() {
   React.useEffect(() => {
     const savedExpertiseLevel = localStorage.getItem("expertiseLevel") as typeof expertiseLevel | null
     const savedAnalysisDepth = localStorage.getItem("analysisDepth") as typeof analysisDepth | null
+    const savedLearnMode = localStorage.getItem("learnMode") === "true"
     if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
+    setLearnMode(savedLearnMode)
   }, [])
 
   // Save preferences to localStorage
@@ -52,6 +55,10 @@ export default function ProfilePage() {
   React.useEffect(() => {
     localStorage.setItem("analysisDepth", analysisDepth)
   }, [analysisDepth])
+
+  React.useEffect(() => {
+    localStorage.setItem("learnMode", String(learnMode))
+  }, [learnMode])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -181,6 +188,12 @@ export default function ProfilePage() {
               label="Notifications"
               checked={notifications}
               onChange={setNotifications}
+            />
+            <ToggleMenuItem
+              icon="📚"
+              label="Mode Apprentissage"
+              checked={learnMode}
+              onChange={setLearnMode}
             />
             <MenuItem
               icon="📊"

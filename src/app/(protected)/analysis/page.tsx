@@ -36,6 +36,7 @@ export default function AnalysisPage() {
   // User preferences
   const [expertiseLevel, setExpertiseLevel] = React.useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">("INTERMEDIATE")
   const [analysisDepth, setAnalysisDepth] = React.useState<"QUICK" | "STANDARD" | "DETAILED">("STANDARD")
+  const [learnMode, setLearnMode] = React.useState(false)
 
   // Voice input
   const [isRecording, setIsRecording] = React.useState(false)
@@ -50,8 +51,10 @@ export default function AnalysisPage() {
   React.useEffect(() => {
     const savedExpertiseLevel = localStorage.getItem("expertiseLevel") as typeof expertiseLevel | null
     const savedAnalysisDepth = localStorage.getItem("analysisDepth") as typeof analysisDepth | null
+    const savedLearnMode = localStorage.getItem("learnMode") === "true"
     if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
+    setLearnMode(savedLearnMode)
   }, [])
 
   // Filter agents based on input
@@ -141,8 +144,36 @@ export default function AnalysisPage() {
     matchCount: number,
     currentMode: typeof mode,
     expertise: typeof expertiseLevel,
-    depth: typeof analysisDepth
+    depth: typeof analysisDepth,
+    isLearnMode: boolean
   ) => {
+    // Learn Mode: Educational content
+    if (isLearnMode) {
+      return `${agentEmoji} Analyse Éducative de vos ${matchCount} match(s)
+
+📚 Mode Apprentissage Actif
+
+**Concept Clé: Analyse ${agentName}**
+${agentName} se concentre sur l'analyse des données pour identifier les tendances et opportunités. Voici les concepts importants:
+
+• **Forme récente**: Performance d'une équipe sur ses 5 derniers matchs. Important mais pas suffisant seul.
+• **xG (Expected Goals)**: Mesure la qualité des occasions créées. Plus fiable que les buts marqués seuls.
+• **H2H (Head to Head)**: Historique des confrontations directes entre les deux équipes.
+
+**Pourquoi c'est important:**
+Comprendre ces concepts vous aide à évaluer objectivement un match au-delà des apparences. Une équipe peut gagner 3-0 mais avoir une xG de 0.5 - c'est un signal d'alerte!
+
+**Termes à connaître:**
+• BTTS: Both Teams To Score (les deux équipes marquent)
+• Over/Under: Plus/Moins de X buts dans le match
+• Value Bet: Cote supérieure à la probabilité réelle
+
+💡 **En savoir plus**: Ces analyses vous aident à comprendre le football, pas à parier. Concentrez-vous sur l'apprentissage!
+
+⚠️ Mode Apprentissage: Aucune recommandation de pari n'est fournie.`
+    }
+
+    // Normal Mode: Personalized analysis
     const baseIntro = `${agentEmoji} Analyse de vos ${matchCount} match(s)`
 
     // Expertise level variations
@@ -303,7 +334,8 @@ export default function AnalysisPage() {
           matches.length,
           mode,
           expertiseLevel,
-          analysisDepth
+          analysisDepth,
+          learnMode
         ),
         timestamp: new Date(),
         confidence: Math.floor(Math.random() * 55) + 40, // Random 40-95
@@ -365,7 +397,8 @@ export default function AnalysisPage() {
           matches.length,
           mode,
           expertiseLevel,
-          analysisDepth
+          analysisDepth,
+          learnMode
         ),
         timestamp: new Date(),
         confidence: Math.floor(Math.random() * 55) + 40,
