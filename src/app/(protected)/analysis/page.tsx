@@ -256,9 +256,9 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     recognitionInstance.onresult = (event: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
       const transcript = Array.from(event.results)
-        .map((result) => result[0]?.transcript ?? "")
+        .map((result: any) => result[0]?.transcript ?? "")
         .join('')
 
       // Auto-add @ if not present and not empty
