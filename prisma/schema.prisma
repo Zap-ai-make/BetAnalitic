@@ -72,6 +72,9 @@ model User {
   sessions              Session[]
   verificationTokens    VerificationToken[]
   notificationPrefs     NotificationPreferences?
+  agentConversations    AgentConversation[]
+  agentMessages         AgentMessage[]
+  agentFeedback         AgentFeedback[]
 
   @@index([email])
   @@index([phone])
@@ -302,6 +305,95 @@ model PrecomputedMatchData {
 
   @@index([expiresAt])
   @@index([matchId])
+}
+
+// ============================================
+// AI AGENTS
+// ============================================
+
+model AgentConversation {
+  id          String   @id @default(cuid())
+  userId      String
+  agentType   AgentType
+  title       String?
+  matchId     String?
+  roomId      String?
+  isGuest     Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    AgentMessage[]
+
+  @@index([userId])
+  @@index([agentType])
+  @@index([matchId])
+  @@index([createdAt])
+}
+
+model AgentMessage {
+  id              String   @id @default(cuid())
+  conversationId  String
+  userId          String
+  role            MessageRole
+  content         String   @db.Text
+  sources         Json?    // Array of sources/citations
+  metadata        Json?    // Additional data (tokens, latency, etc)
+
+  createdAt       DateTime @default(now())
+
+  conversation    AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedback        AgentFeedback?
+
+  @@index([conversationId])
+  @@index([userId])
+  @@index([createdAt])
+}
+
+model AgentFeedback {
+  id          String   @id @default(cuid())
+  messageId   String   @unique
+  userId      String
+  rating      FeedbackRating
+  comment     String?
+
+  createdAt   DateTime @default(now())
+
+  message     AgentMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([rating])
+}
+
+enum AgentType {
+  SCOUT          // 🔍 DataScout
+  FORM           // 📊 FormAnalyzer
+  H2H            // ⚔️ HeadToHead
+  STATS          // 📈 StatsMaster
+  MOMENTUM       // 🌊 MomentumTracker
+  CONTEXT        // 🧠 ContextKing
+  ODDS           // 💰 OddsWhisperer
+  WEATHER        // 🌦️ WeatherGuru
+  REFEREE        // 🟨 RefereeWatch
+  INJURY         // 🏥 InjuryAlert
+  SENTIMENT      // 💬 SentimentPulse
+  PREDICTION     // 🎯 PredictMaster
+  RISK           // ⚠️ RiskGuardian
+  VALUE          // 💎 ValueHunter
+}
+
+enum MessageRole {
+  USER
+  AGENT
+  SYSTEM
+}
+
+enum FeedbackRating {
+  THUMBS_UP
+  THUMBS_DOWN
 }
 
 // ============================================
