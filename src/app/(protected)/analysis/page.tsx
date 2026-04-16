@@ -31,6 +31,7 @@ export default function AnalysisPage() {
   const [showFullAnalysisConfirm, setShowFullAnalysisConfirm] = React.useState(false)
   const [showClearConfirm, setShowClearConfirm] = React.useState(false)
   const [showComparison, setShowComparison] = React.useState(false)
+  const [accuracyModalAgent, setAccuracyModalAgent] = React.useState<string | null>(null)
 
   // Filter agents based on input
   const filteredAgents = React.useMemo(() => {
@@ -81,6 +82,31 @@ export default function AnalysisPage() {
     } else {
       return {
         label: "Faible",
+        bgColor: "bg-orange-500/20",
+        textColor: "text-orange-500",
+        borderColor: "border-orange-500/30",
+      }
+    }
+  }
+
+  const getAccuracyStyle = (accuracy: number) => {
+    if (accuracy >= 70) {
+      return {
+        label: "Excellente",
+        bgColor: "bg-green-500/20",
+        textColor: "text-green-500",
+        borderColor: "border-green-500/30",
+      }
+    } else if (accuracy >= 60) {
+      return {
+        label: "Bonne",
+        bgColor: "bg-yellow-500/20",
+        textColor: "text-yellow-500",
+        borderColor: "border-yellow-500/30",
+      }
+    } else {
+      return {
+        label: "Moyenne",
         bgColor: "bg-orange-500/20",
         textColor: "text-orange-500",
         borderColor: "border-orange-500/30",
@@ -265,7 +291,7 @@ export default function AnalysisPage() {
                   onChange={(e) => setAgentInput(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && selectedAgent) {
-                      handleInvokeAgent()
+                      void handleInvokeAgent()
                     }
                   }}
                   placeholder="@AgentName"
@@ -278,7 +304,7 @@ export default function AnalysisPage() {
                   )}
                 />
                 <button
-                  onClick={handleInvokeAgent}
+                  onClick={() => void handleInvokeAgent()}
                   disabled={!selectedAgent || isInvoking}
                   className={cn(
                     "absolute right-2 top-1/2 -translate-y-1/2",
@@ -484,12 +510,17 @@ export default function AnalysisPage() {
                       >
                         {message.type === "agent" && (
                           <div className="flex items-center gap-2 mb-2">
-                            <span className="text-xl">
-                              {AGENTS.find((a) => a.id === message.agentId)?.emoji}
-                            </span>
-                            <span className="font-display font-semibold text-text-primary text-sm">
-                              {message.agentName}
-                            </span>
+                            <button
+                              onClick={() => setAccuracyModalAgent(message.agentId ?? null)}
+                              className="flex items-center gap-2 hover:opacity-80 transition-opacity group"
+                            >
+                              <span className="text-xl">
+                                {AGENTS.find((a) => a.id === message.agentId)?.emoji}
+                              </span>
+                              <span className="font-display font-semibold text-text-primary text-sm group-hover:text-accent-cyan transition-colors">
+                                {message.agentName}
+                              </span>
+                            </button>
                             {message.confidence !== undefined && (() => {
                               const style = getConfidenceStyle(message.confidence)
                               return (
@@ -704,6 +735,157 @@ export default function AnalysisPage() {
           </div>
         </>
       )}
+
+      {/* Historical Accuracy Modal */}
+      {accuracyModalAgent && (() => {
+        const agent = AGENTS.find((a) => a.id === accuracyModalAgent)
+        const accuracy = agent?.historicalAccuracy
+
+        return (
+          <>
+            <div
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setAccuracyModalAgent(null)}
+            />
+            <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-lg">
+              <div className="bg-bg-secondary rounded-lg border border-bg-tertiary p-6 space-y-4">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{agent?.emoji}</span>
+                    <div>
+                      <h3 className="font-display text-lg font-bold text-text-primary">
+                        {agent?.name}
+                      </h3>
+                      <p className="text-xs text-text-tertiary">{agent?.category}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setAccuracyModalAgent(null)}
+                    className="text-text-secondary hover:text-text-primary transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {!accuracy || accuracy.totalPredictions < 30 ? (
+                  <div className="bg-bg-primary rounded-lg p-4 text-center">
+                    <p className="text-text-secondary text-sm">
+                      ⏳ Données insuffisantes
+                    </p>
+                    <p className="text-text-tertiary text-xs mt-1">
+                      {accuracy?.totalPredictions ?? 0} prédictions (minimum 30 requis)
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Overall Accuracy */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-text-secondary">
+                          Précision Globale
+                        </span>
+                        {(() => {
+                          const style = getAccuracyStyle(accuracy.overallAccuracy)
+                          return (
+                            <div
+                              className={cn(
+                                "px-3 py-1 rounded-full text-sm font-semibold border-2",
+                                style.bgColor,
+                                style.textColor,
+                                style.borderColor
+                              )}
+                            >
+                              {accuracy.overallAccuracy}%
+                            </div>
+                          )
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Recent Form */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-text-secondary">
+                          Forme Récente (30j)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {(() => {
+                            const trend =
+                              accuracy.recentForm > accuracy.overallAccuracy
+                                ? "↑"
+                                : accuracy.recentForm < accuracy.overallAccuracy
+                                  ? "↓"
+                                  : "→"
+                            const trendColor =
+                              trend === "↑"
+                                ? "text-green-500"
+                                : trend === "↓"
+                                  ? "text-orange-500"
+                                  : "text-text-tertiary"
+                            return (
+                              <>
+                                <span className={cn("text-lg", trendColor)}>
+                                  {trend}
+                                </span>
+                                <span className="text-text-primary font-semibold">
+                                  {accuracy.recentForm}%
+                                </span>
+                              </>
+                            )
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Prediction Breakdown */}
+                    <div className="space-y-2">
+                      <span className="text-sm font-medium text-text-secondary">
+                        Détail par Type de Prédiction
+                      </span>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { label: "Résultat", value: accuracy.predictionBreakdown.result },
+                          { label: "Buts", value: accuracy.predictionBreakdown.goals },
+                          { label: "Corners", value: accuracy.predictionBreakdown.corners },
+                          { label: "Cartes", value: accuracy.predictionBreakdown.cards },
+                        ].map((item) => (
+                          <div
+                            key={item.label}
+                            className="bg-bg-primary rounded-lg p-3 border border-bg-tertiary"
+                          >
+                            <div className="text-xs text-text-tertiary mb-1">
+                              {item.label}
+                            </div>
+                            <div className="text-text-primary font-semibold">
+                              {item.value}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Value Added */}
+                    <div className="bg-bg-primary rounded-lg p-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-text-tertiary">
+                          Valeur ajoutée vs hasard (50%)
+                        </span>
+                        <span className="text-accent-cyan font-semibold">
+                          +{(accuracy.overallAccuracy - 50).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="text-xs text-text-tertiary mt-1">
+                        {accuracy.totalPredictions} prédictions analysées
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </>
+        )
+      })()}
 
       <DashboardNav />
     </div>
