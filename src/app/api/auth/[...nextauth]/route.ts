@@ -1,3 +1,14 @@
-import { handlers } from "~/server/auth"
+import { type NextRequest } from "next/server"
 
-export const { GET, POST } = handlers
+export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
+
+export async function GET(request: NextRequest) {
+  const { handlers } = await import("~/server/auth")
+  return handlers.GET(request)
+}
+
+export async function POST(request: NextRequest) {
+  const { handlers } = await import("~/server/auth")
+  return handlers.POST(request)
+}
