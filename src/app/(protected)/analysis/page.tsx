@@ -235,6 +235,7 @@ export default function AnalysisPage() {
     // Invoke all agents sequentially
     for (let i = 0; i < AGENTS.length; i++) {
       const agent = AGENTS[i]
+      if (!agent) continue
 
       await new Promise((resolve) => setTimeout(resolve, 800))
 
