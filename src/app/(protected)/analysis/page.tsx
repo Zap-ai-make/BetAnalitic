@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { useCouponStore } from "~/lib/stores/couponStore"
@@ -20,6 +21,7 @@ interface ConversationMessage {
 }
 
 export default function AnalysisPage() {
+  const router = useRouter()
   const { matches, removeMatch, clearCoupon, mode, setMode } = useCouponStore()
   const [agentInput, setAgentInput] = React.useState("")
   const [showAgentSuggestions, setShowAgentSuggestions] = React.useState(false)
@@ -37,6 +39,11 @@ export default function AnalysisPage() {
   const [expertiseLevel, setExpertiseLevel] = React.useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">("INTERMEDIATE")
   const [analysisDepth, setAnalysisDepth] = React.useState<"QUICK" | "STANDARD" | "DETAILED">("STANDARD")
   const [learnMode, setLearnMode] = React.useState(false)
+
+  // Burst Mode (Premium feature)
+  const [userTier, setUserTier] = React.useState<"FREE" | "PREMIUM" | "EXPERT">("PREMIUM") // Mock: Set to PREMIUM for demo
+  const [burstModeActive, setBurstModeActive] = React.useState(false)
+  const [showBurstUpsell, setShowBurstUpsell] = React.useState(false)
 
   // Voice input
   const [isRecording, setIsRecording] = React.useState(false)
@@ -56,6 +63,20 @@ export default function AnalysisPage() {
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
     setLearnMode(savedLearnMode)
   }, [])
+
+  // Burst Mode detection (Premium feature for LIVE matches)
+  React.useEffect(() => {
+    const hasLiveMatch = matches.some((m) => m.status === "LIVE")
+    const isPremiumOrExpert = userTier === "PREMIUM" || userTier === "EXPERT"
+
+    // Activate Burst Mode for Premium/Expert users with live matches
+    setBurstModeActive(hasLiveMatch && isPremiumOrExpert)
+
+    // Show upsell for Free users with live matches
+    if (hasLiveMatch && userTier === "FREE" && !burstModeActive) {
+      setShowBurstUpsell(true)
+    }
+  }, [matches, userTier])
 
   // Filter agents based on input
   const filteredAgents = React.useMemo(() => {
@@ -484,6 +505,30 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
               >
                 ⚽ Supporter
               </button>
+            </div>
+          )}
+
+          {/* Burst Mode Indicator */}
+          {burstModeActive && (
+            <div className="p-4 rounded-xl bg-gradient-to-r from-accent-gold/20 to-accent-orange/20 border-2 border-accent-gold/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-accent-gold to-accent-orange flex items-center justify-center">
+                    <span className="text-white text-xl">⚡</span>
+                  </div>
+                  <div>
+                    <div className="font-display font-bold text-text-primary">
+                      Burst Mode Actif
+                    </div>
+                    <div className="text-xs text-text-secondary">
+                      Invocations illimitées pendant le match LIVE
+                    </div>
+                  </div>
+                </div>
+                <div className="text-accent-gold font-mono font-bold text-2xl">
+                  ∞
+                </div>
+              </div>
             </div>
           )}
 
@@ -1156,6 +1201,62 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
           </>
         )
       })()}
+
+      {/* Premium Burst Mode Upsell Modal */}
+      {showBurstUpsell && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowBurstUpsell(false)}
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md">
+            <div className="bg-bg-secondary rounded-lg border-2 border-accent-gold p-6 space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-accent-gold to-accent-orange flex items-center justify-center">
+                  <span className="text-3xl">⚡</span>
+                </div>
+                <h3 className="font-display text-xl font-bold text-text-primary mb-2">
+                  Burst Mode Premium
+                </h3>
+                <p className="text-sm text-text-secondary">
+                  Match LIVE détecté ! Débloquez l&apos;accès illimité aux agents pendant les matchs en direct.
+                </p>
+              </div>
+
+              <div className="bg-bg-primary rounded-lg p-4 space-y-2">
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-accent-cyan">✓</span>
+                  <span className="text-text-primary">Invocations illimitées pendant LIVE</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-accent-cyan">✓</span>
+                  <span className="text-text-primary">Analyses en temps réel</span>
+                </div>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-accent-cyan">✓</span>
+                  <span className="text-text-primary">Pas de limite d&apos;utilisation</span>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowBurstUpsell(false)}
+                  className="flex-1"
+                >
+                  Plus tard
+                </Button>
+                <Button
+                  onClick={() => router.push("/subscription")}
+                  className="flex-1 bg-gradient-to-r from-accent-gold to-accent-orange text-bg-primary hover:opacity-90"
+                >
+                  Passer Premium
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <DashboardNav />
     </div>
