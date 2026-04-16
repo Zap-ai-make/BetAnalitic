@@ -78,7 +78,7 @@ export default function AnalysisPage() {
 
   // Burst Mode detection (Premium feature for LIVE matches)
   React.useEffect(() => {
-    const hasLiveMatch = matches.some((m) => m.status === "LIVE")
+    const hasLiveMatch = matches.some((m) => m.status === "live" || m.status === "halftime")
     const isPremiumOrExpert = userTier === "PREMIUM" || userTier === "EXPERT"
 
     // Activate Burst Mode for Premium/Expert users with live matches

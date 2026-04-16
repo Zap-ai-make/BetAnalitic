@@ -1,5 +1,6 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import type { MatchStatus } from "~/lib/providers/types"
 
 interface CouponMatch {
   id: string
@@ -8,6 +9,7 @@ interface CouponMatch {
   league: string
   time: string
   addedAt: Date
+  status?: MatchStatus
 }
 
 export type AnalysisMode = "analytique" | "supporter"
