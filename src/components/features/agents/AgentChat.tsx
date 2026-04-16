@@ -126,7 +126,7 @@ export function AgentChat({
 
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
-      handleSend()
+      void handleSend()
     }
   }
 
@@ -137,7 +137,7 @@ export function AgentChat({
     // Create conversation if needed
     if (!conversationId && agentType) {
       const conv = await createConversation.mutateAsync({
-        agentType: agentType as any,
+        agentType: agentType as "SCOUT" | "FORM" | "H2H" | "STATS" | "MOMENTUM" | "CONTEXT" | "ODDS" | "WEATHER" | "REFEREE" | "INJURY" | "SENTIMENT" | "PREDICTION" | "RISK" | "VALUE",
         matchId,
       })
       setConversationId(conv.id)
@@ -231,7 +231,7 @@ export function AgentChat({
         {sendMessage.isPending && (
           <div className="flex items-center gap-2 text-text-secondary">
             <Loader2 className="h-4 w-4 animate-spin" />
-            <span className="text-sm">L'agent réfléchit...</span>
+            <span className="text-sm">L&apos;agent réfléchit...</span>
           </div>
         )}
 

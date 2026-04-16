@@ -205,7 +205,7 @@ export const agentsRouter = createTRPCRouter({
             i++;
           } else {
             // Save final message to DB
-            ctx.db.agentMessage.create({
+            void ctx.db.agentMessage.create({
               data: {
                 conversationId: input.conversationId,
                 userId: ctx.session.user.id,
