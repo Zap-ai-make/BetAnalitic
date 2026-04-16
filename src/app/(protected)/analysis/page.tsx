@@ -48,6 +48,7 @@ export default function AnalysisPage() {
   // Virtual Mode (Practice mode)
   const [virtualMode, setVirtualMode] = React.useState(false)
   const [virtualBalance, setVirtualBalance] = React.useState(1000)
+  const [rewindMode, setRewindMode] = React.useState(false)
 
   // Voice input
   const [isRecording, setIsRecording] = React.useState(false)
@@ -65,11 +66,13 @@ export default function AnalysisPage() {
     const savedLearnMode = localStorage.getItem("learnMode") === "true"
     const savedVirtualMode = localStorage.getItem("virtualMode") === "true"
     const savedVirtualBalance = Number(localStorage.getItem("virtualBalance")) || 1000
+    const savedRewindMode = localStorage.getItem("rewindMode") === "true"
     if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
     setLearnMode(savedLearnMode)
     setVirtualMode(savedVirtualMode)
     setVirtualBalance(savedVirtualBalance)
+    setRewindMode(savedRewindMode)
   }, [])
 
   // Burst Mode detection (Premium feature for LIVE matches)
@@ -560,6 +563,31 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
                     {virtualBalance.toFixed(2)}€
                   </div>
                   <div className="text-xs text-text-tertiary">Virtuel</div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Rewind Mode Indicator */}
+          {rewindMode && virtualMode && matches.length > 0 && (
+            <div className="p-3 rounded-lg bg-gradient-to-r from-blue-500/20 to-cyan-500/20 border border-blue-500/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">⏪</span>
+                  <div>
+                    <div className="font-display font-semibold text-text-primary text-sm">
+                      Mode Rewind Actif
+                    </div>
+                    <div className="text-xs text-text-tertiary">
+                      Rejouez vos scénarios passés
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-blue-400 font-semibold text-xs">
+                    Scénario #1
+                  </div>
+                  <div className="text-xs text-text-tertiary">Comparaison active</div>
                 </div>
               </div>
             </div>

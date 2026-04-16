@@ -34,6 +34,7 @@ export default function ProfilePage() {
   const [virtualMode, setVirtualMode] = React.useState(false)
   const [virtualBalance, setVirtualBalance] = React.useState(1000)
   const [showVirtualSetup, setShowVirtualSetup] = React.useState(false)
+  const [rewindMode, setRewindMode] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
   // Analysis preferences
@@ -47,11 +48,13 @@ export default function ProfilePage() {
     const savedLearnMode = localStorage.getItem("learnMode") === "true"
     const savedVirtualMode = localStorage.getItem("virtualMode") === "true"
     const savedVirtualBalance = Number(localStorage.getItem("virtualBalance")) || 1000
+    const savedRewindMode = localStorage.getItem("rewindMode") === "true"
     if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
     setLearnMode(savedLearnMode)
     setVirtualMode(savedVirtualMode)
     setVirtualBalance(savedVirtualBalance)
+    setRewindMode(savedRewindMode)
   }, [])
 
   // Save preferences to localStorage
@@ -74,6 +77,10 @@ export default function ProfilePage() {
   React.useEffect(() => {
     localStorage.setItem("virtualBalance", String(virtualBalance))
   }, [virtualBalance])
+
+  React.useEffect(() => {
+    localStorage.setItem("rewindMode", String(rewindMode))
+  }, [rewindMode])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -221,6 +228,12 @@ export default function ProfilePage() {
                   setVirtualMode(checked)
                 }
               }}
+            />
+            <ToggleMenuItem
+              icon="⏪"
+              label="Mode Rewind"
+              checked={rewindMode}
+              onChange={setRewindMode}
             />
             <MenuItem
               icon="📊"
