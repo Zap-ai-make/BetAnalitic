@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { getMatchPrecomputeService } from "~/lib/services/matchPrecompute"
 
+export const dynamic = "force-dynamic"
+
 /**
  * Cron endpoint for match pre-computation
  * Should be called every hour by a cron service (Vercel Cron, GitHub Actions, etc.)

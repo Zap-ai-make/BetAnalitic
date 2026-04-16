@@ -2,6 +2,9 @@ import { type NextRequest } from "next/server"
 import { agentOrchestrator } from "~/lib/agents/orchestrator"
 import { getServerAuthSession } from "~/server/auth"
 
+// Force dynamic rendering (no static build)
+export const dynamic = "force-dynamic"
+
 interface StreamRequest {
   agentId: string
   query: string

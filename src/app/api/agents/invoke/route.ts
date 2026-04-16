@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server"
 import { agentOrchestrator } from "~/lib/agents/orchestrator"
 import { getServerAuthSession } from "~/server/auth"
 
+export const dynamic = "force-dynamic"
+
 interface InvokeRequest {
   agentId: string
   query: string

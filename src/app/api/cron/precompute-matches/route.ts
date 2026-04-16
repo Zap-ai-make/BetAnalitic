@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { precomputeService } from "~/lib/services/precomputeService"
 
+export const dynamic = "force-dynamic"
+
 /**
  * Cron endpoint for pre-computing match data
  * Triggered every 30 minutes via Vercel Cron
