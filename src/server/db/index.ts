@@ -1,5 +1,9 @@
 import { PrismaClient } from "@prisma/client";
 
+const globalForPrisma = globalThis as unknown as {
+  prisma: PrismaClient | undefined;
+};
+
 const createPrismaClient = () =>
   new PrismaClient({
     log:
@@ -8,11 +12,11 @@ const createPrismaClient = () =>
         : ["error"],
   });
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
-};
-
-export const db: PrismaClient =
-  globalForPrisma.prisma ?? createPrismaClient();
-
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, prop: keyof PrismaClient) {
+    if (!globalForPrisma.prisma) {
+      globalForPrisma.prisma = createPrismaClient();
+    }
+    return globalForPrisma.prisma[prop];
+  },
+});

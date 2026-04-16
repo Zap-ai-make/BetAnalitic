@@ -1,8 +1,10 @@
 /**
  * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially useful
- * for Docker builds.
+ * for Docker builds and Vercel deployments.
  */
-await import("./src/env.js");
+if (!process.env.SKIP_ENV_VALIDATION && process.env.DATABASE_URL) {
+  await import("./src/env.js");
+}
 
 import withPWAInit from "@ducanh2912/next-pwa";
 
