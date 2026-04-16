@@ -5,7 +5,7 @@ import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import { cn } from "~/lib/utils"
-import { Trash2, Send } from "lucide-react"
+import { Trash2, Send, Mic } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { AGENTS } from "~/lib/agents/config"
 
@@ -36,6 +36,10 @@ export default function AnalysisPage() {
   // User preferences
   const [expertiseLevel, setExpertiseLevel] = React.useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">("INTERMEDIATE")
   const [analysisDepth, setAnalysisDepth] = React.useState<"QUICK" | "STANDARD" | "DETAILED">("STANDARD")
+
+  // Voice input
+  const [isRecording, setIsRecording] = React.useState(false)
+  const recognitionRef = React.useRef<SpeechRecognition | null>(null)
 
   // Load preferences from localStorage
   React.useEffect(() => {
@@ -158,6 +162,69 @@ export default function AnalysisPage() {
       : "\n\n⚽ Mode Supporter: Perspective passionnée, contexte émotionnel."
 
     return `${baseIntro}${expertiseContext}${depthContext}${modeContext}\n\n${agentName} (Mock): Réponse simulée. Backend à implémenter.`
+  }
+
+  const startRecording = () => {
+    // Check browser support
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-redundant-type-constituents
+    const win = window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const SpeechRecognitionClass = win.SpeechRecognition ?? win.webkitSpeechRecognition
+
+    if (!SpeechRecognitionClass) {
+      alert("Votre navigateur ne supporte pas la reconnaissance vocale. Veuillez utiliser Chrome, Edge ou Safari.")
+      return
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
+    const recognitionInstance = new SpeechRecognitionClass()
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.lang = 'fr-FR'
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.continuous = true
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.interimResults = true
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+      const transcript = Array.from(event.results)
+        .map((result) => result[0]?.transcript ?? "")
+        .join('')
+
+      // Auto-add @ if not present and not empty
+      if (transcript.trim()) {
+        const finalText = transcript.trim().startsWith('@') ? transcript.trim() : `@${transcript.trim()}`
+        setAgentInput(finalText)
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
+      console.error('Speech recognition error:', event.error)
+      setIsRecording(false)
+      if (event.error === 'not-allowed') {
+        alert("Accès au microphone refusé. Veuillez autoriser l'accès dans les paramètres de votre navigateur.")
+      }
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.onend = () => {
+      setIsRecording(false)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+    recognitionInstance.start()
+    setIsRecording(true)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    recognitionRef.current = recognitionInstance
+  }
+
+  const stopRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+      setIsRecording(false)
+    }
   }
 
   const handleInvokeAgent = async () => {
@@ -357,26 +424,42 @@ export default function AnalysisPage() {
                   }}
                   placeholder="@AgentName"
                   className={cn(
-                    "w-full px-4 py-3 pr-12 rounded-lg",
+                    "w-full px-4 py-3 pr-24 rounded-lg",
                     "bg-bg-secondary border-2 border-bg-tertiary",
                     "text-text-primary placeholder:text-text-tertiary",
                     "focus:outline-none focus:border-accent-cyan",
                     "transition-colors"
                   )}
                 />
-                <button
-                  onClick={() => void handleInvokeAgent()}
-                  disabled={!selectedAgent || isInvoking}
-                  className={cn(
-                    "absolute right-2 top-1/2 -translate-y-1/2",
-                    "p-2 rounded-full transition-colors",
-                    selectedAgent && !isInvoking
-                      ? "text-accent-cyan hover:bg-accent-cyan/10"
-                      : "text-text-tertiary cursor-not-allowed"
-                  )}
-                >
-                  <Send className="h-5 w-5" />
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  <button
+                    onClick={isRecording ? stopRecording : startRecording}
+                    disabled={isInvoking}
+                    className={cn(
+                      "p-2 rounded-full transition-all",
+                      isRecording
+                        ? "bg-accent-red text-white animate-pulse"
+                        : "text-text-secondary hover:text-accent-cyan hover:bg-bg-tertiary",
+                      isInvoking && "opacity-50 cursor-not-allowed"
+                    )}
+                    title={isRecording ? "Arrêter l'enregistrement" : "Commencer l'enregistrement vocal"}
+                  >
+                    <Mic className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => void handleInvokeAgent()}
+                    disabled={!selectedAgent || isInvoking}
+                    className={cn(
+                      "p-2 rounded-full transition-colors",
+                      selectedAgent && !isInvoking
+                        ? "text-accent-cyan hover:bg-accent-cyan/10"
+                        : "text-text-tertiary cursor-not-allowed"
+                    )}
+                    title="Envoyer"
+                  >
+                    <Send className="h-5 w-5" />
+                  </button>
+                </div>
 
                 {/* Agent Autocomplete Dropdown */}
                 {showAgentSuggestions && (
