@@ -52,7 +52,8 @@ export default function AnalysisPage() {
 
   // Voice input
   const [isRecording, setIsRecording] = React.useState(false)
-  const recognitionRef = React.useRef<SpeechRecognition | null>(null)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = React.useRef<any>(null)
 
   // Text-to-Speech
   const [playingMessageId, setPlayingMessageId] = React.useState<string | null>(null)
@@ -234,8 +235,8 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
 
   const startRecording = () => {
     // Check browser support
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-redundant-type-constituents
-    const win = window as Window & { webkitSpeechRecognition?: typeof SpeechRecognition }
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
+    const win = window as any
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const SpeechRecognitionClass = win.SpeechRecognition ?? win.webkitSpeechRecognition
 
@@ -253,8 +254,8 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     recognitionInstance.interimResults = true
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    recognitionInstance.onresult = (event: SpeechRecognitionEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    recognitionInstance.onresult = (event: any) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       const transcript = Array.from(event.results)
         .map((result) => result[0]?.transcript ?? "")
@@ -267,8 +268,8 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
       }
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    recognitionInstance.onerror = (event: SpeechRecognitionErrorEvent) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+    recognitionInstance.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error)
       setIsRecording(false)
       if (event.error === 'not-allowed') {
