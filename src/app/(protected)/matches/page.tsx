@@ -6,33 +6,46 @@ import { DashboardNav } from "~/components/shared/DashboardNav"
 import { MatchCard } from "~/components/features/match/MatchCard"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
+import { ChevronDown, Calendar } from "lucide-react"
 
 export default function MatchesPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
-  const [competitionFilter] = useState<string | null>(null)
+  const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
   const [liveOnly, setLiveOnly] = useState(false)
+  const [showCompetitions, setShowCompetitions] = useState(false)
 
-  // Calculate date range (7 days from selected date)
+  const { data: competitions = [] } = api.match.getCompetitions.useQuery()
+
+  // Calculate date range (30 days from selected date for infinite scroll)
   const fromDate = new Date(selectedDate)
   fromDate.setHours(0, 0, 0, 0)
   const toDate = new Date(selectedDate)
-  toDate.setDate(toDate.getDate() + 7)
+  toDate.setDate(toDate.getDate() + 30)
   toDate.setHours(23, 59, 59, 999)
 
-  const { data: matches, isLoading } = api.match.getMatchesByDateRange.useQuery({
-    from: fromDate,
-    to: toDate,
-    competitionIds: competitionFilter ? [competitionFilter] : undefined,
-  })
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = api.match.getMatchesInfinite.useInfiniteQuery(
+    {
+      limit: 20,
+      from: fromDate,
+      to: toDate,
+      competitionIds: competitionFilter ? [competitionFilter] : undefined,
+      liveOnly,
+    },
+    {
+      getNextPageParam: (lastPage) => lastPage.nextCursor,
+    }
+  )
 
-  const { data: liveMatches } = api.match.getLiveMatches.useQuery(undefined, {
-    enabled: liveOnly,
-  })
-
-  const displayMatches = liveOnly ? liveMatches : matches
+  const matches = data?.pages.flatMap((page) => page.matches) ?? []
 
   // Group by date
-  const groupedByDate = displayMatches?.reduce((acc, match) => {
+  const groupedByDate = matches.reduce((acc, match) => {
     const date = match.kickoffTime.toLocaleDateString("fr-FR", {
       weekday: "long",
       year: "numeric",
@@ -42,9 +55,9 @@ export default function MatchesPage() {
     if (!acc[date]) acc[date] = []
     acc[date].push(match)
     return acc
-  }, {} as Record<string, typeof displayMatches>)
+  }, {} as Record<string, typeof matches>)
 
-  const dates = groupedByDate ? Object.keys(groupedByDate) : []
+  const dates = Object.keys(groupedByDate)
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -57,12 +70,12 @@ export default function MatchesPage() {
             Matchs
           </h1>
 
-          <div className="flex gap-2 overflow-x-auto">
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {/* Live Toggle */}
             <button
               onClick={() => setLiveOnly(!liveOnly)}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0",
                 liveOnly
                   ? "bg-accent-red text-white"
                   : "bg-bg-tertiary text-text-secondary"
@@ -72,11 +85,67 @@ export default function MatchesPage() {
               Live
             </button>
 
+            {/* Competition Filter */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setShowCompetitions(!showCompetitions)}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-2",
+                  competitionFilter
+                    ? "bg-accent-cyan text-bg-primary"
+                    : "bg-bg-tertiary text-text-secondary"
+                )}
+              >
+                {competitionFilter
+                  ? competitions.find((c) => c.id === competitionFilter)?.name ??
+                    "Compétition"
+                  : "Compétition"}
+                <ChevronDown className="h-4 w-4" />
+              </button>
+
+              {showCompetitions && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowCompetitions(false)}
+                  />
+                  <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-xl z-20 min-w-[200px] max-h-[300px] overflow-y-auto">
+                    <button
+                      onClick={() => {
+                        setCompetitionFilter(null)
+                        setShowCompetitions(false)
+                      }}
+                      className="w-full px-4 py-2 text-left text-sm hover:bg-bg-tertiary transition-colors text-text-primary"
+                    >
+                      Toutes les compétitions
+                    </button>
+                    {competitions.map((comp) => (
+                      <button
+                        key={comp.id}
+                        onClick={() => {
+                          setCompetitionFilter(comp.id)
+                          setShowCompetitions(false)
+                        }}
+                        className={cn(
+                          "w-full px-4 py-2 text-left text-sm hover:bg-bg-tertiary transition-colors",
+                          competitionFilter === comp.id
+                            ? "bg-accent-cyan/10 text-accent-cyan"
+                            : "text-text-primary"
+                        )}
+                      >
+                        {comp.name}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+
             {/* Date Quick Filters */}
             <button
               onClick={() => setSelectedDate(new Date())}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap",
+                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shrink-0",
                 selectedDate.toDateString() === new Date().toDateString()
                   ? "bg-accent-cyan text-bg-primary"
                   : "bg-bg-tertiary text-text-secondary"
@@ -91,7 +160,7 @@ export default function MatchesPage() {
                 tomorrow.setDate(tomorrow.getDate() + 1)
                 setSelectedDate(tomorrow)
               }}
-              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary"
+              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary shrink-0"
             >
               Demain
             </button>
@@ -102,9 +171,29 @@ export default function MatchesPage() {
                 weekend.setDate(weekend.getDate() + (6 - weekend.getDay()))
                 setSelectedDate(weekend)
               }}
-              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary"
+              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary shrink-0"
             >
               Week-end
+            </button>
+
+            {/* Date Picker */}
+            <button
+              onClick={() => {
+                const dateInput = document.createElement("input")
+                dateInput.type = "date"
+                dateInput.value = selectedDate.toISOString().split("T")[0]!
+                dateInput.onchange = (e) => {
+                  const target = e.target as HTMLInputElement
+                  if (target.value) {
+                    setSelectedDate(new Date(target.value))
+                  }
+                }
+                dateInput.click()
+              }}
+              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary shrink-0 flex items-center gap-2"
+            >
+              <Calendar className="h-4 w-4" />
+              Choisir une date
             </button>
           </div>
         </div>
@@ -131,7 +220,7 @@ export default function MatchesPage() {
         )}
 
         {/* Empty State */}
-        {!isLoading && (!displayMatches || displayMatches.length === 0) && (
+        {!isLoading && matches.length === 0 && (
           <div className="text-center py-12">
             <span className="text-6xl">⚽</span>
             <p className="text-text-secondary mt-4">
@@ -151,42 +240,62 @@ export default function MatchesPage() {
         )}
 
         {/* Matches List Grouped by Date */}
-        {!isLoading && groupedByDate && dates.length > 0 && (
-          <div className="space-y-6">
-            {dates.map((date) => (
-              <div key={date} className="space-y-3">
-                <h2 className="font-display font-semibold text-text-primary sticky top-0 bg-bg-primary py-2">
-                  {date}
-                </h2>
-                <div className="space-y-3">
-                  {groupedByDate[date]?.map((match) => (
-                    <MatchCard
-                      key={match.id}
-                      match={{
-                        id: match.id,
-                        homeTeam: match.homeTeam.name,
-                        awayTeam: match.awayTeam.name,
-                        homeScore: match.homeScore ?? undefined,
-                        awayScore: match.awayScore ?? undefined,
-                        time: match.kickoffTime.toLocaleTimeString("fr-FR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        }),
-                        league: match.competition.name,
-                        status: match.status === "LIVE" || match.status === "HALFTIME"
-                          ? "live"
-                          : match.status === "FINISHED"
-                          ? "finished"
-                          : "upcoming",
-                        analysisCount: match.analysisCount,
-                        tags: match.tags.map((t) => t.tag),
-                      }}
-                    />
-                  ))}
+        {!isLoading && dates.length > 0 && (
+          <>
+            <div className="space-y-6">
+              {dates.map((date) => (
+                <div key={date} className="space-y-3">
+                  <h2 className="font-display font-semibold text-text-primary sticky top-0 bg-bg-primary py-2">
+                    {date}
+                  </h2>
+                  <div className="space-y-3">
+                    {groupedByDate[date]?.map((match) => (
+                      <MatchCard
+                        key={match.id}
+                        match={{
+                          id: match.id,
+                          homeTeam: match.homeTeam.name,
+                          awayTeam: match.awayTeam.name,
+                          homeScore: match.homeScore ?? undefined,
+                          awayScore: match.awayScore ?? undefined,
+                          time: match.kickoffTime.toLocaleTimeString("fr-FR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          }),
+                          league: match.competition.name,
+                          status: match.status === "LIVE" || match.status === "HALFTIME"
+                            ? "live"
+                            : match.status === "FINISHED"
+                            ? "finished"
+                            : "upcoming",
+                          analysisCount: match.analysisCount,
+                          tags: match.tags.map((t) => t.tag),
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
+              ))}
+            </div>
+
+            {/* Load More Button */}
+            {hasNextPage && (
+              <div className="flex justify-center pt-6">
+                <button
+                  onClick={() => fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                  className={cn(
+                    "px-6 py-3 rounded-lg font-medium transition-all",
+                    "bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    "min-h-[44px] min-w-[120px]"
+                  )}
+                >
+                  {isFetchingNextPage ? "Chargement..." : "Voir plus"}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </main>
 

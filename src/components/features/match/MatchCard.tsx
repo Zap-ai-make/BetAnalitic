@@ -26,6 +26,7 @@ export interface MatchCardProps {
 export function MatchCard({ match }: MatchCardProps) {
   const [animating, setAnimating] = React.useState(false)
   const [shaking, setShaking] = React.useState(false)
+  const [showMaxMessage, setShowMaxMessage] = React.useState(false)
   const { addMatch, removeMatch, isSelected } = useCouponStore()
 
   const selected = isSelected(match.id)
@@ -54,8 +55,11 @@ export function MatchCard({ match }: MatchCardProps) {
           navigator.vibrate(50)
         }
       } else {
+        // Max limit reached
         setShaking(true)
+        setShowMaxMessage(true)
         setTimeout(() => setShaking(false), 500)
+        setTimeout(() => setShowMaxMessage(false), 3000)
         if (navigator.vibrate) {
           navigator.vibrate([100, 50, 100])
         }
@@ -64,16 +68,26 @@ export function MatchCard({ match }: MatchCardProps) {
   }
 
   return (
-    <div
-      className={cn(
-        "bg-bg-secondary rounded-lg p-4 border-2 transition-all duration-300 space-y-3",
-        "hover:border-accent-cyan/20",
-        selected && "border-accent-cyan shadow-[0_0_20px_rgba(0,212,255,0.3)]",
-        !selected && "border-transparent",
-        animating && "scale-[0.98]",
-        shaking && "animate-shake"
+    <div className="relative">
+      {/* Max Limit Toast */}
+      {showMaxMessage && (
+        <div className="absolute -top-2 left-1/2 -translate-x-1/2 z-10 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-accent-red text-white text-sm font-medium px-4 py-2 rounded-lg shadow-lg whitespace-nowrap">
+            Max 10 matchs
+          </div>
+        </div>
       )}
-    >
+
+      <div
+        className={cn(
+          "bg-bg-secondary rounded-lg p-4 border-2 transition-all duration-300 space-y-3",
+          "hover:border-accent-cyan/20",
+          selected && "border-accent-cyan shadow-[0_0_20px_rgba(0,212,255,0.3)]",
+          !selected && "border-transparent",
+          animating && "scale-[0.98]",
+          shaking && "animate-shake"
+        )}
+      >
       {/* Header */}
       <div className="flex justify-between items-center">
         <StatusIndicator status={match.status} />
@@ -142,6 +156,7 @@ export function MatchCard({ match }: MatchCardProps) {
             "+ Ajouter"
           )}
         </Button>
+      </div>
       </div>
     </div>
   )

@@ -173,4 +173,78 @@ export const matchRouter = createTRPCRouter({
         analysisCount: Math.floor(Math.random() * 50) + 1,
       }));
     }),
+
+  /**
+   * Get all competitions
+   */
+  getCompetitions: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.db.competition.findMany({
+      orderBy: [{ tier: "asc" }, { name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        country: true,
+        logoUrl: true,
+        tier: true,
+      },
+    });
+  }),
+
+  /**
+   * Get matches with infinite scroll (cursor-based pagination)
+   */
+  getMatchesInfinite: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+        cursor: z.string().optional(), // Match ID cursor
+        from: z.date(),
+        to: z.date(),
+        competitionIds: z.array(z.string()).optional(),
+        liveOnly: z.boolean().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const matches = await ctx.db.match.findMany({
+        where: {
+          kickoffTime: {
+            gte: input.from,
+            lte: input.to,
+          },
+          competitionId: input.competitionIds?.length
+            ? { in: input.competitionIds }
+            : undefined,
+          ...(input.liveOnly && {
+            status: {
+              in: ["LIVE", "HALFTIME"],
+            },
+          }),
+        },
+        include: {
+          homeTeam: true,
+          awayTeam: true,
+          competition: true,
+          tags: true,
+        },
+        orderBy: {
+          kickoffTime: "asc",
+        },
+        take: input.limit + 1,
+        cursor: input.cursor ? { id: input.cursor } : undefined,
+      });
+
+      let nextCursor: string | undefined = undefined;
+      if (matches.length > input.limit) {
+        const nextItem = matches.pop();
+        nextCursor = nextItem?.id;
+      }
+
+      return {
+        matches: matches.map((match) => ({
+          ...match,
+          analysisCount: Math.floor(Math.random() * 50) + 1,
+        })),
+        nextCursor,
+      };
+    }),
 });

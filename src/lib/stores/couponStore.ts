@@ -10,13 +10,17 @@ interface CouponMatch {
   addedAt: Date
 }
 
+export type AnalysisMode = "analytique" | "supporter"
+
 interface CouponStore {
   matches: CouponMatch[]
+  mode: AnalysisMode
   addMatch: (match: CouponMatch) => boolean
   removeMatch: (matchId: string) => void
   clearCoupon: () => void
   isSelected: (matchId: string) => boolean
   count: () => number
+  setMode: (mode: AnalysisMode) => void
 }
 
 const MAX_MATCHES = 10
@@ -25,6 +29,7 @@ export const useCouponStore = create<CouponStore>()(
   persist(
     (set, get) => ({
       matches: [],
+      mode: "analytique",
 
       addMatch: (match) => {
         const state = get()
@@ -62,6 +67,10 @@ export const useCouponStore = create<CouponStore>()(
 
       count: () => {
         return get().matches.length
+      },
+
+      setMode: (mode) => {
+        set({ mode })
       },
     }),
     {

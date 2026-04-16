@@ -4,49 +4,9 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
+import { MatchCard } from "~/components/features/match/MatchCard"
 import { cn } from "~/lib/utils"
-
-// Mock data for the UI
-const MOCK_MATCHES = [
-  {
-    id: "1",
-    status: "live" as const,
-    time: "67'",
-    homeTeam: "PSG",
-    awayTeam: "OM",
-    homeScore: 2,
-    awayScore: 1,
-    homeColor: "#004170",
-    awayColor: "#2FAEE0",
-    league: "Ligue 1",
-    tags: ["Derby", "Classico"],
-    analysisCount: 234,
-  },
-  {
-    id: "2",
-    status: "upcoming" as const,
-    time: "20:45",
-    homeTeam: "Lyon",
-    awayTeam: "Monaco",
-    homeColor: "#DA291C",
-    awayColor: "#E62333",
-    league: "Ligue 1",
-    tags: [],
-    analysisCount: 89,
-  },
-  {
-    id: "3",
-    status: "upcoming" as const,
-    time: "21:00",
-    homeTeam: "Real Madrid",
-    awayTeam: "Barcelona",
-    homeColor: "#FFFFFF",
-    awayColor: "#A50044",
-    league: "La Liga",
-    tags: ["El Clasico"],
-    analysisCount: 567,
-  },
-]
+import { api } from "~/trpc/react"
 
 const MOCK_ROOMS = [
   {
@@ -80,8 +40,41 @@ export default function DashboardPage() {
   useSession() // Verify auth
   const router = useRouter()
 
-  const liveMatches = MOCK_MATCHES.filter((m) => m.status === "live")
-  const upcomingMatches = MOCK_MATCHES.filter((m) => m.status === "upcoming")
+  const { data: matches, isLoading } = api.match.getTodaysMatches.useQuery()
+
+  // Transform matches to MatchCard format
+  const transformMatch = (match: NonNullable<typeof matches>[number]) => {
+    const status =
+      match.status === "LIVE" || match.status === "HALFTIME"
+        ? ("live" as const)
+        : match.status === "SCHEDULED"
+          ? ("upcoming" as const)
+          : ("finished" as const)
+
+    const time =
+      match.status === "LIVE" || match.status === "HALFTIME"
+        ? "LIVE"
+        : new Date(match.kickoffTime).toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+
+    return {
+      id: match.id,
+      status,
+      time,
+      homeTeam: match.homeTeam.name,
+      awayTeam: match.awayTeam.name,
+      league: match.competition.name,
+      homeScore: match.homeScore ?? undefined,
+      awayScore: match.awayScore ?? undefined,
+      tags: match.tags.map((t) => t.tag),
+      analysisCount: match.analysisCount,
+    }
+  }
+
+  const liveMatches = matches?.filter((m) => m.status === "LIVE" || m.status === "HALFTIME").map(transformMatch) ?? []
+  const upcomingMatches = matches?.filter((m) => m.status === "SCHEDULED").map(transformMatch) ?? []
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -90,7 +83,7 @@ export default function DashboardPage() {
       <main className="flex-1 p-4 pb-24 overflow-y-auto">
         <div className="space-y-6">
           {/* Live Matches Section */}
-          {liveMatches.length > 0 && (
+          {(isLoading || liveMatches.length > 0) && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -107,9 +100,13 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {liveMatches.map((match) => (
-                <MatchCard key={match.id} match={match} onAnalyze={() => router.push("/analyse")} />
-              ))}
+              {isLoading ? (
+                <MatchCardSkeleton />
+              ) : (
+                liveMatches.map((match) => (
+                  <MatchCard key={match.id} match={match} />
+                ))
+              )}
             </section>
           )}
 
@@ -122,17 +119,30 @@ export default function DashboardPage() {
                   Matchs du jour
                 </h2>
                 <span className="px-2 py-0.5 bg-bg-tertiary rounded-full text-xs text-text-secondary">
-                  {MOCK_MATCHES.length}
+                  {matches?.length ?? 0}
                 </span>
               </div>
-              <button className="text-sm text-accent-cyan hover:underline">
+              <button
+                onClick={() => router.push("/matches")}
+                className="text-sm text-accent-cyan hover:underline"
+              >
                 Voir tout →
               </button>
             </div>
 
-            {upcomingMatches.map((match) => (
-              <MatchCard key={match.id} match={match} onAnalyze={() => router.push("/analyse")} />
-            ))}
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <MatchCardSkeleton key={i} />
+              ))
+            ) : upcomingMatches.length > 0 ? (
+              upcomingMatches.map((match) => (
+                <MatchCard key={match.id} match={match} />
+              ))
+            ) : (
+              <div className="text-center py-8 text-text-tertiary">
+                Aucun match aujourd&apos;hui
+              </div>
+            )}
           </section>
 
           {/* Active Rooms Section */}
@@ -198,127 +208,22 @@ export default function DashboardPage() {
   )
 }
 
-// Match Card Component
-interface MatchCardProps {
-  match: {
-    id: string
-    status: "live" | "upcoming" | "finished"
-    time: string
-    homeTeam: string
-    awayTeam: string
-    homeScore?: number
-    awayScore?: number
-    homeColor: string
-    awayColor: string
-    league: string
-    tags: string[]
-    analysisCount: number
-  }
-  onAnalyze: () => void
-}
-
-function MatchCard({ match, onAnalyze }: MatchCardProps) {
-  const isLive = match.status === "live"
-
+// Skeleton Loading Component
+function MatchCardSkeleton() {
   return (
-    <div
-      className={cn(
-        "bg-bg-secondary rounded-xl p-4 border transition-all",
-        isLive
-          ? "border-accent-cyan/30 shadow-[0_0_20px_rgba(0,212,255,0.15)]"
-          : "border-transparent hover:border-bg-tertiary"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          {isLive ? (
-            <>
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-red" />
-              </span>
-              <span className="text-xs font-medium text-accent-red">LIVE</span>
-            </>
-          ) : (
-            <span className="text-xs text-text-secondary">Aujourd&apos;hui</span>
-          )}
-        </div>
-        <span className="font-mono text-sm font-medium text-text-primary">
-          {match.time}
-        </span>
+    <div className="bg-bg-secondary rounded-lg p-4 border-2 border-transparent space-y-3 animate-pulse">
+      <div className="flex justify-between items-center">
+        <div className="h-4 w-16 bg-bg-tertiary rounded" />
+        <div className="h-4 w-12 bg-bg-tertiary rounded" />
       </div>
-
-      {/* Teams */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2 flex-1">
-          <div
-            className="w-8 h-8 rounded-full flex-shrink-0"
-            style={{ backgroundColor: match.homeColor }}
-          />
-          <span className="font-semibold text-text-primary truncate">
-            {match.homeTeam}
-          </span>
-        </div>
-
-        <div className="px-3">
-          {match.homeScore !== undefined ? (
-            <span className="font-mono font-bold text-text-primary">
-              {match.homeScore} - {match.awayScore}
-            </span>
-          ) : (
-            <span className="text-text-tertiary text-sm">vs</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 flex-1 justify-end">
-          <span className="font-semibold text-text-primary truncate">
-            {match.awayTeam}
-          </span>
-          <div
-            className="w-8 h-8 rounded-full flex-shrink-0"
-            style={{ backgroundColor: match.awayColor }}
-          />
-        </div>
+      <div className="space-y-2">
+        <div className="h-5 w-32 bg-bg-tertiary rounded" />
+        <div className="h-5 w-32 bg-bg-tertiary rounded" />
+        <div className="h-4 w-24 bg-bg-tertiary rounded" />
       </div>
-
-      {/* Tags */}
-      {match.tags.length > 0 && (
-        <div className="flex gap-2 mb-3">
-          {match.tags.map((tag) => (
-            <span
-              key={tag}
-              className={cn(
-                "px-2 py-1 rounded text-xs",
-                tag === "Derby" || tag === "Classico" || tag === "El Clasico"
-                  ? "bg-agent-context/20 text-agent-context"
-                  : "bg-bg-tertiary text-text-secondary"
-              )}
-            >
-              {tag === "Derby" && "🏆 "}
-              {tag === "Classico" && "⚔️ "}
-              {tag === "El Clasico" && "🔥 "}
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Footer */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs text-text-tertiary">
-          {match.analysisCount} analysent ce match
-        </span>
-        <button
-          onClick={onAnalyze}
-          className={cn(
-            "px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors",
-            "bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90",
-            "min-h-[36px]"
-          )}
-        >
-          + Analyser
-        </button>
+      <div className="flex justify-between items-center pt-2">
+        <div className="h-4 w-40 bg-bg-tertiary rounded" />
+        <div className="h-9 w-24 bg-bg-tertiary rounded" />
       </div>
     </div>
   )
