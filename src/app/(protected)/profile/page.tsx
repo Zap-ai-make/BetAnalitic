@@ -31,6 +31,9 @@ export default function ProfilePage() {
   const [darkMode, setDarkMode] = React.useState(true)
   const [notifications, setNotifications] = React.useState(true)
   const [learnMode, setLearnMode] = React.useState(false)
+  const [virtualMode, setVirtualMode] = React.useState(false)
+  const [virtualBalance, setVirtualBalance] = React.useState(1000)
+  const [showVirtualSetup, setShowVirtualSetup] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
   // Analysis preferences
@@ -42,9 +45,13 @@ export default function ProfilePage() {
     const savedExpertiseLevel = localStorage.getItem("expertiseLevel") as typeof expertiseLevel | null
     const savedAnalysisDepth = localStorage.getItem("analysisDepth") as typeof analysisDepth | null
     const savedLearnMode = localStorage.getItem("learnMode") === "true"
+    const savedVirtualMode = localStorage.getItem("virtualMode") === "true"
+    const savedVirtualBalance = Number(localStorage.getItem("virtualBalance")) || 1000
     if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
     setLearnMode(savedLearnMode)
+    setVirtualMode(savedVirtualMode)
+    setVirtualBalance(savedVirtualBalance)
   }, [])
 
   // Save preferences to localStorage
@@ -59,6 +66,14 @@ export default function ProfilePage() {
   React.useEffect(() => {
     localStorage.setItem("learnMode", String(learnMode))
   }, [learnMode])
+
+  React.useEffect(() => {
+    localStorage.setItem("virtualMode", String(virtualMode))
+  }, [virtualMode])
+
+  React.useEffect(() => {
+    localStorage.setItem("virtualBalance", String(virtualBalance))
+  }, [virtualBalance])
 
   const handleLogout = async () => {
     setIsLoggingOut(true)
@@ -195,6 +210,18 @@ export default function ProfilePage() {
               checked={learnMode}
               onChange={setLearnMode}
             />
+            <ToggleMenuItem
+              icon="🎮"
+              label="Mode Virtuel"
+              checked={virtualMode}
+              onChange={(checked) => {
+                if (checked && virtualBalance === 0) {
+                  setShowVirtualSetup(true)
+                } else {
+                  setVirtualMode(checked)
+                }
+              }}
+            />
             <MenuItem
               icon="📊"
               label="Mode par défaut"
@@ -270,6 +297,65 @@ export default function ProfilePage() {
           BetAnalytic v0.1.0
         </p>
       </main>
+
+      {/* Virtual Setup Modal */}
+      {showVirtualSetup && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/50 z-40"
+            onClick={() => setShowVirtualSetup(false)}
+          />
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md">
+            <div className="bg-bg-secondary rounded-lg border border-purple-500/50 p-6 space-y-4">
+              <div className="text-center">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  <span className="text-3xl">🎮</span>
+                </div>
+                <h3 className="font-display text-xl font-bold text-text-primary mb-2">
+                  Configurer Mode Virtuel
+                </h3>
+                <p className="text-sm text-text-secondary">
+                  Choisissez votre balance de départ pour pratiquer sans risque
+                </p>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[100, 500, 1000].map((amount) => (
+                  <button
+                    key={amount}
+                    onClick={() => {
+                      setVirtualBalance(amount)
+                      setVirtualMode(true)
+                      setShowVirtualSetup(false)
+                    }}
+                    className={cn(
+                      "p-4 rounded-lg border-2 transition-all",
+                      "hover:border-purple-500 hover:bg-purple-500/10",
+                      "text-center"
+                    )}
+                  >
+                    <div className="font-display font-bold text-text-primary">
+                      {amount}€
+                    </div>
+                    <div className="text-xs text-text-tertiary mt-1">
+                      {amount === 100 ? "Débutant" : amount === 500 ? "Intermédiaire" : "Avancé"}
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowVirtualSetup(false)}
+                  className="w-full py-2 text-text-secondary hover:text-text-primary transition-colors text-sm"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <DashboardNav />
     </div>

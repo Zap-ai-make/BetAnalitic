@@ -45,6 +45,10 @@ export default function AnalysisPage() {
   const [burstModeActive, setBurstModeActive] = React.useState(false)
   const [showBurstUpsell, setShowBurstUpsell] = React.useState(false)
 
+  // Virtual Mode (Practice mode)
+  const [virtualMode, setVirtualMode] = React.useState(false)
+  const [virtualBalance, setVirtualBalance] = React.useState(1000)
+
   // Voice input
   const [isRecording, setIsRecording] = React.useState(false)
   const recognitionRef = React.useRef<SpeechRecognition | null>(null)
@@ -59,9 +63,13 @@ export default function AnalysisPage() {
     const savedExpertiseLevel = localStorage.getItem("expertiseLevel") as typeof expertiseLevel | null
     const savedAnalysisDepth = localStorage.getItem("analysisDepth") as typeof analysisDepth | null
     const savedLearnMode = localStorage.getItem("learnMode") === "true"
+    const savedVirtualMode = localStorage.getItem("virtualMode") === "true"
+    const savedVirtualBalance = Number(localStorage.getItem("virtualBalance")) || 1000
     if (savedExpertiseLevel) setExpertiseLevel(savedExpertiseLevel)
     if (savedAnalysisDepth) setAnalysisDepth(savedAnalysisDepth)
     setLearnMode(savedLearnMode)
+    setVirtualMode(savedVirtualMode)
+    setVirtualBalance(savedVirtualBalance)
   }, [])
 
   // Burst Mode detection (Premium feature for LIVE matches)
@@ -527,6 +535,31 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
                 </div>
                 <div className="text-accent-gold font-mono font-bold text-2xl">
                   ∞
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Virtual Mode Indicator */}
+          {virtualMode && matches.length > 0 && (
+            <div className="p-3 rounded-lg bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🎮</span>
+                  <div>
+                    <div className="font-display font-semibold text-text-primary text-sm">
+                      Mode Virtuel Actif
+                    </div>
+                    <div className="text-xs text-text-tertiary">
+                      Aucun argent réel n&apos;est utilisé
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-purple-400 font-mono font-bold">
+                    {virtualBalance.toFixed(2)}€
+                  </div>
+                  <div className="text-xs text-text-tertiary">Virtuel</div>
                 </div>
               </div>
             </div>
