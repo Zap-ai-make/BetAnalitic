@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { precomputeService } from "~/lib/services/precomputeService"
 
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 /**
  * Cron endpoint for pre-computing match data
@@ -9,6 +9,9 @@ export const dynamic = "force-dynamic"
  */
 export async function GET(req: NextRequest) {
   try {
+    // Dynamic import to avoid build-time DB connection
+    const { precomputeService } = await import("~/lib/services/precomputeService")
+
     // Verify cron secret
     const authHeader = req.headers.get("authorization")
     const cronSecret = process.env.CRON_SECRET
@@ -82,6 +85,9 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
+    // Dynamic import to avoid build-time DB connection
+    const { precomputeService } = await import("~/lib/services/precomputeService")
+
     // Verify authorization
     const authHeader = req.headers.get("authorization")
     const apiSecret = process.env.API_SECRET

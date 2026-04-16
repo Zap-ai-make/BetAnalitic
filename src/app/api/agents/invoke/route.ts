@@ -1,8 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { agentOrchestrator } from "~/lib/agents/orchestrator"
-import { getServerAuthSession } from "~/server/auth"
 
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 interface InvokeRequest {
   agentId: string
@@ -20,6 +19,10 @@ interface InvokeRequest {
  */
 export async function POST(req: NextRequest) {
   try {
+    // Dynamic imports to avoid build-time DB connection
+    const { getServerAuthSession } = await import("~/server/auth")
+    const { agentOrchestrator } = await import("~/lib/agents/orchestrator")
+
     // Check authentication
     const session = await getServerAuthSession()
     if (!session?.user) {
@@ -36,9 +39,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // TODO: Check rate limits based on user tier
-    // For now, simple in-memory check could be added
-
     // Invoke agent
     const result = await agentOrchestrator.routeQuery(
       body.agentId,
@@ -49,19 +49,6 @@ export async function POST(req: NextRequest) {
         conversationHistory: body.conversationHistory,
       }
     )
-
-    // TODO: Log invocation to database for history (Story 4.8)
-    // await db.agentInvocation.create({
-    //   data: {
-    //     userId: session.user.id,
-    //     agentId: body.agentId,
-    //     query: body.query,
-    //     response: result.response,
-    //     matchId: body.matchId,
-    //     latency: result.latency,
-    //     model: result.model,
-    //   },
-    // })
 
     return NextResponse.json({
       success: true,

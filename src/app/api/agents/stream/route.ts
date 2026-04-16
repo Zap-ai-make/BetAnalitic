@@ -1,9 +1,8 @@
 import { type NextRequest } from "next/server"
-import { agentOrchestrator } from "~/lib/agents/orchestrator"
-import { getServerAuthSession } from "~/server/auth"
 
 // Force dynamic rendering (no static build)
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 interface StreamRequest {
   agentId: string
@@ -21,6 +20,10 @@ interface StreamRequest {
  */
 export async function POST(req: NextRequest) {
   try {
+    // Dynamic imports to avoid build-time DB connection
+    const { getServerAuthSession } = await import("~/server/auth")
+    const { agentOrchestrator } = await import("~/lib/agents/orchestrator")
+
     // Check authentication
     const session = await getServerAuthSession()
     if (!session?.user) {

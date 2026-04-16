@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
-import { getMatchPrecomputeService } from "~/lib/services/matchPrecompute"
 
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 /**
  * Cron endpoint for match pre-computation
@@ -19,6 +19,9 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Dynamic import to avoid build-time DB connection
+    const { getMatchPrecomputeService } = await import("~/lib/services/matchPrecompute")
+
     const service = getMatchPrecomputeService()
     await service.precomputeUpcomingMatches()
 

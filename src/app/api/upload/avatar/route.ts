@@ -1,17 +1,20 @@
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "~/server/auth";
-import { db } from "~/server/db";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request: NextRequest) {
   try {
+    // Dynamic imports to avoid build-time DB connection
+    const { auth } = await import("~/server/auth");
+    const { db } = await import("~/server/db");
+
     const session = await auth();
 
     if (!session?.user?.id) {
