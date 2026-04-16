@@ -5,7 +5,7 @@ import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import { cn } from "~/lib/utils"
-import { Trash2, Send, Mic } from "lucide-react"
+import { Trash2, Send, Mic, Volume2, Pause } from "lucide-react"
 import { Button } from "~/components/ui/button"
 import { AGENTS } from "~/lib/agents/config"
 
@@ -40,6 +40,11 @@ export default function AnalysisPage() {
   // Voice input
   const [isRecording, setIsRecording] = React.useState(false)
   const recognitionRef = React.useRef<SpeechRecognition | null>(null)
+
+  // Text-to-Speech
+  const [playingMessageId, setPlayingMessageId] = React.useState<string | null>(null)
+  const [speechRate, setSpeechRate] = React.useState(1)
+  const utteranceRef = React.useRef<SpeechSynthesisUtterance | null>(null)
 
   // Load preferences from localStorage
   React.useEffect(() => {
@@ -226,6 +231,49 @@ export default function AnalysisPage() {
       setIsRecording(false)
     }
   }
+
+  const startTTS = (messageId: string, content: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel() // Stop any current speech
+
+      const utterance = new SpeechSynthesisUtterance(content)
+      utterance.lang = 'fr-FR'
+      utterance.rate = speechRate
+
+      utterance.onend = () => {
+        setPlayingMessageId(null)
+        utteranceRef.current = null
+      }
+
+      utterance.onerror = () => {
+        setPlayingMessageId(null)
+        utteranceRef.current = null
+      }
+
+      utteranceRef.current = utterance
+      window.speechSynthesis.speak(utterance)
+      setPlayingMessageId(messageId)
+    } else {
+      alert("Votre navigateur ne supporte pas la synthèse vocale")
+    }
+  }
+
+  const stopTTS = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+      setPlayingMessageId(null)
+      utteranceRef.current = null
+    }
+  }
+
+  // Cleanup TTS on unmount
+  React.useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   const handleInvokeAgent = async () => {
     if (!selectedAgent || matches.length === 0) return
@@ -665,6 +713,51 @@ export default function AnalysisPage() {
                                 {message.agentName}
                               </span>
                             </button>
+                            <button
+                              onClick={() => {
+                                if (playingMessageId === message.id) {
+                                  stopTTS()
+                                } else {
+                                  startTTS(message.id, message.content)
+                                }
+                              }}
+                              className={cn(
+                                "p-1.5 rounded-full transition-colors",
+                                playingMessageId === message.id
+                                  ? "bg-accent-cyan/20 text-accent-cyan"
+                                  : "text-text-tertiary hover:text-accent-cyan"
+                              )}
+                              title={playingMessageId === message.id ? "Arrêter la lecture" : "Lire à haute voix"}
+                            >
+                              {playingMessageId === message.id ? (
+                                <Pause className="h-4 w-4" />
+                              ) : (
+                                <Volume2 className="h-4 w-4" />
+                              )}
+                            </button>
+                            {playingMessageId === message.id && (
+                              <div className="flex items-center gap-1 ml-2">
+                                {[0.75, 1, 1.5, 2].map((rate) => (
+                                  <button
+                                    key={rate}
+                                    onClick={() => {
+                                      setSpeechRate(rate)
+                                      // Restart with new rate
+                                      stopTTS()
+                                      setTimeout(() => startTTS(message.id, message.content), 100)
+                                    }}
+                                    className={cn(
+                                      "px-2 py-0.5 rounded text-xs",
+                                      speechRate === rate
+                                        ? "bg-accent-cyan text-bg-primary"
+                                        : "text-text-tertiary hover:text-text-primary"
+                                    )}
+                                  >
+                                    {rate}x
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             {message.confidence !== undefined && (() => {
                               const style = getConfidenceStyle(message.confidence)
                               return (
