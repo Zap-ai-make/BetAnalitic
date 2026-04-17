@@ -178,6 +178,7 @@ model NotificationPreferences {
   matchAlerts  Boolean @default(true)
   agentAlerts  Boolean @default(true)
   weeklyDigest Boolean @default(false)
+  roomAlerts   Boolean @default(true) // Story 6.14: Room notifications
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -473,6 +474,7 @@ model RoomMessage {
   replies   RoomMessage[] @relation("MessageReplies")
 
   reactions Json?
+  metadata  Json? // Story 6.10: Shared tickets, polls, etc.
 
   createdAt DateTime  @default(now())
   editedAt  DateTime?

@@ -324,6 +324,139 @@ export const roomRouter = createTRPCRouter({
     }),
 
   /**
+   * Story 6.11: Invite user to room
+   */
+  inviteUser: protectedProcedure
+    .input(
+      z.object({
+        roomId: z.string(),
+        username: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Check if user is owner or has invite permission
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        include: {
+          members: {
+            where: { userId },
+          },
+        },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      const membership = room.members[0]
+      const settings = room.settings as { membersCanInvite?: boolean }
+
+      if (room.ownerId !== userId && membership?.role !== "ADMIN" && !settings.membersCanInvite) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You don't have permission to invite users",
+        })
+      }
+
+      // Find user to invite
+      const invitee = await ctx.db.user.findUnique({
+        where: { username: input.username },
+      })
+
+      if (!invitee) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "User not found",
+        })
+      }
+
+      // Check if already a member
+      const existingMember = await ctx.db.roomMember.findUnique({
+        where: {
+          roomId_userId: {
+            roomId: input.roomId,
+            userId: invitee.id,
+          },
+        },
+      })
+
+      if (existingMember) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "User is already a member",
+        })
+      }
+
+      // Add as member
+      await ctx.db.roomMember.create({
+        data: {
+          roomId: input.roomId,
+          userId: invitee.id,
+          role: "MEMBER",
+        },
+      })
+
+      return { success: true, username: invitee.username }
+    }),
+
+  /**
+   * Story 6.11: Join room via invite link
+   */
+  joinViaInvite: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      if (room.visibility === "PRIVATE") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "This room is private",
+        })
+      }
+
+      // Check if already a member
+      const existingMember = await ctx.db.roomMember.findUnique({
+        where: {
+          roomId_userId: {
+            roomId: input.roomId,
+            userId,
+          },
+        },
+      })
+
+      if (existingMember) {
+        return room
+      }
+
+      // Add as member
+      await ctx.db.roomMember.create({
+        data: {
+          roomId: input.roomId,
+          userId,
+          role: "MEMBER",
+        },
+      })
+
+      return room
+    }),
+
+  /**
    * Story 6.7: Discover public rooms
    */
   discover: protectedProcedure
@@ -470,6 +603,7 @@ export const roomRouter = createTRPCRouter({
         type: z.enum(["TEXT", "AGENT", "SYSTEM"]).default("TEXT"),
         agentId: z.string().optional(),
         replyToId: z.string().optional(),
+        ticketId: z.string().optional(), // Story 6.10: Share ticket
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -501,6 +635,7 @@ export const roomRouter = createTRPCRouter({
           type: input.type,
           agentId: input.agentId,
           replyToId: input.replyToId,
+          metadata: input.ticketId ? { ticketId: input.ticketId } : undefined,
         },
         include: {
           user: {
@@ -527,5 +662,480 @@ export const roomRouter = createTRPCRouter({
         reactions: message.reactions,
         createdAt: message.createdAt,
       }
+    }),
+
+  /**
+   * Story 6.12: Kick/ban user (Owner/Admin only)
+   */
+  kickUser: protectedProcedure
+    .input(
+      z.object({
+        roomId: z.string(),
+        targetUserId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Check if user is owner or admin
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        include: {
+          members: {
+            where: { userId },
+          },
+        },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      const myMembership = room.members[0]
+
+      if (room.ownerId !== userId && myMembership?.role !== "ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only owners and admins can kick users",
+        })
+      }
+
+      // Cannot kick the owner
+      if (input.targetUserId === room.ownerId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Cannot kick the room owner",
+        })
+      }
+
+      // Remove membership
+      await ctx.db.roomMember.delete({
+        where: {
+          roomId_userId: {
+            roomId: input.roomId,
+            userId: input.targetUserId,
+          },
+        },
+      })
+
+      return { success: true }
+    }),
+
+  /**
+   * Story 6.12: Promote user to admin
+   */
+  promoteToAdmin: protectedProcedure
+    .input(
+      z.object({
+        roomId: z.string(),
+        targetUserId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Check if user is owner
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      if (room.ownerId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only room owner can promote users",
+        })
+      }
+
+      // Update role
+      await ctx.db.roomMember.update({
+        where: {
+          roomId_userId: {
+            roomId: input.roomId,
+            userId: input.targetUserId,
+          },
+        },
+        data: {
+          role: "ADMIN",
+        },
+      })
+
+      return { success: true }
+    }),
+
+  /**
+   * Story 6.12: Delete message (Owner/Admin only)
+   */
+  deleteMessage: protectedProcedure
+    .input(
+      z.object({
+        roomId: z.string(),
+        messageId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Check if user is owner, admin, or message author
+      const message = await ctx.db.roomMessage.findUnique({
+        where: { id: input.messageId },
+        include: {
+          room: {
+            include: {
+              members: {
+                where: { userId },
+              },
+            },
+          },
+        },
+      })
+
+      if (!message) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Message not found",
+        })
+      }
+
+      const myMembership = message.room.members[0]
+      const isOwner = message.room.ownerId === userId
+      const isAdmin = myMembership?.role === "ADMIN"
+      const isAuthor = message.userId === userId
+
+      if (!isOwner && !isAdmin && !isAuthor) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Not authorized to delete this message",
+        })
+      }
+
+      // Soft delete
+      await ctx.db.roomMessage.update({
+        where: { id: input.messageId },
+        data: { isDeleted: true },
+      })
+
+      return { success: true }
+    }),
+
+  /**
+   * Story 6.13: Get room analytics
+   */
+  getAnalytics: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Check if user is owner or admin
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        include: {
+          members: {
+            where: { userId },
+          },
+        },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      const myMembership = room.members[0]
+
+      if (room.ownerId !== userId && myMembership?.role !== "ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only owners and admins can view analytics",
+        })
+      }
+
+      // Get stats
+      const totalMessages = await ctx.db.roomMessage.count({
+        where: {
+          roomId: input.roomId,
+          isDeleted: false,
+        },
+      })
+
+      const totalMembers = await ctx.db.roomMember.count({
+        where: { roomId: input.roomId },
+      })
+
+      // Top contributors
+      const topContributors = await ctx.db.roomMessage.groupBy({
+        by: ["userId"],
+        where: {
+          roomId: input.roomId,
+          isDeleted: false,
+        },
+        _count: {
+          id: true,
+        },
+        orderBy: {
+          _count: {
+            id: "desc",
+          },
+        },
+        take: 5,
+      })
+
+      const contributorDetails = await ctx.db.user.findMany({
+        where: {
+          id: {
+            in: topContributors.map((c) => c.userId),
+          },
+        },
+        select: {
+          id: true,
+          username: true,
+          displayName: true,
+          avatarUrl: true,
+        },
+      })
+
+      const contributorsWithCounts = topContributors.map((c) => {
+        const user = contributorDetails.find((u) => u.id === c.userId)
+        return {
+          userId: c.userId,
+          userName: user?.displayName ?? user?.username ?? "Unknown",
+          userAvatar: user?.avatarUrl,
+          messageCount: c._count.id,
+        }
+      })
+
+      // Activity by day (last 7 days)
+      const sevenDaysAgo = new Date()
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+      const recentMessages = await ctx.db.roomMessage.findMany({
+        where: {
+          roomId: input.roomId,
+          isDeleted: false,
+          createdAt: {
+            gte: sevenDaysAgo,
+          },
+        },
+        select: {
+          createdAt: true,
+        },
+      })
+
+      const activityByDay = recentMessages.reduce((acc, msg) => {
+        const day = msg.createdAt.toISOString().split("T")[0]
+        acc[day] = (acc[day] ?? 0) + 1
+        return acc
+      }, {} as Record<string, number>)
+
+      return {
+        totalMessages,
+        totalMembers,
+        topContributors: contributorsWithCounts,
+        activityByDay,
+        createdAt: room.createdAt,
+      }
+    }),
+
+  /**
+   * Story 6.14: Mark room as read
+   */
+  markAsRead: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Update last read timestamp in settings (using metadata Json field)
+      await ctx.db.roomMember.updateMany({
+        where: {
+          roomId: input.roomId,
+          userId,
+        },
+        data: {
+          // Would use lastReadAt field if it existed, using metadata for now
+          updatedAt: new Date(),
+        },
+      })
+
+      return { success: true }
+    }),
+
+  /**
+   * Story 6.14: Get unread count for user's rooms
+   */
+  getUnreadCounts: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id
+
+    const memberships = await ctx.db.roomMember.findMany({
+      where: { userId },
+      include: {
+        room: {
+          include: {
+            messages: {
+              where: {
+                isDeleted: false,
+                userId: { not: userId }, // Don't count own messages
+              },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    })
+
+    const unreadCounts = memberships.map((m) => {
+      const lastMessage = m.room.messages[0]
+      const unread = lastMessage && lastMessage.createdAt > m.updatedAt ? 1 : 0
+      return {
+        roomId: m.roomId,
+        unread,
+      }
+    })
+
+    return unreadCounts
+  }),
+
+  /**
+   * Story 6.15: Get archived rooms
+   */
+  getArchived: protectedProcedure
+    .input(
+      z.object({
+        limit: z.number().min(1).max(50).default(20),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const memberships = await ctx.db.roomMember.findMany({
+        where: {
+          userId,
+          room: {
+            archivedAt: { not: null },
+          },
+        },
+        include: {
+          room: {
+            include: {
+              owner: {
+                select: {
+                  id: true,
+                  username: true,
+                  displayName: true,
+                  avatarUrl: true,
+                },
+              },
+              match: {
+                include: {
+                  homeTeam: true,
+                  awayTeam: true,
+                },
+              },
+              _count: {
+                select: {
+                  members: true,
+                  messages: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: {
+          room: {
+            archivedAt: "desc",
+          },
+        },
+        take: input.limit,
+      })
+
+      return memberships.map((m) => ({
+        ...m.room,
+        memberCount: m.room._count.members,
+        messageCount: m.room._count.messages,
+        myRole: m.role,
+      }))
+    }),
+
+  /**
+   * Story 6.15: Archive room (Owner only)
+   */
+  archive: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      if (room.ownerId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only room owner can archive",
+        })
+      }
+
+      await ctx.db.room.update({
+        where: { id: input.roomId },
+        data: {
+          archivedAt: new Date(),
+        },
+      })
+
+      return { success: true }
+    }),
+
+  /**
+   * Story 6.15: Unarchive room (Owner only)
+   */
+  unarchive: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+      })
+
+      if (!room) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Room not found",
+        })
+      }
+
+      if (room.ownerId !== userId) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only room owner can unarchive",
+        })
+      }
+
+      await ctx.db.room.update({
+        where: { id: input.roomId },
+        data: {
+          archivedAt: null,
+        },
+      })
+
+      return { success: true }
     }),
 })

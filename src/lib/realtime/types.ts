@@ -22,8 +22,9 @@ export interface RealtimeMessage {
   id: string
   channelId: string
   userId: string
-  type: "text" | "agent" | "system"
-  content: string
+  type: "text" | "agent" | "system" | "ROOM_MESSAGE"
+  content?: string
+  payload?: unknown
   metadata?: Record<string, unknown>
   timestamp: Date
 }

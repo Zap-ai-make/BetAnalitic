@@ -62,7 +62,7 @@ export function useRoomChat({
               userId: msg.userId,
               userName: (meta.userName as string) ?? "Anonyme",
               userAvatar: meta.userAvatar as string | undefined,
-              content: msg.content,
+              content: msg.content ?? "",
               type: msg.type,
               createdAt: msg.timestamp,
             }
