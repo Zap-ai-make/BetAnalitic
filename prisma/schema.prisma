@@ -15,14 +15,14 @@ datasource db {
 // ============================================
 
 model User {
-  id            String    @id @default(cuid())
-  email         String?   @unique
-  phone         String?   @unique
-  username      String    @unique
-  passwordHash  String
-  displayName   String?
-  avatarUrl     String?
-  bio           String?
+  id           String  @id @default(cuid())
+  email        String? @unique
+  phone        String? @unique
+  username     String  @unique
+  passwordHash String
+  displayName  String?
+  avatarUrl    String?
+  bio          String?
 
   // Verification
   emailVerified          DateTime?
@@ -32,49 +32,55 @@ model User {
   riskDisclaimerAccepted Boolean   @default(false)
 
   // Subscription
-  subscriptionTier  SubscriptionTier @default(FREE)
+  subscriptionTier   SubscriptionTier @default(FREE)
   subscriptionEndsAt DateTime?
 
   // User Preferences
-  expertiseLevel  ExpertiseLevel @default(BEGINNER)
-  favoriteSports  String[]       @default([])
-  favoriteTeams   String[]       @default([])
-  analysisDepth   AnalysisDepth  @default(STANDARD)
-  language        String         @default("fr")
+  expertiseLevel ExpertiseLevel @default(BEGINNER)
+  favoriteSports String[]       @default([])
+  favoriteTeams  String[]       @default([])
+  analysisDepth  AnalysisDepth  @default(STANDARD)
+  language       String         @default("fr")
 
   // Metadata
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
   // Onboarding
-  onboardingCompleted Boolean   @default(false)
-  onboardingSkipped   Boolean   @default(false)
-  userMode            UserMode  @default(ANALYTIC)
+  onboardingCompleted Boolean  @default(false)
+  onboardingSkipped   Boolean  @default(false)
+  userMode            UserMode @default(ANALYTIC)
 
   // Tutorial
-  tutorialCompleted   Boolean   @default(false)
-  tutorialSkipped     Boolean   @default(false)
-  firstAnalysisAt     DateTime?
+  tutorialCompleted Boolean   @default(false)
+  tutorialSkipped   Boolean   @default(false)
+  firstAnalysisAt   DateTime?
 
   // Platform Tour
-  tourCompleted       Boolean   @default(false)
-  tourSkipped         Boolean   @default(false)
+  tourCompleted Boolean @default(false)
+  tourSkipped   Boolean @default(false)
 
   // Account Deletion
   deletionScheduledAt DateTime?
   deletionReason      String?
 
   // Data Export
-  lastExportAt        DateTime?
+  lastExportAt DateTime?
 
   // Relations
-  sessions              Session[]
-  verificationTokens    VerificationToken[]
-  notificationPrefs     NotificationPreferences?
-  agentConversations    AgentConversation[]
-  agentMessages         AgentMessage[]
-  agentFeedback         AgentFeedback[]
+  sessions           Session[]
+  verificationTokens VerificationToken[]
+  notificationPrefs  NotificationPreferences?
+  agentConversations AgentConversation[]
+  agentMessages      AgentMessage[]
+  agentFeedback      AgentFeedback[]
+
+  // Room relations (Epic 6)
+  ownedRooms      Room[]        @relation("RoomOwner")
+  roomMemberships RoomMember[]  @relation("RoomMembership")
+  roomMessages    RoomMessage[] @relation("RoomMessages")
+  roomTickets     RoomTicket[]  @relation("RoomTickets")
 
   @@index([email])
   @@index([phone])
@@ -99,13 +105,13 @@ model Session {
 }
 
 model VerificationToken {
-  id        String              @id @default(cuid())
+  id        String                @id @default(cuid())
   userId    String
-  token     String              @unique
+  token     String                @unique
   type      VerificationTokenType
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime            @default(now())
+  createdAt DateTime              @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -152,26 +158,26 @@ enum UserMode {
 // ============================================
 
 model NotificationPreferences {
-  id        String   @id @default(cuid())
-  userId    String   @unique
+  id     String @id @default(cuid())
+  userId String @unique
 
   // Global toggles
-  pushEnabled   Boolean @default(true)
-  emailDigest   EmailDigestFrequency @default(NONE)
-  inAppAlerts   Boolean @default(true)
+  pushEnabled Boolean              @default(true)
+  emailDigest EmailDigestFrequency @default(NONE)
+  inAppAlerts Boolean              @default(true)
 
   // Do Not Disturb
-  dndEnabled    Boolean @default(false)
-  dndStart      String  @default("22:00")
-  dndEnd        String  @default("08:00")
+  dndEnabled Boolean @default(false)
+  dndStart   String  @default("22:00")
+  dndEnd     String  @default("08:00")
 
   // Per-agent notifications (JSON for flexibility)
   agentNotifications Json @default("{}")
 
   // Specific notification types
-  matchAlerts   Boolean @default(true)
-  agentAlerts   Boolean @default(true)
-  weeklyDigest  Boolean @default(false)
+  matchAlerts  Boolean @default(true)
+  agentAlerts  Boolean @default(true)
+  weeklyDigest Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -190,33 +196,33 @@ enum EmailDigestFrequency {
 // ============================================
 
 model Competition {
-  id         String   @id @default(cuid())
-  externalId String   @unique
+  id         String  @id @default(cuid())
+  externalId String  @unique
   name       String
   country    String
   logoUrl    String?
-  tier       Int      @default(1)
+  tier       Int     @default(1)
   season     String?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  matches    Match[]
+  matches Match[]
 
   @@index([country])
   @@index([tier])
 }
 
 model Team {
-  id         String   @id @default(cuid())
-  externalId String   @unique
+  id         String  @id @default(cuid())
+  externalId String  @unique
   name       String
   shortName  String
   logoUrl    String?
   country    String?
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   homeMatches Match[] @relation("HomeTeam")
   awayMatches Match[] @relation("AwayTeam")
@@ -236,26 +242,27 @@ model Match {
   awayScore     Int?
 
   // Metadata
-  venue         String?
-  referee       String?
-  round         String?
-  stage         String?
+  venue   String?
+  referee String?
+  round   String?
+  stage   String?
 
   // Additional data stored as JSON
-  odds          Json?
-  weather       Json?
-  lineups       Json?
-  statistics    Json?
+  odds       Json?
+  weather    Json?
+  lineups    Json?
+  statistics Json?
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  homeTeam           Team                  @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
-  awayTeam           Team                  @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
-  competition        Competition           @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  tags               MatchTag[]
-  precomputedData    PrecomputedMatchData?
+  homeTeam        Team                  @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam        Team                  @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  competition     Competition           @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  tags            MatchTag[]
+  precomputedData PrecomputedMatchData?
+  Room            Room[]
 
   @@index([kickoffTime])
   @@index([status])
@@ -269,7 +276,7 @@ model MatchTag {
   matchId String
   tag     String // "Derby", "Clasico", "TopMatch", etc.
 
-  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@unique([matchId, tag])
   @@index([tag])
@@ -285,23 +292,23 @@ enum MatchStatus {
 }
 
 model PrecomputedMatchData {
-  id           String   @id @default(cuid())
-  matchId      String   @unique
+  id      String @id @default(cuid())
+  matchId String @unique
 
   // Aggregated data
-  teamStats    Json     // Home/away team stats (form, goals, etc)
-  h2hHistory   Json     // Head-to-head history
-  referee      Json?    // Referee profile and stats
-  weather      Json?    // Weather conditions
+  teamStats  Json // Home/away team stats (form, goals, etc)
+  h2hHistory Json // Head-to-head history
+  referee    Json? // Referee profile and stats
+  weather    Json? // Weather conditions
 
   // Metadata
-  computedAt   DateTime @default(now())
-  expiresAt    DateTime
-  retryCount   Int      @default(0)
-  lastError    String?
+  computedAt DateTime @default(now())
+  expiresAt  DateTime
+  retryCount Int      @default(0)
+  lastError  String?
 
   // Relations
-  match        Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@index([matchId])
@@ -312,19 +319,19 @@ model PrecomputedMatchData {
 // ============================================
 
 model AgentConversation {
-  id          String   @id @default(cuid())
-  userId      String
-  agentType   AgentType
-  title       String?
-  matchId     String?
-  roomId      String?
-  isGuest     Boolean  @default(false)
+  id        String    @id @default(cuid())
+  userId    String
+  agentType AgentType
+  title     String?
+  matchId   String?
+  roomId    String?
+  isGuest   Boolean   @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  messages    AgentMessage[]
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages AgentMessage[]
 
   @@index([userId])
   @@index([agentType])
@@ -333,19 +340,19 @@ model AgentConversation {
 }
 
 model AgentMessage {
-  id              String   @id @default(cuid())
-  conversationId  String
-  userId          String
-  role            MessageRole
-  content         String   @db.Text
-  sources         Json?    // Array of sources/citations
-  metadata        Json?    // Additional data (tokens, latency, etc)
+  id             String      @id @default(cuid())
+  conversationId String
+  userId         String
+  role           MessageRole
+  content        String      @db.Text
+  sources        Json? // Array of sources/citations
+  metadata       Json? // Additional data (tokens, latency, etc)
 
-  createdAt       DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  conversation    AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-  user            User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  feedback        AgentFeedback?
+  conversation AgentConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  feedback     AgentFeedback?
 
   @@index([conversationId])
   @@index([userId])
@@ -353,36 +360,36 @@ model AgentMessage {
 }
 
 model AgentFeedback {
-  id          String   @id @default(cuid())
-  messageId   String   @unique
-  userId      String
-  rating      FeedbackRating
-  comment     String?
+  id        String         @id @default(cuid())
+  messageId String         @unique
+  userId    String
+  rating    FeedbackRating
+  comment   String?
 
-  createdAt   DateTime @default(now())
+  createdAt DateTime @default(now())
 
-  message     AgentMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message AgentMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([rating])
 }
 
 enum AgentType {
-  SCOUT          // 🔍 DataScout
-  FORM           // 📊 FormAnalyzer
-  H2H            // ⚔️ HeadToHead
-  STATS          // 📈 StatsMaster
-  MOMENTUM       // 🌊 MomentumTracker
-  CONTEXT        // 🧠 ContextKing
-  ODDS           // 💰 OddsWhisperer
-  WEATHER        // 🌦️ WeatherGuru
-  REFEREE        // 🟨 RefereeWatch
-  INJURY         // 🏥 InjuryAlert
-  SENTIMENT      // 💬 SentimentPulse
-  PREDICTION     // 🎯 PredictMaster
-  RISK           // ⚠️ RiskGuardian
-  VALUE          // 💎 ValueHunter
+  SCOUT // 🔍 DataScout
+  FORM // 📊 FormAnalyzer
+  H2H // ⚔️ HeadToHead
+  STATS // 📈 StatsMaster
+  MOMENTUM // 🌊 MomentumTracker
+  CONTEXT // 🧠 ContextKing
+  ODDS // 💰 OddsWhisperer
+  WEATHER // 🌦️ WeatherGuru
+  REFEREE // 🟨 RefereeWatch
+  INJURY // 🏥 InjuryAlert
+  SENTIMENT // 💬 SentimentPulse
+  PREDICTION // 🎯 PredictMaster
+  RISK // ⚠️ RiskGuardian
+  VALUE // 💎 ValueHunter
 }
 
 enum MessageRole {
@@ -394,6 +401,137 @@ enum MessageRole {
 enum FeedbackRating {
   THUMBS_UP
   THUMBS_DOWN
+}
+
+// ============================================
+// COLLABORATIVE ROOMS (Epic 6)
+// ============================================
+
+model Room {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  color       String  @default("#00D4FF")
+  badge       String?
+
+  visibility RoomVisibility @default(PUBLIC)
+  type       RoomType       @default(PRIVATE)
+
+  ownerId String
+  owner   User   @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  matchId String?
+  match   Match?  @relation(fields: [matchId], references: [id], onDelete: SetNull)
+
+  maxMembers Int @default(50)
+
+  settings Json @default("{\"membersCanInvite\":true,\"membersCanInvokeAgents\":true,\"dataOnlyMode\":false}")
+
+  members  RoomMember[]
+  messages RoomMessage[]
+  tickets  RoomTicket[]
+
+  createdAt  DateTime  @default(now())
+  archivedAt DateTime?
+
+  @@index([ownerId])
+  @@index([matchId])
+  @@index([createdAt])
+  @@index([type, visibility])
+}
+
+model RoomMember {
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("RoomMembership", fields: [userId], references: [id], onDelete: Cascade)
+
+  role     RoomRole @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  @@id([roomId, userId])
+  @@index([userId])
+  @@index([roomId, role])
+}
+
+model RoomMessage {
+  id String @id @default(cuid())
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("RoomMessages", fields: [userId], references: [id], onDelete: Cascade)
+
+  type    RoomMessageType @default(TEXT)
+  content String          @db.Text
+
+  agentId   String?
+  replyToId String?
+  replyTo   RoomMessage?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
+  replies   RoomMessage[] @relation("MessageReplies")
+
+  reactions Json?
+
+  createdAt DateTime  @default(now())
+  editedAt  DateTime?
+  isDeleted Boolean   @default(false)
+
+  @@index([roomId, createdAt])
+  @@index([userId])
+  @@index([agentId])
+}
+
+model RoomTicket {
+  id String @id @default(cuid())
+
+  roomId String
+  room   Room   @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation("RoomTickets", fields: [userId], references: [id], onDelete: Cascade)
+
+  matches   Json // Array of match selections
+  totalOdds Float
+
+  status RoomTicketStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+
+  @@index([roomId])
+  @@index([userId])
+  @@index([status])
+}
+
+enum RoomVisibility {
+  PUBLIC
+  PRIVATE
+  INVITE_ONLY
+}
+
+enum RoomType {
+  OFFICIAL
+  PRIVATE
+}
+
+enum RoomRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum RoomMessageType {
+  TEXT
+  AGENT
+  SYSTEM
+}
+
+enum RoomTicketStatus {
+  ACTIVE
+  WON
+  LOST
+  ARCHIVED
 }
 
 // ============================================
