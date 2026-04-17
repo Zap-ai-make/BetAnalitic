@@ -6,6 +6,7 @@ import { notificationsRouter } from "~/server/api/routers/notifications";
 import { onboardingRouter } from "~/server/api/routers/onboarding";
 import { postRouter } from "~/server/api/routers/post";
 import { profileRouter } from "~/server/api/routers/profile";
+import { roomRouter } from "~/server/api/routers/room";
 import { sessionRouter } from "~/server/api/routers/session";
 import { termsRouter } from "~/server/api/routers/terms";
 import { tourRouter } from "~/server/api/routers/tour";
@@ -26,6 +27,7 @@ export const appRouter = createTRPCRouter({
   onboarding: onboardingRouter,
   post: postRouter,
   profile: profileRouter,
+  room: roomRouter,
   session: sessionRouter,
   terms: termsRouter,
   tour: tourRouter,

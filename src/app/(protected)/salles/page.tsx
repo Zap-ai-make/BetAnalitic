@@ -1,228 +1,153 @@
 "use client"
 
+/**
+ * Salles Page
+ * Story 6.3+: List of joined rooms with real data
+ */
+
 import * as React from "react"
+import { api } from "~/trpc/react"
+import { Users, MessageSquare, Clock, Crown, Plus } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
-import { ChevronLeft, Settings, MessageSquare, Users, Circle } from "lucide-react"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 
-interface Room {
-  id: string
-  name: string
-  badge: string
-  onlineCount: number
-  memberCount: number
-  color: string
-}
-
-interface Ticket {
-  id: string
-  title: string
-  author: string
-  time: string
-  messageCount: number
-  participantCount: number
-}
-
-// Mock data
-const MOCK_ROOMS: Room[] = [
-  { id: "1", name: "Ligue 1 Masters", badge: "📊", onlineCount: 45, memberCount: 234, color: "#00D4FF" },
-  { id: "2", name: "Champions League", badge: "🏆", onlineCount: 78, memberCount: 512, color: "#FFD93D" },
-  { id: "3", name: "Value Bets FR", badge: "💰", onlineCount: 23, memberCount: 156, color: "#10B981" },
-]
-
-const MOCK_TICKETS: Ticket[] = [
-  { id: "1", title: "📋 Coupon PSG-OM + Lyon-Monaco", author: "@swabo", time: "Il y a 2h", messageCount: 45, participantCount: 12 },
-  { id: "2", title: "📋 Analyse Ligue 1 J28", author: "@expert_foot", time: "Il y a 5h", messageCount: 23, participantCount: 8 },
-  { id: "3", title: "📋 Monaco vs Lille", author: "@swabo", time: "Hier", messageCount: 67, participantCount: 19 },
-]
-
-type ViewMode = "list" | "room"
-type TabType = "bienvenue" | "encours" | "archives"
-
 export default function SallesPage() {
-  const [viewMode, setViewMode] = React.useState<ViewMode>("room")
-  const [selectedRoom, setSelectedRoom] = React.useState<Room>(MOCK_ROOMS[0]!)
-  const [tab, setTab] = React.useState<TabType>("encours")
+  const router = useRouter()
+  const { data: rooms, isLoading } = api.room.getMyRooms.useQuery()
 
-  const handleRoomSelect = (room: Room) => {
-    setSelectedRoom(room)
-    setViewMode("room")
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-bg-primary">
+        <div className="text-text-tertiary">Chargement...</div>
+      </div>
+    )
   }
 
-  if (viewMode === "list") {
+  if (!rooms || rooms.length === 0) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
         {/* Header */}
         <header className="sticky top-0 z-20 bg-bg-primary border-b border-bg-tertiary">
           <div className="flex items-center justify-between px-4 py-3">
             <h1 className="font-display text-xl font-bold text-text-primary">Salles</h1>
-            <button className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-[44px]">
-              + Créer
+            <button
+              className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-[44px] flex items-center gap-2"
+              onClick={() => {
+                alert("Fonctionnalité Premium - Story 6.4")
+              }}
+            >
+              <Plus className="w-4 h-4" />
+              Créer
             </button>
           </div>
         </header>
 
-        {/* Room List */}
-        <main className="flex-1 p-4 pb-24 space-y-3">
-          {MOCK_ROOMS.map((room) => (
-            <button
-              key={room.id}
-              onClick={() => handleRoomSelect(room)}
-              className="w-full bg-bg-secondary rounded-xl p-4 text-left border-l-4 hover:bg-bg-tertiary transition-colors"
-              style={{ borderLeftColor: room.color }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="font-semibold text-text-primary">{room.name}</span>
-                <span className="text-lg">{room.badge}</span>
-              </div>
-              <div className="flex items-center gap-4 text-xs text-text-secondary">
-                <span className="flex items-center gap-1">
-                  <Circle className="w-1.5 h-1.5 fill-accent-green text-accent-green" />
-                  {room.onlineCount} en ligne
-                </span>
-                <span>{room.memberCount} membres</span>
-              </div>
-            </button>
-          ))}
-        </main>
+        {/* Empty State */}
+        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
+          <div className="text-6xl">💬</div>
+          <h2 className="font-display text-xl text-text-primary">Aucune salle</h2>
+          <p className="text-text-tertiary text-center max-w-md">
+            Rejoignez une salle officielle depuis un match ou créez votre propre salle privée
+          </p>
+        </div>
 
         <DashboardNav />
       </div>
     )
   }
 
-  // Room Detail View (matching mockup)
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       {/* Header */}
       <header className="sticky top-0 z-20 bg-bg-primary border-b border-bg-tertiary">
         <div className="flex items-center justify-between px-4 py-3">
-          <button
-            onClick={() => setViewMode("list")}
-            className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-[44px]"
-          >
-            <ChevronLeft className="w-5 h-5" />
-            <span className="font-medium">{selectedRoom.name}</span>
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-lg">{selectedRoom.badge}</span>
-            <button className="p-2 text-text-secondary hover:text-text-primary min-h-[44px] min-w-[44px] flex items-center justify-center">
-              <Settings className="w-5 h-5" />
-            </button>
+          <div>
+            <h1 className="font-display text-xl font-bold text-text-primary">Mes Salles</h1>
+            <p className="text-xs text-text-tertiary">{rooms.length} salle(s) rejointe(s)</p>
           </div>
-        </div>
-
-        {/* Room Stats Bar */}
-        <div className="px-4 py-2 bg-bg-secondary flex items-center gap-4 text-xs text-text-secondary">
-          <span className="flex items-center gap-1">
-            <Circle className="w-1.5 h-1.5 fill-accent-green text-accent-green" />
-            {selectedRoom.onlineCount} en ligne
-          </span>
-          <span className="flex items-center gap-1">
-            <Users className="w-3 h-3" />
-            {selectedRoom.memberCount} membres
-          </span>
+          <button
+            className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-[44px] flex items-center gap-2"
+            onClick={() => {
+              alert("Fonctionnalité Premium - Story 6.4")
+            }}
+          >
+            <Plus className="w-4 h-4" />
+            Créer
+          </button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 p-4 pb-24 overflow-y-auto">
-        {/* Tabs */}
-        <div className="bg-bg-secondary rounded-xl p-1 flex mb-4">
-          <button
-            onClick={() => setTab("bienvenue")}
+      {/* Rooms List */}
+      <main className="flex-1 p-4 pb-24 space-y-3 overflow-y-auto">
+        {rooms.map((room) => (
+          <div
+            key={room.id}
+            onClick={() => router.push(`/salles/${room.id}`)}
             className={cn(
-              "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all",
-              tab === "bienvenue"
-                ? "bg-bg-tertiary text-text-primary"
-                : "text-text-secondary hover:text-text-primary"
+              "bg-bg-secondary rounded-xl p-4 space-y-3",
+              "border border-bg-tertiary",
+              "hover:border-accent-cyan transition-colors cursor-pointer"
             )}
           >
-            👋 Bienvenue
-          </button>
-          <button
-            onClick={() => setTab("encours")}
-            className={cn(
-              "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all",
-              tab === "encours"
-                ? "bg-bg-tertiary text-text-primary"
-                : "text-text-secondary hover:text-text-primary"
-            )}
-          >
-            🔥 En cours
-          </button>
-          <button
-            onClick={() => setTab("archives")}
-            className={cn(
-              "flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all",
-              tab === "archives"
-                ? "bg-bg-tertiary text-text-primary"
-                : "text-text-secondary hover:text-text-primary"
-            )}
-          >
-            📦 Archives
-          </button>
-        </div>
-
-        {/* Tickets List */}
-        <div className="space-y-3">
-          {MOCK_TICKETS.map((ticket) => (
-            <button
-              key={ticket.id}
-              className="w-full bg-bg-secondary rounded-xl p-4 text-left hover:bg-bg-tertiary transition-colors"
-            >
-              <div className="flex items-start justify-between mb-1">
-                <h3 className="font-semibold text-text-primary text-sm">{ticket.title}</h3>
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {room.badge && <span className="text-xl">{room.badge}</span>}
+                  <h3 className="font-display text-base font-semibold text-text-primary truncate">
+                    {room.name}
+                  </h3>
+                  {room.type === "OFFICIAL" && (
+                    <span className="px-2 py-0.5 bg-accent-cyan/10 text-accent-cyan text-xs rounded-full">
+                      Officiel
+                    </span>
+                  )}
+                </div>
+                {room.description && (
+                  <p className="text-sm text-text-tertiary line-clamp-2 mt-1">
+                    {room.description}
+                  </p>
+                )}
               </div>
-              <p className="text-xs text-text-tertiary mb-2">
-                Par {ticket.author} • {ticket.time}
-              </p>
-              <div className="flex items-center gap-4 text-xs text-text-secondary">
-                <span className="flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3" />
-                  {ticket.messageCount} messages
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="w-3 h-3" />
-                  {ticket.participantCount} participants
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
+              {room.myRole === "OWNER" && (
+                <Crown className="w-5 h-5 text-accent-gold flex-shrink-0" />
+              )}
+            </div>
 
-        {/* My Coupon Section */}
-        <div className="mt-6 bg-bg-secondary rounded-xl p-4">
-          <div className="mb-3">
-            <h3 className="font-semibold text-text-primary text-sm flex items-center gap-2">
-              <span>📋</span>
-              Mon coupon du jour
-            </h3>
-            <p className="text-xs text-text-secondary">3 matchs sélectionnés</p>
+            {/* Stats */}
+            <div className="flex items-center gap-4 text-xs text-text-secondary">
+              <div className="flex items-center gap-1.5">
+                <Users className="w-4 h-4" />
+                <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <MessageSquare className="w-4 h-4" />
+                <span>{room.messageCount} message{room.messageCount > 1 ? "s" : ""}</span>
+              </div>
+              {room.match && (
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span>
+                    {new Date(room.match.kickoffTime).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Match Info (if applicable) */}
+            {room.match && (
+              <div className="pt-2 border-t border-bg-tertiary">
+                <div className="text-sm text-text-secondary">
+                  {room.match.homeTeam.shortName} vs {room.match.awayTeam.shortName}
+                </div>
+              </div>
+            )}
           </div>
-
-          <button
-            className={cn(
-              "w-full py-3 rounded-xl font-semibold text-sm mb-2",
-              "bg-gradient-to-r from-accent-cyan to-[#0099CC]",
-              "text-bg-primary hover:opacity-90 transition-opacity"
-            )}
-          >
-            Partager dans cette salle
-          </button>
-
-          <button
-            className={cn(
-              "w-full py-3 rounded-xl font-semibold text-sm",
-              "bg-bg-tertiary text-text-primary",
-              "hover:bg-bg-tertiary/80 transition-colors",
-              "flex items-center justify-center gap-2"
-            )}
-          >
-            Partager dans autre salle
-            <span className="text-text-secondary">▼</span>
-          </button>
-        </div>
+        ))}
       </main>
 
       <DashboardNav />
