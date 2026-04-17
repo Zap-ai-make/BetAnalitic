@@ -76,9 +76,9 @@ export function useRoomChat({
 
         // Enter presence
         await provider.enterPresence(channelId, {
-          odifier: userId,
-          odifierName: userName,
-          odifierAvatar: userAvatar,
+          userId: userId,
+          userName: userName,
+          userAvatar: userAvatar,
           status: "online",
           joinedAt: new Date(),
         })

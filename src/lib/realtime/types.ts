@@ -11,9 +11,9 @@ export type ConnectionState =
   | "failed"
 
 export interface PresenceData {
-  odifier: string
-  odifierName: string
-  odifierAvatar?: string
+  userId: string
+  userName: string
+  userAvatar?: string
   status: "online" | "away" | "busy"
   joinedAt: Date
 }
@@ -84,9 +84,9 @@ export interface RoomSettings {
 }
 
 export interface RoomMember {
-  odifier: string
-  odifierName: string
-  odifierAvatar?: string
+  userId: string
+  userName: string
+  userAvatar?: string
   role: MemberRole
   joinedAt: Date
   isOnline: boolean
@@ -111,7 +111,7 @@ export interface RoomMessage {
 export interface RoomTicket {
   id: string
   roomId: string
-  odifier: string
+  userId: string
   status: "active" | "won" | "lost" | "archived"
   matches: Array<{
     matchId: string

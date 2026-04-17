@@ -57,7 +57,7 @@ export function RoomMemberList({
       </div>
 
       {sortedMembers.map((member) => {
-        const isCurrentUser = member.odifier === currentUserId
+        const isCurrentUser = member.userId === currentUserId
         const canManageMember =
           canManage &&
           !isCurrentUser &&
@@ -66,7 +66,7 @@ export function RoomMemberList({
 
         return (
           <div
-            key={member.odifier}
+            key={member.userId}
             className={cn(
               "flex items-center gap-3 px-3 py-2 rounded-lg",
               "hover:bg-bg-tertiary transition-colors"
@@ -75,7 +75,7 @@ export function RoomMemberList({
             {/* Avatar */}
             <div className="relative">
               <div className="w-10 h-10 rounded-full bg-bg-tertiary flex items-center justify-center text-lg">
-                {member.odifierAvatar ?? member.odifierName.charAt(0).toUpperCase()}
+                {member.userAvatar ?? member.userName.charAt(0).toUpperCase()}
               </div>
               {/* Online indicator */}
               <Circle
@@ -92,7 +92,7 @@ export function RoomMemberList({
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <span className="font-medium text-text-primary truncate">
-                  {member.odifierName}
+                  {member.userName}
                 </span>
                 {roleIcons[member.role]}
                 {isCurrentUser && (
@@ -110,7 +110,7 @@ export function RoomMemberList({
                 <button
                   type="button"
                   onClick={() =>
-                    setMenuOpen(menuOpen === member.odifier ? null : member.odifier)
+                    setMenuOpen(menuOpen === member.userId ? null : member.userId)
                   }
                   className={cn(
                     "p-2 rounded-lg text-text-tertiary hover:text-text-primary",
@@ -121,13 +121,13 @@ export function RoomMemberList({
                   <MoreVertical className="w-5 h-5" />
                 </button>
 
-                {menuOpen === member.odifier && (
+                {menuOpen === member.userId && (
                   <div className="absolute right-0 top-full mt-1 w-48 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-xl z-50">
                     {currentUserRole === "owner" && member.role === "member" && (
                       <button
                         type="button"
                         onClick={() => {
-                          onPromoteMember?.(member.odifier, "admin")
+                          onPromoteMember?.(member.userId, "admin")
                           setMenuOpen(null)
                         }}
                         className="w-full px-4 py-3 text-left text-sm text-text-primary hover:bg-bg-tertiary flex items-center gap-2"
@@ -139,7 +139,7 @@ export function RoomMemberList({
                     <button
                       type="button"
                       onClick={() => {
-                        onRemoveMember?.(member.odifier)
+                        onRemoveMember?.(member.userId)
                         setMenuOpen(null)
                       }}
                       className="w-full px-4 py-3 text-left text-sm text-accent-red hover:bg-bg-tertiary flex items-center gap-2"
