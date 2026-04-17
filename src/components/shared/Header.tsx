@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { cn } from "~/lib/utils"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import { useRouter } from "next/navigation"
@@ -151,9 +152,11 @@ export function Header({
             aria-label="User profile"
           >
             {userAvatar ? (
-              <img
+              <Image
                 src={userAvatar}
                 alt={userName}
+                width={40}
+                height={40}
                 className="w-full h-full object-cover"
               />
             ) : (

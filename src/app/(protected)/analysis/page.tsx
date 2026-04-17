@@ -237,7 +237,7 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
     // Check browser support
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any
     const win = window as any
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const SpeechRecognitionClass = win.SpeechRecognition ?? win.webkitSpeechRecognition
 
     if (!SpeechRecognitionClass) {
@@ -256,8 +256,9 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     recognitionInstance.onresult = (event: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access
       const transcript = Array.from(event.results)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access
         .map((result: any) => result[0]?.transcript ?? "")
         .join('')
 
@@ -270,8 +271,10 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
 
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     recognitionInstance.onerror = (event: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       console.error('Speech recognition error:', event.error)
       setIsRecording(false)
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (event.error === 'not-allowed') {
         alert("Accès au microphone refusé. Veuillez autoriser l'accès dans les paramètres de votre navigateur.")
       }
@@ -291,6 +294,7 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
 
   const stopRecording = () => {
     if (recognitionRef.current) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       recognitionRef.current.stop()
       setIsRecording(false)
     }

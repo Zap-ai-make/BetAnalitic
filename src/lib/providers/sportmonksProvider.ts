@@ -197,7 +197,7 @@ export class SportmonksProvider implements DataProvider {
     }
   }
 
-  private transformFormData(teamId: string, data: unknown): FormData {
+  private transformFormData(teamId: string, _data: unknown): FormData {
     return {
       teamId,
       lastMatches: [],
@@ -212,7 +212,7 @@ export class SportmonksProvider implements DataProvider {
     }
   }
 
-  private transformLiveStats(data: unknown): LiveStats {
+  private transformLiveStats(_data: unknown): LiveStats {
     return {
       matchId: "",
       score: { home: 0, away: 0 },
@@ -227,7 +227,7 @@ export class SportmonksProvider implements DataProvider {
     }
   }
 
-  private transformOdds(matchId: string, data: unknown): OddsData {
+  private transformOdds(matchId: string, _data: unknown): OddsData {
     return {
       matchId,
       bookmakers: [],
@@ -236,8 +236,8 @@ export class SportmonksProvider implements DataProvider {
     }
   }
 
-  private transformRefereeData(data: unknown): RefereeData {
-    const raw = data as Record<string, unknown>
+  private transformRefereeData(_data: unknown): RefereeData {
+    const raw = _data as Record<string, unknown>
     return {
       id: String(raw.id ?? ""),
       name: String(raw.display_name ?? ""),
@@ -254,7 +254,7 @@ export class SportmonksProvider implements DataProvider {
   private transformHeadToHead(
     homeTeamId: string,
     awayTeamId: string,
-    data: unknown[]
+    _data: unknown[]
   ): HeadToHead {
     return {
       homeTeamId,

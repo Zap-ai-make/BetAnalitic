@@ -13,13 +13,6 @@ interface GenerateOptions {
   }
 }
 
-interface StreamChunk {
-  model: string
-  created_at: string
-  response: string
-  done: boolean
-}
-
 export class OllamaClient {
   private client: Ollama
   private baseUrl: string
