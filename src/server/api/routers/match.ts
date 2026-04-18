@@ -30,7 +30,6 @@ export const matchRouter = createTRPCRouter({
         awayTeam: match.awayTeam.name,
         homeScore: match.homeScore ?? undefined,
         awayScore: match.awayScore ?? undefined,
-        minute: match.minute ?? undefined,
       }
     }),
 

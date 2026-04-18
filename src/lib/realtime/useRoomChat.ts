@@ -55,6 +55,9 @@ export function useRoomChat({
           channelId,
           onMessage: (msg) => {
             if (!mounted) return
+            // Skip LIVE_UPDATE messages in room chat
+            if (msg.type === "LIVE_UPDATE") return
+
             const meta = msg.metadata ?? {}
             const roomMessage: RoomMessage = {
               id: msg.id,

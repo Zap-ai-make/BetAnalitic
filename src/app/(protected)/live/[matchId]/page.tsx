@@ -49,7 +49,6 @@ export default function LiveModePage() {
     awayTeam: string
     homeScore?: number
     awayScore?: number
-    minute?: number
     status: string
   }
 
@@ -88,15 +87,6 @@ export default function LiveModePage() {
             </h2>
           </div>
         </div>
-
-        {match.minute && (
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 bg-accent-cyan rounded-full animate-pulse" />
-            <span className="text-sm font-semibold text-text-secondary">
-              {match.minute}&apos;
-            </span>
-          </div>
-        )}
       </div>
 
       {/* Refresh Indicator */}
