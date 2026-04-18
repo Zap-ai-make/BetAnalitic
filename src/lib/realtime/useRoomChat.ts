@@ -63,7 +63,7 @@ export function useRoomChat({
               userName: (meta.userName as string) ?? "Anonyme",
               userAvatar: meta.userAvatar as string | undefined,
               content: msg.content ?? "",
-              type: msg.type,
+              type: msg.type === "ROOM_MESSAGE" ? "system" : msg.type,
               createdAt: msg.timestamp,
             }
             setMessages((prev) => [...prev, roomMessage])

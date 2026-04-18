@@ -4,6 +4,37 @@ import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
 
 export const matchRouter = createTRPCRouter({
   /**
+   * Get match by ID
+   * Story 7.3: Support Live Mode screen
+   */
+  getById: protectedProcedure
+    .input(z.object({ matchId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const match = await ctx.db.match.findUnique({
+        where: { id: input.matchId },
+        include: {
+          homeTeam: true,
+          awayTeam: true,
+          competition: true,
+          tags: true,
+        },
+      })
+
+      if (!match) {
+        throw new Error("Match not found")
+      }
+
+      return {
+        ...match,
+        homeTeam: match.homeTeam.name,
+        awayTeam: match.awayTeam.name,
+        homeScore: match.homeScore ?? undefined,
+        awayScore: match.awayScore ?? undefined,
+        minute: match.minute ?? undefined,
+      }
+    }),
+
+  /**
    * Get today's matches
    */
   getTodaysMatches: protectedProcedure.query(async ({ ctx }) => {
