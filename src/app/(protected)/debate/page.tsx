@@ -1,191 +1,204 @@
+"use client"
+
 /**
- * Story 8.7: DebateArena Page
+ * Epic 8: DebateArena Page
+ * Showcase real-time agent debates
  */
 
-import { redirect } from "next/navigation"
-import { auth } from "~/server/auth"
-import { DebateCard, HotDebateBadge } from "~/components/features/debate/DebateCard"
+import * as React from "react"
+import { DebateArenaInvocation } from "~/components/features/debate/DebateArenaInvocation"
+import { DebateArena } from "~/components/features/debate/DebateArena"
+import { ExpertDebateCreator } from "~/components/features/debate/ExpertDebateCreator"
+import { useDebateArenaStore } from "~/stores/debateArena"
+import { Sparkles, Trophy, Users } from "lucide-react"
 
-// Mock data
-const MOCK_DEBATES = [
-  {
-    id: "1",
-    topic: "PSG remportera la Ligue des Champions cette saison",
-    matchName: "PSG vs Bayern Munich",
-    positions: [
-      { agentId: "scout", agentName: "Scout", agentColor: "#22c55e", position: "for" as const, summary: "" },
-      { agentId: "strategist", agentName: "Strategist", agentColor: "#3b82f6", position: "for" as const, summary: "" },
-      { agentId: "sentinel", agentName: "Sentinel", agentColor: "#ef4444", position: "against" as const, summary: "" },
-      { agentId: "oracle", agentName: "Oracle", agentColor: "#8b5cf6", position: "against" as const, summary: "" },
-    ],
-    voteCount: 234,
-    participantCount: 156,
-    status: "active" as const,
-    endsAt: new Date(Date.now() + 45 * 60 * 1000),
-    intensity: "high" as const,
-  },
-  {
-    id: "2",
-    topic: "Le Real Madrid est favori pour la Liga cette saison",
-    positions: [
-      { agentId: "scout", agentName: "Scout", agentColor: "#22c55e", position: "for" as const, summary: "" },
-      { agentId: "historian", agentName: "Historian", agentColor: "#f59e0b", position: "against" as const, summary: "" },
-    ],
-    voteCount: 89,
-    participantCount: 67,
-    status: "voting" as const,
-    endsAt: new Date(Date.now() + 15 * 60 * 1000),
-    intensity: "medium" as const,
-  },
-  {
-    id: "3",
-    topic: "Haaland finira meilleur buteur de Premier League",
-    positions: [
-      { agentId: "strategist", agentName: "Strategist", agentColor: "#3b82f6", position: "for" as const, summary: "" },
-      { agentId: "valuebet", agentName: "ValueBet", agentColor: "#10b981", position: "for" as const, summary: "" },
-      { agentId: "sentinel", agentName: "Sentinel", agentColor: "#ef4444", position: "against" as const, summary: "" },
-    ],
-    voteCount: 312,
-    participantCount: 201,
-    status: "closed" as const,
-    winner: "for" as const,
-    intensity: "low" as const,
-  },
-]
-
-export default async function DebatePage() {
-  const session = await auth()
-  if (!session) redirect("/login")
-
-  const activeDebates = MOCK_DEBATES.filter((d) => d.status === "active")
-  const votingDebates = MOCK_DEBATES.filter((d) => d.status === "voting")
-  const closedDebates = MOCK_DEBATES.filter((d) => d.status === "closed")
+export default function DebatePage() {
+  const { currentDebate, isDebating, debateHistory } = useDebateArenaStore()
 
   return (
     <div className="min-h-screen bg-bg-primary pb-20">
       {/* Header */}
-      <div className="bg-bg-secondary border-b border-bg-tertiary">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-display font-bold text-text-primary flex items-center gap-2">
-                🎭 DebateArena
-              </h1>
-              <p className="text-text-secondary mt-1">
-                Les agents IA débattent, vous décidez
-              </p>
-            </div>
-            <button
-              type="button"
-              className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-xl font-medium hover:bg-accent-cyan/80 transition-colors min-h-[44px]"
-            >
-              + Nouveau débat
-            </button>
+      <div className="bg-linear-to-r from-accent-cyan/10 to-accent-purple/10 border-b border-bg-tertiary">
+        <div className="max-w-5xl mx-auto px-4 py-8">
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <Sparkles className="w-8 h-8 text-accent-cyan animate-pulse" />
+            <h1 className="text-3xl font-display font-bold text-text-primary">
+              ⚔️ DebateArena
+            </h1>
+            <Sparkles className="w-8 h-8 text-accent-purple animate-pulse" />
           </div>
+          <p className="text-center text-text-secondary max-w-2xl mx-auto">
+            Déclenchez un débat épique entre deux agents IA. Regardez-les argumenter
+            en temps réel avec des données, de l&apos;intelligence et de la stratégie.
+          </p>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-        {/* Active Debates */}
-        {activeDebates.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-4">
-              <span className="relative flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent-red opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-accent-red" />
-              </span>
-              <h2 className="text-lg font-display font-semibold text-text-primary">
-                Débats en cours
-              </h2>
+      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        {/* Quick Start Section */}
+        <section className="bg-bg-secondary rounded-2xl p-6 border border-bg-tertiary">
+          <h2 className="font-display font-bold text-xl text-text-primary mb-4 flex items-center gap-2">
+            <Trophy className="w-6 h-6 text-accent-gold" />
+            Lancer un Débat
+          </h2>
+          <p className="text-sm text-text-secondary mb-6">
+            Choisissez votre mode de débat : automatique avec sélection intelligente
+            ou personnalisé (Experts uniquement)
+          </p>
+
+          <div className="flex flex-wrap gap-3">
+            <DebateArenaInvocation
+              matchId="match-demo"
+              matchLabel="PSG vs OM • Ligue 1"
+            />
+            <ExpertDebateCreator
+              matchId="match-custom"
+              matchLabel="Real Madrid vs Barcelona • El Clásico"
+              isExpert={false}
+            />
+          </div>
+        </section>
+
+        {/* Features Grid */}
+        <section>
+          <h2 className="font-display font-bold text-xl text-text-primary mb-4 flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-accent-cyan" />
+            Comment ça marche ?
+          </h2>
+
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-bg-secondary rounded-xl p-5 border border-bg-tertiary">
+              <div className="w-12 h-12 rounded-full bg-accent-cyan/20 flex items-center justify-center mb-3">
+                <span className="text-2xl">🎯</span>
+              </div>
+              <h3 className="font-semibold text-base text-text-primary mb-2">
+                Sélection Intelligente
+              </h3>
+              <p className="text-sm text-text-tertiary leading-relaxed">
+                Le système choisit automatiquement deux agents avec des perspectives
+                opposées : Scout vs Insider (data vs intel), GoalMaster vs WallMaster
+                (attaque vs défense).
+              </p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              {activeDebates.map((debate) => (
-                <div key={debate.id} className="relative">
-                  <HotDebateBadge
-                    intensity={debate.intensity}
-                    className="absolute top-4 right-4 z-10"
-                  />
-                  <DebateCard
-                    id={debate.id}
-                    topic={debate.topic}
-                    matchName={debate.matchName}
-                    positions={debate.positions}
-                    voteCount={debate.voteCount}
-                    participantCount={debate.participantCount}
-                    status={debate.status}
-                    endsAt={debate.endsAt}
-                  />
+            <div className="bg-bg-secondary rounded-xl p-5 border border-bg-tertiary">
+              <div className="w-12 h-12 rounded-full bg-accent-purple/20 flex items-center justify-center mb-3">
+                <span className="text-2xl">⏱️</span>
+              </div>
+              <h3 className="font-semibold text-base text-text-primary mb-2">
+                Débat Immersif
+              </h3>
+              <p className="text-sm text-text-tertiary leading-relaxed">
+                6 échanges tour par tour avec pauses dramatiques de 8-10s. Effet
+                typewriter, messages glissant depuis les côtés, zone d&apos;interaction
+                bloquée pendant le débat.
+              </p>
+            </div>
+
+            <div className="bg-bg-secondary rounded-xl p-5 border border-bg-tertiary">
+              <div className="w-12 h-12 rounded-full bg-accent-gold/20 flex items-center justify-center mb-3">
+                <span className="text-2xl">🏆</span>
+              </div>
+              <h3 className="font-semibold text-base text-text-primary mb-2">
+                Verdict Spectaculaire
+              </h3>
+              <p className="text-sm text-text-tertiary leading-relaxed">
+                Animation gavel, scores en pourcentage, résumé des arguments clés.
+                L&apos;agent gagnant est déterminé par la force de ses arguments.
+              </p>
+            </div>
+
+            <div className="bg-bg-secondary rounded-xl p-5 border border-bg-tertiary">
+              <div className="w-12 h-12 rounded-full bg-accent-orange/20 flex items-center justify-center mb-3">
+                <span className="text-2xl">👑</span>
+              </div>
+              <h3 className="font-semibold text-base text-text-primary mb-2">
+                Mode Expert (Premium)
+              </h3>
+              <p className="text-sm text-text-tertiary leading-relaxed">
+                Les Experts peuvent créer des scénarios personnalisés : choisir les
+                agents, définir le sujet, publier dans leur salle pour leur audience.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Debate History */}
+        {debateHistory.length > 0 && (
+          <section>
+            <h2 className="font-display font-bold text-xl text-text-primary mb-4 flex items-center gap-2">
+              <Users className="w-6 h-6 text-accent-purple" />
+              Débats Récents
+            </h2>
+
+            <div className="space-y-3">
+              {debateHistory.slice(0, 5).map((debate) => (
+                <div
+                  key={debate.id}
+                  className="bg-bg-secondary rounded-xl p-4 border border-bg-tertiary"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <p className="font-semibold text-sm text-text-primary mb-1">
+                        {debate.topic}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-text-tertiary">
+                        <span
+                          className="font-semibold"
+                          style={{ color: debate.agent1.color }}
+                        >
+                          {debate.agent1.name}
+                        </span>
+                        <span>vs</span>
+                        <span
+                          className="font-semibold"
+                          style={{ color: debate.agent2.color }}
+                        >
+                          {debate.agent2.name}
+                        </span>
+                        <span>•</span>
+                        <span>{debate.messages.length} échanges</span>
+                      </div>
+                    </div>
+                    {debate.verdict && (
+                      <div className="text-right">
+                        <p className="text-xs text-text-tertiary mb-1">Vainqueur</p>
+                        <div className="flex items-center gap-1">
+                          <Trophy className="w-3 h-3 text-accent-gold" />
+                          <span className="text-sm font-semibold text-text-primary">
+                            {debate.verdict.winner === debate.agent1.id
+                              ? debate.agent1.name
+                              : debate.agent2.name}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </section>
         )}
 
-        {/* Voting Open */}
-        {votingDebates.length > 0 && (
-          <section>
-            <h2 className="text-lg font-display font-semibold text-text-primary mb-4">
-              🗳️ Votes ouverts
-            </h2>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {votingDebates.map((debate) => (
-                <DebateCard
-                  key={debate.id}
-                  id={debate.id}
-                  topic={debate.topic}
-                  matchName={debate.matchName}
-                  positions={debate.positions}
-                  voteCount={debate.voteCount}
-                  participantCount={debate.participantCount}
-                  status={debate.status}
-                  endsAt={debate.endsAt}
-                />
-              ))}
+        {/* Status */}
+        {currentDebate && (
+          <div className="fixed bottom-24 inset-x-4 max-w-md mx-auto">
+            <div className="bg-accent-cyan/10 border border-accent-cyan/30 rounded-xl p-4 backdrop-blur-sm animate-pulse">
+              <p className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-accent-cyan" />
+                Débat en cours
+              </p>
+              <p className="text-xs text-text-tertiary mt-1">
+                {currentDebate.agent1.name} vs {currentDebate.agent2.name} •{" "}
+                {currentDebate.messages.length} échanges
+              </p>
             </div>
-          </section>
-        )}
-
-        {/* Closed Debates */}
-        {closedDebates.length > 0 && (
-          <section>
-            <h2 className="text-lg font-display font-semibold text-text-primary mb-4">
-              📜 Débats terminés
-            </h2>
-
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {closedDebates.map((debate) => (
-                <DebateCard
-                  key={debate.id}
-                  id={debate.id}
-                  topic={debate.topic}
-                  matchName={debate.matchName}
-                  positions={debate.positions}
-                  voteCount={debate.voteCount}
-                  participantCount={debate.participantCount}
-                  status={debate.status}
-                  winner={debate.winner}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Empty State */}
-        {MOCK_DEBATES.length === 0 && (
-          <div className="py-16 text-center">
-            <div className="text-5xl mb-4">🎭</div>
-            <h3 className="text-lg font-display font-semibold text-text-primary mb-2">
-              Aucun débat en cours
-            </h3>
-            <p className="text-text-secondary max-w-md mx-auto">
-              Lancez un débat pour voir les agents IA argumenter sur un sujet
-              controversé !
-            </p>
           </div>
         )}
       </div>
+
+      {/* DebateArena Overlay */}
+      {isDebating && <DebateArena />}
     </div>
   )
 }
