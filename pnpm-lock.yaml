@@ -44,6 +44,12 @@ dependencies:
   clsx:
     specifier: ^2.1.1
     version: 2.1.1
+  dexie:
+    specifier: ^4.4.2
+    version: 4.4.2
+  dexie-react-hooks:
+    specifier: ^4.4.0
+    version: 4.4.0(dexie@4.4.2)(react@19.2.5)
   geist:
     specifier: ^1.7.0
     version: 1.7.0(next@15.5.15)
@@ -3312,6 +3318,20 @@ packages:
     resolution: {integrity: sha512-RWmIqhcFf1lRYBvNmr7qTNuyCt/7/ns2jbpp1+PalgE/rDQcBT0fioSMUpJ93irlUhC5hrg4cYqe6U+0ImW0rA==}
     dependencies:
       dequal: 2.0.3
+    dev: false
+
+  /dexie-react-hooks@4.4.0(dexie@4.4.2)(react@19.2.5):
+    resolution: {integrity: sha512-ObLXBS5+4BJU8vtSvBx6b9fY6zZYgniAtwxzjCHsUQadgbqYN6935X2/1TWw4Rf2N1aZV1io5/ziox4vKuxABA==}
+    peerDependencies:
+      dexie: '>=4.2.0-alpha.1 <5.0.0'
+      react: '>=16'
+    dependencies:
+      dexie: 4.4.2
+      react: 19.2.5
+    dev: false
+
+  /dexie@4.4.2:
+    resolution: {integrity: sha512-zMtV8q79EFE5U8FKZvt0Y/77PCU/Hr/RDxv1EDeo228L+m/HTbeN2AjoQm674rhQCX8n3ljK87lajt7UQuZfvw==}
     dev: false
 
   /dir-glob@3.0.1:

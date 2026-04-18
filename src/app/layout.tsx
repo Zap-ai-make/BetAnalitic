@@ -5,6 +5,9 @@ import { type Metadata, type Viewport } from "next";
 
 import { TRPCReactProvider } from "~/trpc/react";
 import { SessionProvider } from "~/components/providers/SessionProvider";
+import { InstallPrompt } from "~/components/features/pwa/InstallPrompt";
+import { UpdatePrompt } from "~/components/features/pwa/UpdatePrompt";
+import { OfflineIndicator } from "~/components/features/pwa/OfflineIndicator";
 
 // Configure fonts with next/font for optimal performance
 const inter = Inter({
@@ -70,7 +73,12 @@ export default function RootLayout({
       </head>
       <body className="safe-area-insets bg-bg-primary text-text-primary antialiased">
         <SessionProvider>
-          <TRPCReactProvider>{children}</TRPCReactProvider>
+          <TRPCReactProvider>
+            <OfflineIndicator />
+            {children}
+            <InstallPrompt />
+            <UpdatePrompt />
+          </TRPCReactProvider>
         </SessionProvider>
       </body>
     </html>

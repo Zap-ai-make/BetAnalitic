@@ -1,26 +1,21 @@
 "use client"
 
 /**
- * Story 12.1: PWA Install Prompt
+ * Epic 12 Story 12.1: PWA Installation & App Shell
+ * Install prompt component (A2HS - Add to Home Screen)
  */
 
 import * as React from "react"
-import { cn } from "~/lib/utils"
-import { Download, X, Smartphone } from "lucide-react"
+import { Download, X } from "lucide-react"
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>
 }
 
-interface InstallPromptProps {
-  onDismiss?: () => void
-  className?: string
-}
-
-export function InstallPrompt({ onDismiss, className }: InstallPromptProps) {
+export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = React.useState<BeforeInstallPromptEvent | null>(null)
-  const [isVisible, setIsVisible] = React.useState(false)
+  const [showBanner, setShowBanner] = React.useState(false)
   const [isInstalled, setIsInstalled] = React.useState(false)
 
   React.useEffect(() => {
@@ -30,162 +25,126 @@ export function InstallPrompt({ onDismiss, className }: InstallPromptProps) {
       return
     }
 
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault()
-      setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setIsVisible(true)
+    // Track visit count
+    const visitCount = parseInt(localStorage.getItem("pwa-visit-count") ?? "0")
+    localStorage.setItem("pwa-visit-count", String(visitCount + 1))
+
+    // Check if user has dismissed the banner before
+    const dismissed = localStorage.getItem("pwa-install-dismissed")
+    if (dismissed === "true") {
+      return
     }
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall)
+    // Show banner after 2 visits
+    if (visitCount >= 2) {
+      setShowBanner(true)
+    }
+
+    // Listen for beforeinstallprompt event
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e as BeforeInstallPromptEvent)
+      setShowBanner(true)
+    }
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+
+    // Listen for app installed event
+    const handleAppInstalled = () => {
+      setIsInstalled(true)
+      setShowBanner(false)
+      setDeferredPrompt(null)
+      localStorage.setItem("pwa-installed", "true")
+    }
+
+    window.addEventListener("appinstalled", handleAppInstalled)
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall)
+      window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt)
+      window.removeEventListener("appinstalled", handleAppInstalled)
     }
   }, [])
 
   const handleInstall = async () => {
-    if (!deferredPrompt) return
+    if (!deferredPrompt) {
+      return
+    }
 
+    // Show the install prompt
     await deferredPrompt.prompt()
-    const result = await deferredPrompt.userChoice
 
-    if (result.outcome === "accepted") {
-      setIsInstalled(true)
+    // Wait for the user to respond
+    const { outcome } = await deferredPrompt.userChoice
+
+    if (outcome === "accepted") {
+      console.log("User accepted the install prompt")
+      setShowBanner(false)
+    } else {
+      console.log("User dismissed the install prompt")
     }
 
     setDeferredPrompt(null)
-    setIsVisible(false)
   }
 
   const handleDismiss = () => {
-    setIsVisible(false)
-    onDismiss?.()
+    setShowBanner(false)
+    localStorage.setItem("pwa-install-dismissed", "true")
   }
 
-  if (!isVisible || isInstalled) return null
+  if (isInstalled || !showBanner) {
+    return null
+  }
 
   return (
-    <div
-      className={cn(
-        "fixed bottom-20 left-4 right-4 z-50",
-        "p-4 bg-bg-secondary rounded-2xl shadow-xl",
-        "border border-bg-tertiary",
-        "animate-in slide-in-from-bottom duration-300",
-        className
-      )}
-    >
-      <button
-        type="button"
-        onClick={handleDismiss}
-        className="absolute top-2 right-2 p-2 text-text-tertiary hover:text-text-primary"
-      >
-        <X className="w-4 h-4" />
-      </button>
+    <div className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-4 md:w-96">
+      <div className="bg-gradient-to-br from-accent-cyan/10 to-accent-purple/10 border-2 border-accent-cyan/30 rounded-2xl p-4 shadow-2xl backdrop-blur-sm">
+        <button
+          onClick={handleDismiss}
+          className="absolute top-2 right-2 text-text-tertiary hover:text-text-primary transition-colors"
+          aria-label="Fermer"
+        >
+          <X className="w-5 h-5" />
+        </button>
 
-      <div className="flex items-start gap-4">
-        <div className="p-3 bg-accent-cyan/20 rounded-xl">
-          <Smartphone className="w-6 h-6 text-accent-cyan" />
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 w-12 h-12 bg-accent-cyan/20 rounded-xl flex items-center justify-center">
+            <Download className="w-6 h-6 text-accent-cyan" />
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-bold text-lg text-text-primary mb-1">
+              Installer BetAnalytic
+            </h3>
+            <p className="text-sm text-text-secondary mb-3">
+              Accédez rapidement à vos analyses avec l&apos;application installée sur votre appareil
+            </p>
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleInstall}
+                className="flex-1 px-4 py-2 bg-accent-cyan text-bg-primary rounded-xl font-semibold hover:bg-accent-cyan/90 transition-colors text-sm min-h-[40px]"
+              >
+                Installer
+              </button>
+              <button
+                onClick={handleDismiss}
+                className="px-4 py-2 bg-bg-tertiary text-text-secondary rounded-xl font-semibold hover:bg-bg-tertiary/80 transition-colors text-sm min-h-[40px]"
+              >
+                Plus tard
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex-1">
-          <h3 className="font-display font-semibold text-text-primary">
-            Installer l&apos;application
-          </h3>
-          <p className="text-sm text-text-secondary mt-1">
-            Accédez à BetAnalytic directement depuis votre écran d&apos;accueil
-          </p>
-
-          <button
-            type="button"
-            onClick={handleInstall}
-            className="mt-3 flex items-center gap-2 px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-medium text-sm hover:bg-accent-cyan/80 transition-colors"
-          >
-            <Download className="w-4 h-4" />
-            Installer
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/**
- * Story 12.2: Offline Indicator
- */
-export function OfflineIndicator({ className }: { className?: string }) {
-  const [isOnline, setIsOnline] = React.useState(true)
-
-  React.useEffect(() => {
-    setIsOnline(navigator.onLine)
-
-    const handleOnline = () => setIsOnline(true)
-    const handleOffline = () => setIsOnline(false)
-
-    window.addEventListener("online", handleOnline)
-    window.addEventListener("offline", handleOffline)
-
-    return () => {
-      window.removeEventListener("online", handleOnline)
-      window.removeEventListener("offline", handleOffline)
-    }
-  }, [])
-
-  if (isOnline) return null
-
-  return (
-    <div
-      className={cn(
-        "fixed top-0 left-0 right-0 z-50",
-        "py-2 px-4 bg-accent-orange text-bg-primary text-center text-sm font-medium",
-        className
-      )}
-    >
-      Vous êtes hors ligne. Certaines fonctionnalités peuvent être limitées.
-    </div>
-  )
-}
-
-/**
- * Story 12.3: Update Available Banner
- */
-interface UpdateBannerProps {
-  onUpdate: () => void
-  onDismiss: () => void
-  className?: string
-}
-
-export function UpdateBanner({ onUpdate, onDismiss, className }: UpdateBannerProps) {
-  return (
-    <div
-      className={cn(
-        "fixed bottom-20 left-4 right-4 z-50",
-        "p-4 bg-accent-green text-bg-primary rounded-2xl shadow-xl",
-        className
-      )}
-    >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="font-medium">Nouvelle version disponible</p>
-          <p className="text-sm opacity-80">
-            Mettez à jour pour profiter des dernières fonctionnalités
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onDismiss}
-            className="px-3 py-1.5 text-sm hover:bg-white/10 rounded-lg transition-colors"
-          >
-            Plus tard
-          </button>
-          <button
-            type="button"
-            onClick={onUpdate}
-            className="px-3 py-1.5 bg-white text-accent-green text-sm font-medium rounded-lg hover:bg-white/90 transition-colors"
-          >
-            Mettre à jour
-          </button>
+        <div className="mt-3 pt-3 border-t border-bg-tertiary">
+          <div className="flex items-center gap-2 text-xs text-text-tertiary">
+            <span>✓</span>
+            <span>Accès instantané</span>
+            <span className="text-bg-tertiary">•</span>
+            <span>Mode hors-ligne</span>
+            <span className="text-bg-tertiary">•</span>
+            <span>Notifications</span>
+          </div>
         </div>
       </div>
     </div>

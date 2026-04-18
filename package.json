@@ -29,6 +29,8 @@
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "dexie": "^4.4.2",
+    "dexie-react-hooks": "^4.4.0",
     "geist": "^1.7.0",
     "lucide-react": "^1.8.0",
     "next": "^15.0.0-canary.75",
