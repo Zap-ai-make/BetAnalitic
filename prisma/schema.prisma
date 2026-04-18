@@ -35,6 +35,23 @@ model User {
   subscriptionTier   SubscriptionTier @default(FREE)
   subscriptionEndsAt DateTime?
 
+  // Credits & Rewards (Story 11.2)
+  credits           Float    @default(0) // Virtual credits for rewards
+  lifetimeCredits   Float    @default(0) // Total credits ever earned
+  referredByCode    String? // Referral code used at signup
+  welcomeBonusGiven Boolean  @default(false) // Whether signup bonus was given
+
+  // Gamification Points (Story 11.3)
+  points         Int      @default(0) // Current points balance
+  lifetimePoints Int      @default(0) // Total points ever earned
+  level          Int      @default(1) // User level based on points
+  lastDailyLogin DateTime? // Last daily login reward claim
+
+  // Streak Tracking (Story 11.6)
+  currentStreak  Int      @default(0) // Current consecutive days
+  longestStreak  Int      @default(0) // Best streak ever
+  lastStreakDate DateTime? // Last day streak was maintained
+
   // User Preferences
   expertiseLevel ExpertiseLevel @default(BEGINNER)
   favoriteSports String[]       @default([])
@@ -91,6 +108,13 @@ model User {
   subscriptions     ExpertSubscription[] @relation("UserSubscriptions") // Story 10.6
   subscribers       ExpertSubscription[] @relation("ExpertSubscribers") // Story 10.6
   payoutRequests    PayoutRequest[] @relation("ExpertPayouts") // Story 10.7
+
+  // Referral & Growth (Epic 11)
+  referralsMade      Referral[]          @relation("UserReferrals") // Story 11.1
+  referredBy         Referral?           @relation("ReferredUser") // Story 11.1
+  pointsTransactions PointsTransaction[] @relation("UserPointsTransactions") // Story 11.3
+  achievements       UserAchievement[]   @relation("UserAchievements") // Story 11.5
+  contestEntries     ContestEntry[]      @relation("ContestEntries") // Story 11.7
 
   @@index([email])
   @@index([phone])
@@ -754,6 +778,235 @@ enum PayoutStatus {
   COMPLETED
   REJECTED
   FAILED
+}
+
+// ============================================
+// REFERRAL & GROWTH ENGINE (Epic 11)
+// ============================================
+
+model Referral {
+  id             String   @id @default(cuid())
+  referralCode   String   @unique // Unique code for sharing
+  referrerId     String   // User who created the referral
+  referredUserId String?  @unique // User who signed up (null until signup)
+
+  // Status
+  status ReferralStatus @default(PENDING)
+
+  // Tracking
+  shareCount    Int @default(0) // How many times shared
+  clickCount    Int @default(0) // How many times link clicked
+  rewardGiven   Boolean @default(false) // Whether referrer received reward
+  rewardAmount  Float? // Reward amount (credits or discount)
+
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  convertedAt DateTime? // When referred user signed up
+  firstPaymentAt DateTime? // When referred user made first payment
+
+  // Relations
+  referrer     User  @relation("UserReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser User? @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: SetNull)
+
+  @@index([referrerId])
+  @@index([status])
+  @@index([referralCode])
+}
+
+enum ReferralStatus {
+  PENDING    // Link created but not used
+  ACTIVE     // Referred user signed up and is active
+  CHURNED    // Referred user churned/unsubscribed
+  INVALID    // Fraud detected or invalidated
+}
+
+// ============================================
+// GAMIFICATION POINTS (Story 11.3)
+// ============================================
+
+model PointsTransaction {
+  id     String @id @default(cuid())
+  userId String
+
+  // Transaction Details
+  points      Int // Can be positive (earn) or negative (spend)
+  actionType  PointsActionType
+  description String?
+
+  // Metadata
+  relatedEntityId String? // ID of related entity (e.g., agent conversation, referral, etc.)
+  metadata        Json? // Additional context
+  createdAt       DateTime @default(now())
+
+  // Relations
+  user User @relation("UserPointsTransactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+enum PointsActionType {
+  DAILY_LOGIN        // +10 points
+  AGENT_INVOCATION   // +25 points
+  SHARE_ANALYSIS     // +50 points
+  CORRECT_PREDICTION // +100 points
+  SUCCESSFUL_REFERRAL // +200 points
+  LEVEL_UP           // Bonus points for leveling up
+  MANUAL_ADJUSTMENT  // Admin adjustment
+  REWARD_REDEMPTION  // -X points when redeeming
+}
+
+// ============================================
+// ACHIEVEMENTS & BADGES (Story 11.5)
+// ============================================
+
+model UserAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  achievementId String   // Achievement identifier (e.g., "first_prediction", "10_wins")
+
+  // Progress
+  progress      Int      @default(0) // Current progress toward achievement
+  unlockedAt    DateTime? // When the achievement was unlocked (null if not yet unlocked)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user User @relation("UserAchievements", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, achievementId])
+  @@index([userId])
+  @@index([achievementId])
+  @@index([unlockedAt])
+}
+
+// Achievement definitions are stored in code, not database
+// Each achievement has:
+// - id: unique identifier
+// - name: display name
+// - description: what it takes to unlock
+// - category: PREDICTION, SOCIAL, LEARNING, MILESTONE
+// - icon: icon name
+// - requirement: number required to unlock
+// - rarity: COMMON, RARE, EPIC, LEGENDARY
+
+// ============================================
+// PREDICTION CONTESTS (Story 11.7)
+// ============================================
+
+model PredictionContest {
+  id          String   @id @default(cuid())
+  name        String
+  description String   @db.Text
+  type        ContestType @default(WEEKLY)
+
+  // Timing
+  startDate DateTime
+  endDate   DateTime
+  status    ContestStatus @default(UPCOMING)
+
+  // Entry & Rewards
+  entryFee  Int @default(0) // Points required to join (0 = free)
+  prizePool Int @default(0) // Total points in prize pool
+
+  // Configuration
+  maxParticipants Int? // null = unlimited
+  matchIds        Json // Array of match IDs included in contest
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  entries ContestEntry[]
+  prizes  ContestPrize[]
+
+  @@index([status])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([type])
+}
+
+model ContestEntry {
+  id        String @id @default(cuid())
+  contestId String
+  userId    String
+
+  // Scoring
+  totalPoints Int     @default(0) // Total points earned in contest
+  rank        Int? // Final rank (calculated when contest ends)
+  prizeClaimed Boolean @default(false)
+
+  // Metadata
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  contest     PredictionContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  user        User              @relation("ContestEntries", fields: [userId], references: [id], onDelete: Cascade)
+  predictions ContestPrediction[]
+
+  @@unique([contestId, userId])
+  @@index([contestId])
+  @@index([userId])
+  @@index([totalPoints])
+}
+
+model ContestPrediction {
+  id      String @id @default(cuid())
+  entryId String
+  matchId String
+
+  // Prediction
+  prediction String // "HOME", "DRAW", "AWAY", or custom format
+  metadata   Json? // Additional prediction data (exact score, etc.)
+
+  // Result
+  isCorrect Boolean? // null until match is finished
+  pointsEarned Int @default(0)
+
+  // Metadata
+  createdAt DateTime @default(now())
+
+  // Relations
+  entry ContestEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, matchId])
+  @@index([entryId])
+  @@index([matchId])
+}
+
+model ContestPrize {
+  id        String @id @default(cuid())
+  contestId String
+
+  // Prize Details
+  rankStart Int // e.g., 1 for 1st place
+  rankEnd   Int // e.g., 3 for top 3
+  reward    Int // Points awarded
+
+  // Relations
+  contest PredictionContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
+
+  @@index([contestId])
+}
+
+enum ContestType {
+  DAILY
+  WEEKLY
+  MONTHLY
+  SPECIAL_EVENT
+}
+
+enum ContestStatus {
+  UPCOMING  // Not started yet
+  ACTIVE    // Currently running
+  ENDED     // Finished, calculating results
+  COMPLETED // Results calculated, prizes awarded
+  CANCELLED // Contest cancelled
 }
 
 // ============================================

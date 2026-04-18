@@ -37,6 +37,8 @@ const registerSchema = z
         message: "Vous devez confirmer avoir 18 ans ou plus",
       }),
     }),
+    // Referral code (Story 11.2)
+    referralCode: z.string().optional(),
   })
   .refine((data) => data.email ?? data.phone, {
     message: "Email ou numéro de téléphone requis",
@@ -68,7 +70,7 @@ export const authRouter = createTRPCRouter({
    * Register a new user
    */
   register: publicProcedure.input(registerSchema).mutation(async ({ ctx, input }) => {
-    const { email, phone, username, password, ageVerified } = input;
+    const { email, phone, username, password, ageVerified, referralCode } = input;
 
     // Check if username already exists
     const existingUsername = await ctx.db.user.findUnique({
@@ -136,6 +138,26 @@ export const authRouter = createTRPCRouter({
       },
     });
 
+    // Process referral code if provided (Story 11.2)
+    let referralBonus = 0;
+    if (referralCode) {
+      try {
+        // Import referral router to call processReferralSignup
+        const { referralRouter } = await import("~/server/api/routers/referral");
+        const caller = referralRouter.createCaller(ctx);
+        const referralResult = await caller.processReferralSignup({
+          referralCode,
+          newUserId: user.id,
+        });
+        if (referralResult.success) {
+          referralBonus = referralResult.welcomeBonus ?? 0;
+        }
+      } catch (error) {
+        // Log error but don't fail registration
+        console.error("Referral processing failed:", error);
+      }
+    }
+
     // TODO: Send verification email/SMS
     // For now, just return success
     // In production: integrate with Resend, SendGrid, Twilio, etc.
@@ -145,6 +167,7 @@ export const authRouter = createTRPCRouter({
       userId: user.id,
       verificationRequired: true,
       verificationType: email ? "email" : "phone",
+      referralBonus,
     };
   }),
 

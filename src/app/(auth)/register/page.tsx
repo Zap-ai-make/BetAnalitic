@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
@@ -22,6 +22,7 @@ export default function RegisterPage() {
   )
   const [showPassword, setShowPassword] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [referralCode, setReferralCode] = useState<string | null>(null)
 
   const {
     register,
@@ -39,8 +40,18 @@ export default function RegisterPage() {
 
   const password = watch("password") ?? ""
 
+  // Check for referral code in localStorage (Story 11.2)
+  useEffect(() => {
+    const storedReferralCode = localStorage.getItem("referralCode")
+    if (storedReferralCode) {
+      setReferralCode(storedReferralCode)
+    }
+  }, [])
+
   const registerMutation = api.auth.register.useMutation({
     onSuccess: () => {
+      // Clear referral code from localStorage after successful registration
+      localStorage.removeItem("referralCode")
       setSuccess(true)
     },
   })
@@ -52,6 +63,7 @@ export default function RegisterPage() {
       username: data.username,
       password: data.password,
       ageVerified: true,
+      referralCode: referralCode ?? undefined,
     })
   }
 
