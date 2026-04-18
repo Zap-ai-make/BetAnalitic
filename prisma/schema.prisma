@@ -82,6 +82,16 @@ model User {
   roomMessages    RoomMessage[] @relation("RoomMessages")
   roomTickets     RoomTicket[]  @relation("RoomTickets")
 
+  // Expert Program (Epic 10)
+  expertApplication ExpertApplication?
+  expertProfile     ExpertProfile?
+  expertContent     ExpertContent[] // Story 10.5
+  follows           ExpertFollow[]  @relation("UserFollows") // Story 10.6
+  followers         ExpertFollow[]  @relation("ExpertFollowers") // Story 10.6
+  subscriptions     ExpertSubscription[] @relation("UserSubscriptions") // Story 10.6
+  subscribers       ExpertSubscription[] @relation("ExpertSubscribers") // Story 10.6
+  payoutRequests    PayoutRequest[] @relation("ExpertPayouts") // Story 10.7
+
   @@index([email])
   @@index([phone])
   @@index([username])
@@ -417,6 +427,8 @@ model Room {
 
   visibility RoomVisibility @default(PUBLIC)
   type       RoomType       @default(PRIVATE)
+  expertOnly Boolean        @default(false) // Story 10.8: Experts only
+  expertHosted Boolean      @default(false) // Story 10.8: Hosted by verified expert
 
   ownerId String
   owner   User   @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -534,6 +546,214 @@ enum RoomTicketStatus {
   WON
   LOST
   ARCHIVED
+}
+
+// ============================================
+// EXPERT PROGRAM (Epic 10)
+// ============================================
+
+model ExpertApplication {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Application Details
+  bio               String
+  expertiseAreas    String[] // e.g., ["Ligue 1", "Champions League", "xG Analysis"]
+  socialProofLinks  String[] // LinkedIn, Twitter, blog, etc.
+  trackRecord       String   // Description of past predictions/successes
+  certifications    String?  // Optional certifications
+  mediaAppearances  String?  // Optional media mentions
+
+  // Review Process
+  status        ExpertApplicationStatus @default(PENDING)
+  submittedAt   DateTime                @default(now())
+  reviewedAt    DateTime?
+  reviewedBy    String?                 // Admin userId
+  rejectionReason String?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([submittedAt])
+}
+
+model ExpertProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Expert Status
+  verifiedAt     DateTime @default(now())
+  verifiedBy     String   // Admin userId
+  isActive       Boolean  @default(true)
+  expertiseAreas String[] // Verified expertise areas
+
+  // Performance Metrics
+  followerCount    Int @default(0)
+  subscriberCount  Int @default(0)
+  contentCount     Int @default(0)
+  totalRevenue     Float @default(0) // In euros
+  platformRevenue  Float @default(0) // Platform's cut
+  expertRevenue    Float @default(0) // Expert's cut
+
+  // Content & Monetization
+  monthlyPrice  Float? // Expert-set monthly subscription price
+  yearlyPrice   Float? // Expert-set yearly subscription price
+  isAcceptingSubs Boolean @default(false)
+
+  // Payout Info
+  stripeConnectId String? // Stripe Connect account ID
+  payoutThreshold Float   @default(50.0)
+  pendingPayout   Float   @default(0)
+  totalPaidOut    Float   @default(0)
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([isActive])
+  @@index([followerCount])
+}
+
+// ============================================
+// EXPERT CONTENT (Story 10.5)
+// ============================================
+
+model ExpertContent {
+  id       String @id @default(cuid())
+  authorId String
+
+  // Content
+  title       String
+  content     String   @db.Text // Rich text content
+  coverImage  String? // Optional cover image URL
+  excerpt     String? // Short description
+  tags        String[] // Content tags
+  category    String? // Content category
+
+  // Visibility & Access
+  isPremium   Boolean @default(false) // Requires subscription to view
+  isPublished Boolean @default(false) // Draft vs Published
+  isDraft     Boolean @default(true)
+
+  // Analytics
+  viewCount    Int @default(0)
+  likeCount    Int @default(0)
+  commentCount Int @default(0)
+
+  // Metadata
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relations
+  author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([authorId])
+  @@index([isPublished, isPremium])
+  @@index([publishedAt])
+}
+
+enum ExpertApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ============================================
+// EXPERT FOLLOW & SUBSCRIPTION (Story 10.6)
+// ============================================
+
+model ExpertFollow {
+  id         String   @id @default(cuid())
+  userId     String   // Follower
+  expertId   String   // Expert being followed
+  followedAt DateTime @default(now())
+
+  user   User @relation("UserFollows", fields: [userId], references: [id], onDelete: Cascade)
+  expert User @relation("ExpertFollowers", fields: [expertId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, expertId])
+  @@index([userId])
+  @@index([expertId])
+}
+
+model ExpertSubscription {
+  id         String                @id @default(cuid())
+  userId     String                // Subscriber
+  expertId   String                // Expert
+  status     SubscriptionStatus    @default(ACTIVE)
+  plan       SubscriptionPlan      // MONTHLY or YEARLY
+  price      Float                 // Price at time of subscription
+  currency   String                @default("EUR")
+
+  // Stripe
+  stripeSubscriptionId String? @unique
+  stripeCustomerId     String?
+
+  // Dates
+  startDate     DateTime  @default(now())
+  currentPeriodEnd DateTime
+  cancelAt      DateTime?
+  canceledAt    DateTime?
+  endedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  expert User @relation("ExpertSubscribers", fields: [expertId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, expertId])
+  @@index([userId])
+  @@index([expertId])
+  @@index([status])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  PAST_DUE
+  PAUSED
+}
+
+enum SubscriptionPlan {
+  MONTHLY
+  YEARLY
+}
+
+// ============================================
+// EXPERT PAYOUTS (Story 10.7)
+// ============================================
+
+model PayoutRequest {
+  id       String       @id @default(cuid())
+  expertId String
+  amount   Float
+  currency String       @default("EUR")
+  status   PayoutStatus @default(PENDING)
+
+  // Stripe
+  stripePayoutId String? @unique
+
+  // Processing
+  requestedAt DateTime  @default(now())
+  processedAt DateTime?
+  processedBy String? // Admin userId
+  rejectedReason String?
+
+  // Relations
+  expert User @relation("ExpertPayouts", fields: [expertId], references: [id], onDelete: Cascade)
+
+  @@index([expertId])
+  @@index([status])
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+  FAILED
 }
 
 // ============================================

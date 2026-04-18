@@ -1,6 +1,7 @@
 import { accountRouter } from "~/server/api/routers/account";
 import { agentsRouter } from "~/server/api/routers/agents";
 import { authRouter } from "~/server/api/routers/auth";
+import { expertRouter } from "~/server/api/routers/expert";
 import { matchRouter } from "~/server/api/routers/match";
 import { notificationsRouter } from "~/server/api/routers/notifications";
 import { onboardingRouter } from "~/server/api/routers/onboarding";
@@ -22,6 +23,7 @@ export const appRouter = createTRPCRouter({
   account: accountRouter,
   agents: agentsRouter,
   auth: authRouter,
+  expert: expertRouter,
   match: matchRouter,
   notifications: notificationsRouter,
   onboarding: onboardingRouter,

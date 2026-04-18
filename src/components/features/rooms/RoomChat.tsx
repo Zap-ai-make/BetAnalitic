@@ -4,6 +4,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 import { Send } from "lucide-react"
 import type { RoomMessage } from "~/lib/realtime/types"
+import { VerifiedExpertBadge } from "~/components/features/expert/VerifiedExpertBadge"
 
 interface RoomChatProps {
   messages: RoomMessage[]
@@ -12,14 +13,17 @@ interface RoomChatProps {
   isDataOnly?: boolean
   disabled?: boolean
   className?: string
+  expertsMap?: Record<string, boolean>
 }
 
 function MessageBubble({
   message,
   isOwn,
+  isExpert = false,
 }: {
   message: RoomMessage
   isOwn: boolean
+  isExpert?: boolean
 }) {
   const isAgent = message.type === "agent"
   const isSystem = message.type === "system"
@@ -49,19 +53,24 @@ function MessageBubble({
             ? "bg-accent-cyan text-bg-primary rounded-br-md"
             : isAgent
               ? "bg-bg-secondary border-l-4 border-accent-cyan rounded-bl-md"
-              : "bg-bg-tertiary rounded-bl-md"
+              : isExpert
+                ? "bg-bg-secondary border-l-4 border-accent-gold rounded-bl-md"
+                : "bg-bg-tertiary rounded-bl-md"
         )}
       >
         {!isOwn && (
-          <p
-            className={cn(
-              "text-xs font-medium mb-1",
-              isAgent ? "text-accent-cyan" : "text-text-secondary"
-            )}
-          >
-            {message.userName}
-            {isAgent && " 🤖"}
-          </p>
+          <div className="flex items-center gap-1.5 mb-1">
+            <p
+              className={cn(
+                "text-xs font-medium",
+                isAgent ? "text-accent-cyan" : isExpert ? "text-accent-gold" : "text-text-secondary"
+              )}
+            >
+              {message.userName}
+              {isAgent && " 🤖"}
+            </p>
+            {isExpert && <VerifiedExpertBadge size="sm" />}
+          </div>
         )}
 
         <p className={cn("text-sm", isOwn ? "text-bg-primary" : "text-text-primary")}>
@@ -91,6 +100,7 @@ export function RoomChat({
   isDataOnly = false,
   disabled = false,
   className,
+  expertsMap = {},
 }: RoomChatProps) {
   const [input, setInput] = React.useState("")
   const messagesEndRef = React.useRef<HTMLDivElement>(null)
@@ -127,6 +137,7 @@ export function RoomChat({
               key={message.id}
               message={message}
               isOwn={message.userId === currentUserId}
+              isExpert={expertsMap[message.userId] ?? false}
             />
           ))
         )}

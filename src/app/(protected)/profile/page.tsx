@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { DashboardNav } from "~/components/shared/DashboardNav"
+import { VerifiedExpertBadge, ExpertInfoCard } from "~/components/features/expert/VerifiedExpertBadge"
+import { api } from "~/trpc/react"
 
 // Mock user data
 const MOCK_USER = {
@@ -26,7 +28,7 @@ const MOCK_USER = {
 }
 
 export default function ProfilePage() {
-  useSession() // Verify auth
+  const { data: session } = useSession() // Verify auth
   const router = useRouter()
   const [darkMode, setDarkMode] = React.useState(true)
   const [notifications, setNotifications] = React.useState(true)
@@ -36,6 +38,12 @@ export default function ProfilePage() {
   const [showVirtualSetup, setShowVirtualSetup] = React.useState(false)
   const [rewindMode, setRewindMode] = React.useState(false)
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
+  const [showExpertInfo, setShowExpertInfo] = React.useState(false)
+
+  // Query expert profile
+  const { data: expertProfile } = api.expert.getMyExpertProfile.useQuery(undefined, {
+    enabled: !!session?.user.id,
+  })
 
   // Analysis preferences
   const [expertiseLevel, setExpertiseLevel] = React.useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">("INTERMEDIATE")
@@ -139,10 +147,12 @@ export default function ProfilePage() {
                 ⭐ Premium
               </span>
             )}
-            {MOCK_USER.isExpert && (
-              <span className="px-3 py-1 rounded-full text-xs font-semibold bg-agent-context text-white">
-                🏅 Expert
-              </span>
+            {expertProfile?.isActive && (
+              <VerifiedExpertBadge
+                size="md"
+                showLabel
+                onClick={() => setShowExpertInfo(true)}
+              />
             )}
           </div>
         </div>
@@ -368,6 +378,20 @@ export default function ProfilePage() {
             </div>
           </div>
         </>
+      )}
+
+      {/* Expert Info Card */}
+      {showExpertInfo && expertProfile && (
+        <ExpertInfoCard
+          expertProfile={{
+            expertiseAreas: expertProfile.expertiseAreas,
+            followerCount: expertProfile.followerCount,
+            subscriberCount: expertProfile.subscriberCount,
+            contentCount: expertProfile.contentCount,
+            verifiedAt: expertProfile.verifiedAt,
+          }}
+          onClose={() => setShowExpertInfo(false)}
+        />
       )}
 
       <DashboardNav />
