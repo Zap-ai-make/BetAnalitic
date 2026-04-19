@@ -54,7 +54,7 @@ function MagicLinkVerification() {
     if (token && status === "loading") {
       verifyMagicLinkMutation.mutate({ token })
     }
-  }, [token])
+  }, [token, status, verifyMagicLinkMutation])
 
   // No token provided
   if (!token) {

@@ -83,7 +83,7 @@ class BackgroundSyncManager {
   /**
    * Execute an action (send to server)
    */
-  private async executeAction(action: PendingAction): Promise<SyncResult> {
+  private async executeAction(_action: PendingAction): Promise<SyncResult> {
     // This is a placeholder - in real implementation, you'd call your tRPC endpoints
     // based on the action type
 

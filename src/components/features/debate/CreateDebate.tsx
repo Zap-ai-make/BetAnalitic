@@ -6,7 +6,7 @@
 
 import * as React from "react"
 import { cn } from "~/lib/utils"
-import { X, Plus, Bot, Search } from "lucide-react"
+import { X } from "lucide-react"
 
 interface Agent {
   id: string

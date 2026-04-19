@@ -41,7 +41,7 @@ export default function AnalysisPage() {
   const [learnMode, setLearnMode] = React.useState(false)
 
   // Burst Mode (Premium feature)
-  const [userTier, setUserTier] = React.useState<"FREE" | "PREMIUM" | "EXPERT">("PREMIUM") // Mock: Set to PREMIUM for demo
+  const [userTier] = React.useState<"FREE" | "PREMIUM" | "EXPERT">("PREMIUM") // Mock: Set to PREMIUM for demo
   const [burstModeActive, setBurstModeActive] = React.useState(false)
   const [showBurstUpsell, setShowBurstUpsell] = React.useState(false)
 
@@ -88,7 +88,7 @@ export default function AnalysisPage() {
     if (hasLiveMatch && userTier === "FREE" && !burstModeActive) {
       setShowBurstUpsell(true)
     }
-  }, [matches, userTier])
+  }, [matches, userTier, burstModeActive])
 
   // Filter agents based on input
   const filteredAgents = React.useMemo(() => {

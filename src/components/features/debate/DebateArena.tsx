@@ -6,7 +6,7 @@
  */
 
 import * as React from "react"
-import { Gavel, Sparkles, TrendingUp, TrendingDown } from "lucide-react"
+import { Gavel, Sparkles } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { useDebateArenaStore } from "~/stores/debateArena"
 import type { DebateMessage } from "~/stores/debateArena"
@@ -111,7 +111,7 @@ export function DebateArena() {
     }
 
     void runDebate()
-  }, [currentDebate?.id]) // Only run when debate ID changes
+  }, [currentDebate?.id, currentDebate, addMessage, setCurrentMessageIndex, setIsTyping, updateStatus, setVerdict, endDebate]) // Only run when debate ID changes
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })

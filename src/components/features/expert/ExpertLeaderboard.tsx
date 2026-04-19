@@ -6,7 +6,7 @@
 
 import * as React from "react"
 import { cn } from "~/lib/utils"
-import { Trophy, TrendingUp, Crown } from "lucide-react"
+import { Trophy, Crown } from "lucide-react"
 
 interface LeaderboardEntry {
   rank: number

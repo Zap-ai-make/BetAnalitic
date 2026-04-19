@@ -115,9 +115,7 @@ export const reengagementRouter = createTRPCRouter({
         message: z.string().optional(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
-      const userId = ctx.session.user.id
-
+    .mutation(async ({ ctx: _ctx, input }) => {
       // Record the notification attempt
       // In production, this would trigger actual email/push notification
       // For now, we'll just log it
@@ -272,7 +270,7 @@ export const reengagementRouter = createTRPCRouter({
  */
 function getSuggestionsForEngagement(
   level: "ACTIVE" | "AT_RISK" | "DORMANT" | "INACTIVE",
-  user: { currentStreak: number; level: number; points: number }
+  _user: { currentStreak: number; level: number; points: number }
 ): string[] {
   switch (level) {
     case "ACTIVE":

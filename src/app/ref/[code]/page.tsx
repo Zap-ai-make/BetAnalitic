@@ -26,7 +26,7 @@ export default function ReferralLandingPage() {
       // Track the click
       trackClickMutation.mutate({ referralCode: code })
     }
-  }, [code])
+  }, [code, trackClickMutation])
 
   const handleSignup = () => {
     router.push("/auth/signup")

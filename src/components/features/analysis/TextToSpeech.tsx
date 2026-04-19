@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { cn } from "~/lib/utils"
-import { Volume2, VolumeX, Pause, Play } from "lucide-react"
+import { Volume2, VolumeX, Pause } from "lucide-react"
 
 interface TextToSpeechProps {
   text: string

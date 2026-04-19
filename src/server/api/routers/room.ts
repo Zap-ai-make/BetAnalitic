@@ -991,7 +991,7 @@ export const roomRouter = createTRPCRouter({
    */
   markAsRead: protectedProcedure
     .input(z.object({ roomId: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ ctx: _ctx, input: _input }) => {
       // TODO: Add lastReadAt field to RoomMember model to track read status
       // For now, just return success
       return { success: true }

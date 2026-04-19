@@ -150,7 +150,7 @@ export default function LeaderboardPage() {
             </div>
           ) : data && data.leaderboard.length > 0 ? (
             <div className="divide-y divide-bg-tertiary">
-              {data.leaderboard.map((entry, index) => (
+              {data.leaderboard.map((entry) => (
                 <div
                   key={entry.userId}
                   ref={entry.isCurrentUser ? currentUserRef : undefined}

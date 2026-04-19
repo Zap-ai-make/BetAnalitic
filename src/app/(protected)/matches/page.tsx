@@ -6,7 +6,7 @@ import { DashboardNav } from "~/components/shared/DashboardNav"
 import { MatchCard } from "~/components/features/match/MatchCard"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
-import { ChevronDown, Calendar, Search, X, Filter } from "lucide-react"
+import { ChevronDown, Calendar, Search, X } from "lucide-react"
 
 type MatchStatus = "all" | "upcoming" | "live" | "finished"
 

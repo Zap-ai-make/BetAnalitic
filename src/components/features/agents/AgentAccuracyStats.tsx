@@ -42,7 +42,7 @@ function StatBar({ label, value, color }: { label: string; value: number; color:
 }
 
 export function AgentAccuracyStats({
-  agentId,
+  agentId: _agentId,
   agentName,
   stats,
   className,

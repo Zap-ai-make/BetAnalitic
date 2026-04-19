@@ -44,7 +44,7 @@ export function ModerationQueue({
   reports,
   onApprove,
   onDismiss,
-  onViewDetails,
+  onViewDetails: _onViewDetails,
   className,
 }: ModerationQueueProps) {
   const [processingId, setProcessingId] = React.useState<string | null>(null)

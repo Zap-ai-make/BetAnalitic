@@ -6,7 +6,7 @@
  */
 
 import * as React from "react"
-import { TrendingUp, TrendingDown, Target, Calendar, Trophy, Award } from "lucide-react"
+import { TrendingUp, Target, Calendar, Trophy, Award } from "lucide-react"
 import { cn } from "~/lib/utils"
 
 interface ExpertTrackRecordProps {
