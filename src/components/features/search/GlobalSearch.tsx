@@ -5,19 +5,20 @@
  */
 
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
+import { api } from "~/trpc/react"
 import { Search, X, Users, Trophy, Bot, Calendar, ArrowRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
-type SearchResultType = "match" | "room" | "expert" | "agent"
+type SearchResultType = "match" | "room" | "expert" | "analysis"
 
 interface SearchResult {
   id: string
   type: SearchResultType
   title: string
   subtitle?: string
-  icon?: LucideIcon
-  href?: string
+  url: string
 }
 
 interface GlobalSearchProps {
@@ -31,73 +32,53 @@ const typeConfig: Record<SearchResultType, { icon: LucideIcon; color: string; la
   match: { icon: Calendar, color: "text-accent-cyan", label: "Match" },
   room: { icon: Users, color: "text-accent-purple", label: "Salon" },
   expert: { icon: Trophy, color: "text-accent-orange", label: "Expert" },
-  agent: { icon: Bot, color: "text-accent-green", label: "Agent" },
-}
-
-// Mock search function
-const mockSearch = async (query: string): Promise<SearchResult[]> => {
-  if (!query.trim()) return []
-
-  // Simulate API delay
-  await new Promise((r) => setTimeout(r, 200))
-
-  const results: SearchResult[] = []
-
-  if (query.toLowerCase().includes("psg")) {
-    results.push(
-      { id: "1", type: "match", title: "PSG vs Bayern Munich", subtitle: "Champions League - 20h00" },
-      { id: "2", type: "room", title: "Fans PSG", subtitle: "234 membres" }
-    )
-  }
-
-  if (query.toLowerCase().includes("expert")) {
-    results.push(
-      { id: "3", type: "expert", title: "ProTipster", subtitle: "Expert Diamant • 78% win rate" }
-    )
-  }
-
-  results.push(
-    { id: "4", type: "agent", title: "Scout", subtitle: "Analyse de matchs" },
-    { id: "5", type: "agent", title: "ValueBet", subtitle: "Détection de value bets" }
-  )
-
-  return results.slice(0, 8)
+  analysis: { icon: Bot, color: "text-accent-green", label: "Analyse" },
 }
 
 export function GlobalSearch({ isOpen, onClose, onSelect, className }: GlobalSearchProps) {
+  const router = useRouter()
   const [query, setQuery] = React.useState("")
-  const [results, setResults] = React.useState<SearchResult[]>([])
-  const [isLoading, setIsLoading] = React.useState(false)
+  const [debouncedQuery, setDebouncedQuery] = React.useState("")
+  const [history, setHistory] = React.useState<string[]>([])
   const inputRef = React.useRef<HTMLInputElement>(null)
 
+  // Debounce search query (300ms)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [query])
+
+  // tRPC query
+  const { data: results = [], isLoading } = api.search.global.useQuery(
+    { query: debouncedQuery },
+    { enabled: debouncedQuery.length > 0 }
+  )
+
+  // Load search history
+  React.useEffect(() => {
+    if (isOpen) {
+      const stored = localStorage.getItem("search-history")
+      if (stored) {
+        try {
+          setHistory(JSON.parse(stored) as string[])
+        } catch {
+          setHistory([])
+        }
+      }
+    }
+  }, [isOpen])
+
+  // Auto-focus on open
   React.useEffect(() => {
     if (isOpen) {
       inputRef.current?.focus()
     } else {
       setQuery("")
-      setResults([])
+      setDebouncedQuery("")
     }
   }, [isOpen])
-
-  React.useEffect(() => {
-    const search = async () => {
-      if (!query.trim()) {
-        setResults([])
-        return
-      }
-
-      setIsLoading(true)
-      try {
-        const data = await mockSearch(query)
-        setResults(data)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    const timeout = setTimeout(() => void search(), 300)
-    return () => clearTimeout(timeout)
-  }, [query])
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -175,6 +156,16 @@ export function GlobalSearch({ isOpen, onClose, onSelect, className }: GlobalSea
                     key={result.id}
                     type="button"
                     onClick={() => {
+                      // Save to history
+                      const newHistory = [
+                        query,
+                        ...history.filter((h) => h !== query).slice(0, 9),
+                      ]
+                      setHistory(newHistory)
+                      localStorage.setItem("search-history", JSON.stringify(newHistory))
+
+                      // Navigate
+                      router.push(result.url)
                       onSelect?.(result)
                       onClose()
                     }}
@@ -203,17 +194,61 @@ export function GlobalSearch({ isOpen, onClose, onSelect, className }: GlobalSea
             </div>
           )}
 
+          {/* Search History - Epic 13 Story 13.5 */}
+          {!query && history.length > 0 && (
+            <div className="p-4 border-b border-bg-tertiary">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-text-tertiary uppercase tracking-wide">
+                  Recherches récentes
+                </p>
+                <button
+                  onClick={() => {
+                    setHistory([])
+                    localStorage.removeItem("search-history")
+                  }}
+                  className="text-xs text-accent-cyan hover:text-accent-cyan/80"
+                >
+                  Effacer l&apos;historique
+                </button>
+              </div>
+              <div className="space-y-1">
+                {history.slice(0, 10).map((item, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQuery(item)}
+                      className="flex-1 flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-bg-tertiary transition-colors text-left"
+                    >
+                      <Calendar className="w-4 h-4 text-text-tertiary" />
+                      <span className="text-sm text-text-secondary">{item}</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const newHistory = history.filter((h) => h !== item)
+                        setHistory(newHistory)
+                        localStorage.setItem("search-history", JSON.stringify(newHistory))
+                      }}
+                      className="p-2 text-text-tertiary hover:text-text-primary"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Quick Actions */}
           {!query && (
-            <div className="p-4">
+            <div className="p-4 border-t border-bg-tertiary">
               <p className="text-xs text-text-tertiary uppercase tracking-wide mb-3">
                 Actions rapides
               </p>
               <div className="grid grid-cols-2 gap-2">
-                <QuickAction icon={Calendar} label="Matchs du jour" />
-                <QuickAction icon={Users} label="Mes salons" />
-                <QuickAction icon={Bot} label="Tous les agents" />
-                <QuickAction icon={Trophy} label="Top experts" />
+                <QuickAction icon={Calendar} label="Matchs du jour" onClick={() => router.push("/matches")} />
+                <QuickAction icon={Users} label="Mes salons" onClick={() => router.push("/salles")} />
+                <QuickAction icon={Bot} label="Tous les agents" onClick={() => router.push("/agents")} />
+                <QuickAction icon={Trophy} label="Top experts" onClick={() => router.push("/experts")} />
               </div>
             </div>
           )}
@@ -223,10 +258,11 @@ export function GlobalSearch({ isOpen, onClose, onSelect, className }: GlobalSea
   )
 }
 
-function QuickAction({ icon: Icon, label }: { icon: LucideIcon; label: string }) {
+function QuickAction({ icon: Icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="flex items-center gap-2 p-3 bg-bg-tertiary rounded-xl text-sm text-text-secondary hover:text-text-primary transition-colors"
     >
       <Icon className="w-4 h-4" />

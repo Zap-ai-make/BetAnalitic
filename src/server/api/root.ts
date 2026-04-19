@@ -14,6 +14,7 @@ import { profileRouter } from "~/server/api/routers/profile";
 import { reengagementRouter } from "~/server/api/routers/reengagement";
 import { referralRouter } from "~/server/api/routers/referral";
 import { roomRouter } from "~/server/api/routers/room";
+import { searchRouter } from "~/server/api/routers/search";
 import { sessionRouter } from "~/server/api/routers/session";
 import { streakRouter } from "~/server/api/routers/streak";
 import { termsRouter } from "~/server/api/routers/terms";
@@ -43,6 +44,7 @@ export const appRouter = createTRPCRouter({
   reengagement: reengagementRouter,
   referral: referralRouter,
   room: roomRouter,
+  search: searchRouter,
   session: sessionRouter,
   streak: streakRouter,
   terms: termsRouter,

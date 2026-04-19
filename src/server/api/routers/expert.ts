@@ -9,6 +9,33 @@ import { TRPCError } from "@trpc/server"
 
 export const expertRouter = createTRPCRouter({
   /**
+   * Epic 13 Story 13.4: Get all experts for discovery
+   */
+  getExperts: protectedProcedure.query(async ({ ctx }) => {
+    const experts = await ctx.db.expertProfile.findMany({
+      where: {
+        isActive: true,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: {
+        followerCount: "desc",
+      },
+      take: 100,
+    })
+
+    return experts
+  }),
+
+  /**
    * Story 10.1: Submit Expert Application
    */
   submitApplication: protectedProcedure

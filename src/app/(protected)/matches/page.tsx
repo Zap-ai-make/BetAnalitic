@@ -1,18 +1,22 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { MatchCard } from "~/components/features/match/MatchCard"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
-import { ChevronDown, Calendar } from "lucide-react"
+import { ChevronDown, Calendar, Search, X, Filter } from "lucide-react"
+
+type MatchStatus = "all" | "upcoming" | "live" | "finished"
 
 export default function MatchesPage() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
-  const [liveOnly, setLiveOnly] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<MatchStatus>("all")
+  const [searchQuery, setSearchQuery] = useState("")
   const [showCompetitions, setShowCompetitions] = useState(false)
+  const [showStatusFilter, setShowStatusFilter] = useState(false)
 
   const { data: competitions = [] } = api.match.getCompetitions.useQuery()
 
@@ -35,14 +39,64 @@ export default function MatchesPage() {
       from: fromDate,
       to: toDate,
       competitionIds: competitionFilter ? [competitionFilter] : undefined,
-      liveOnly,
+      liveOnly: statusFilter === "live",
     },
     {
       getNextPageParam: (lastPage) => lastPage.nextCursor,
     }
   )
 
-  const matches = data?.pages.flatMap((page) => page.matches) ?? []
+  // Filter matches by search query and status
+  const matches = useMemo(() => {
+    let filtered = data?.pages.flatMap((page) => page.matches) ?? []
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (m) =>
+          m.homeTeam.name.toLowerCase().includes(query) ||
+          m.awayTeam.name.toLowerCase().includes(query) ||
+          m.competition.name.toLowerCase().includes(query)
+      )
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((m) => {
+        if (statusFilter === "live") {
+          return m.status === "LIVE" || m.status === "HALFTIME"
+        }
+        if (statusFilter === "finished") {
+          return m.status === "FINISHED"
+        }
+        if (statusFilter === "upcoming") {
+          return m.status === "SCHEDULED"
+        }
+        return true
+      })
+    }
+
+    return filtered
+  }, [data, searchQuery, statusFilter])
+
+  // Count active filters
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    if (competitionFilter) count++
+    if (statusFilter !== "all") count++
+    if (searchQuery.trim()) count++
+    if (selectedDate.toDateString() !== new Date().toDateString()) count++
+    return count
+  }, [competitionFilter, statusFilter, searchQuery, selectedDate])
+
+  // Clear all filters
+  const clearFilters = () => {
+    setCompetitionFilter(null)
+    setStatusFilter("all")
+    setSearchQuery("")
+    setSelectedDate(new Date())
+  }
 
   // Group by date
   const groupedByDate = matches.reduce((acc, match) => {
@@ -66,24 +120,98 @@ export default function MatchesPage() {
       {/* Filter Bar */}
       <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary p-4">
         <div className="space-y-3">
-          <h1 className="font-display text-xl font-bold text-text-primary">
-            Matchs
-          </h1>
+          <div className="flex items-center justify-between">
+            <h1 className="font-display text-xl font-bold text-text-primary">
+              Matchs
+            </h1>
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-2 text-sm text-accent-cyan hover:text-accent-cyan/80"
+              >
+                <X className="h-4 w-4" />
+                Effacer filtres ({activeFiltersCount})
+              </button>
+            )}
+          </div>
+
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher une équipe, compétition..."
+              className={cn(
+                "w-full pl-10 pr-10 py-3 rounded-xl bg-bg-secondary",
+                "text-text-primary placeholder:text-text-tertiary",
+                "border border-bg-tertiary focus:border-accent-cyan",
+                "focus:outline-none transition-colors"
+              )}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+          </div>
 
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {/* Live Toggle */}
-            <button
-              onClick={() => setLiveOnly(!liveOnly)}
-              className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all shrink-0",
-                liveOnly
-                  ? "bg-accent-red text-white"
-                  : "bg-bg-tertiary text-text-secondary"
+            {/* Status Filter */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => setShowStatusFilter(!showStatusFilter)}
+                className={cn(
+                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-2",
+                  statusFilter !== "all"
+                    ? "bg-accent-cyan text-bg-primary"
+                    : "bg-bg-tertiary text-text-secondary"
+                )}
+              >
+                {statusFilter === "live" && <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse" />}
+                {statusFilter === "all" ? "Statut" :
+                 statusFilter === "live" ? "Live" :
+                 statusFilter === "upcoming" ? "À venir" : "Terminés"}
+                <ChevronDown className="h-4 w-4" />
+              </button>
+
+              {showStatusFilter && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setShowStatusFilter(false)}
+                  />
+                  <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-xl z-20 min-w-[150px]">
+                    {[
+                      { value: "all" as const, label: "Tous" },
+                      { value: "live" as const, label: "Live" },
+                      { value: "upcoming" as const, label: "À venir" },
+                      { value: "finished" as const, label: "Terminés" },
+                    ].map((status) => (
+                      <button
+                        key={status.value}
+                        onClick={() => {
+                          setStatusFilter(status.value)
+                          setShowStatusFilter(false)
+                        }}
+                        className={cn(
+                          "w-full px-4 py-2 text-left text-sm hover:bg-bg-tertiary transition-colors",
+                          statusFilter === status.value
+                            ? "bg-accent-cyan/10 text-accent-cyan"
+                            : "text-text-primary"
+                        )}
+                      >
+                        {status.label}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
-            >
-              {liveOnly && <span className="inline-block w-2 h-2 bg-white rounded-full mr-2 animate-pulse" />}
-              Live
-            </button>
+            </div>
 
             {/* Competition Filter */}
             <div className="relative shrink-0">
@@ -224,17 +352,24 @@ export default function MatchesPage() {
           <div className="text-center py-12">
             <span className="text-6xl">⚽</span>
             <p className="text-text-secondary mt-4">
-              {liveOnly
+              {searchQuery
+                ? `Aucun résultat pour "${searchQuery}"`
+                : statusFilter === "live"
                 ? "Aucun match en direct"
                 : "Aucun match trouvé pour cette période"}
             </p>
-            {liveOnly && (
-              <button
-                onClick={() => setLiveOnly(false)}
-                className="mt-4 text-accent-cyan text-sm hover:underline"
-              >
-                Voir tous les matchs
-              </button>
+            {activeFiltersCount > 0 && (
+              <div className="mt-6 space-y-2">
+                <p className="text-text-tertiary text-sm">
+                  Essayez d&apos;élargir votre recherche
+                </p>
+                <button
+                  onClick={clearFilters}
+                  className="mt-4 px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium hover:bg-accent-cyan/90 transition-colors"
+                >
+                  Effacer tous les filtres
+                </button>
+              </div>
             )}
           </div>
         )}

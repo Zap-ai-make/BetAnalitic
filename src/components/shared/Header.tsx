@@ -13,6 +13,7 @@ export interface HeaderProps {
   onLangSwitch?: () => void
   onNotificationClick?: () => void
   onUserClick?: () => void
+  onSearchClick?: () => void
 }
 
 export function Header({
@@ -22,6 +23,7 @@ export function Header({
   onLangSwitch,
   onNotificationClick,
   onUserClick,
+  onSearchClick,
 }: HeaderProps) {
   const router = useRouter()
   const couponCount = useCouponStore((state) => state.count())
@@ -47,6 +49,33 @@ export function Header({
 
         {/* Right Section */}
         <div className="flex items-center gap-2">
+          {/* Search */}
+          <button
+            type="button"
+            onClick={onSearchClick}
+            className={cn(
+              "flex items-center justify-center w-10 h-10 rounded-full",
+              "text-text-secondary hover:text-text-primary hover:bg-bg-secondary",
+              "transition-colors duration-200",
+              "min-h-[44px] min-w-[44px]"
+            )}
+            aria-label="Search"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </button>
+
           {/* Coupon Badge */}
           <button
             type="button"

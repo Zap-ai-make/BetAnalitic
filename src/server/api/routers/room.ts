@@ -137,6 +137,45 @@ export const roomRouter = createTRPCRouter({
   }),
 
   /**
+   * Epic 13 Story 13.3: Get public rooms for discovery
+   */
+  getPublicRooms: protectedProcedure.query(async ({ ctx }) => {
+    const rooms = await ctx.db.room.findMany({
+      where: {
+        visibility: "PUBLIC",
+        archivedAt: null,
+      },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+          },
+        },
+        _count: {
+          select: {
+            members: true,
+            messages: true,
+          },
+        },
+      },
+      orderBy: [
+        { type: "asc" }, // OFFICIAL first
+        { createdAt: "desc" },
+      ],
+      take: 50,
+    })
+
+    return rooms.map((r) => ({
+      ...r,
+      memberCount: r._count.members,
+      messageCount: r._count.messages,
+    }))
+  }),
+
+  /**
    * Get room by ID
    */
   getById: protectedProcedure

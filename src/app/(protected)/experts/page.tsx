@@ -1,82 +1,137 @@
+"use client"
+
 /**
- * Story 10.5: Experts Page
+ * Story 10.5 + Epic 13 Story 13.4: Experts Page with Discovery
  */
 
-import { redirect } from "next/navigation"
-import { auth } from "~/server/auth"
+import * as React from "react"
+import { Header } from "~/components/shared/Header"
+import { DashboardNav } from "~/components/shared/DashboardNav"
 import { ExpertCard } from "~/components/features/expert/ExpertBadge"
 import { ExpertLeaderboard } from "~/components/features/expert/ExpertLeaderboard"
+import { Search, X, Filter } from "lucide-react"
+import { cn } from "~/lib/utils"
+import { api } from "~/trpc/react"
 
-// Mock data
-const MOCK_EXPERTS = [
-  {
-    id: "1",
-    name: "ProTipster",
-    level: "diamond" as const,
-    winRate: 78,
-    totalPredictions: 1250,
-    monthlyProfit: 34,
-    streak: 12,
-    specialties: ["Ligue 1", "Premier League", "Over/Under"],
-  },
-  {
-    id: "2",
-    name: "FootballGuru",
-    level: "gold" as const,
-    winRate: 72,
-    totalPredictions: 890,
-    monthlyProfit: 22,
-    streak: 5,
-    specialties: ["La Liga", "BTTS", "Handicap"],
-  },
-  {
-    id: "3",
-    name: "BetMaster",
-    level: "gold" as const,
-    winRate: 69,
-    totalPredictions: 654,
-    monthlyProfit: 18,
-    streak: 0,
-    specialties: ["Bundesliga", "Serie A"],
-  },
-]
+export default function ExpertsPage() {
+  const [searchQuery, setSearchQuery] = React.useState("")
+  const [selectedCategory, setSelectedCategory] = React.useState<"all" | "top-rated" | "rising">("all")
 
-const MOCK_LEADERBOARD = [
-  { rank: 1, userId: "1", name: "ProTipster", winRate: 78, profit: 34, predictions: 1250 },
-  { rank: 2, userId: "2", name: "FootballGuru", winRate: 72, profit: 22, predictions: 890 },
-  { rank: 3, userId: "3", name: "BetMaster", winRate: 69, profit: 18, predictions: 654 },
-  { rank: 4, userId: "4", name: "TipKing", winRate: 67, profit: 15, predictions: 456 },
-  { rank: 5, userId: "5", name: "WinnerPro", winRate: 65, profit: 12, predictions: 321 },
-]
+  const { data: experts, isLoading } = api.expert.getExperts.useQuery()
 
-export default async function ExpertsPage() {
-  const session = await auth()
-  if (!session) redirect("/login")
+  // Filter experts
+  const filteredExperts = React.useMemo(() => {
+    if (!experts) return []
+
+    let filtered = experts
+
+    // Search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase()
+      filtered = filtered.filter(
+        (e) =>
+          e.user.displayName?.toLowerCase().includes(query) ||
+          e.user.username.toLowerCase().includes(query) ||
+          e.expertiseAreas.some((area) => area.toLowerCase().includes(query))
+      )
+    }
+
+    // Category filter
+    if (selectedCategory === "top-rated") {
+      filtered = filtered.sort((a, b) => b.followerCount - a.followerCount).slice(0, 10)
+    } else if (selectedCategory === "rising") {
+      filtered = filtered.filter((e) => e.followerCount >= 10 && e.followerCount < 100)
+    }
+
+    return filtered
+  }, [experts, searchQuery, selectedCategory])
 
   return (
-    <div className="min-h-screen bg-bg-primary pb-20">
-      {/* Header */}
-      <div className="bg-bg-secondary border-b border-bg-tertiary">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <h1 className="text-2xl font-display font-bold text-text-primary flex items-center gap-2">
+    <div className="min-h-screen bg-bg-primary flex flex-col">
+      <Header />
+
+      {/* Search & Filters */}
+      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
+        <div className="px-4 pt-4 space-y-3">
+          <h1 className="font-display text-xl font-bold text-text-primary flex items-center gap-2">
             👑 Programme Expert
           </h1>
-          <p className="text-text-secondary mt-1">
-            Suivez les meilleurs parieurs et apprenez de leurs pronostics
-          </p>
+
+          {/* Search Bar */}
+          <div className="relative pb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Rechercher un expert, spécialité..."
+              className={cn(
+                "w-full pl-10 pr-10 py-3 rounded-xl bg-bg-secondary",
+                "text-text-primary placeholder:text-text-tertiary",
+                "border border-bg-tertiary focus:border-accent-cyan",
+                "focus:outline-none transition-colors"
+              )}
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            )}
+          </div>
+
+          {/* Category Filters */}
+          <div className="flex gap-2 pb-3 overflow-x-auto">
+            <button
+              onClick={() => setSelectedCategory("all")}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                selectedCategory === "all"
+                  ? "bg-accent-cyan text-bg-primary"
+                  : "bg-bg-tertiary text-text-secondary"
+              )}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => setSelectedCategory("top-rated")}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                selectedCategory === "top-rated"
+                  ? "bg-accent-cyan text-bg-primary"
+                  : "bg-bg-tertiary text-text-secondary"
+              )}
+            >
+              Top 10
+            </button>
+            <button
+              onClick={() => setSelectedCategory("rising")}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
+                selectedCategory === "rising"
+                  ? "bg-accent-cyan text-bg-primary"
+                  : "bg-bg-tertiary text-text-secondary"
+              )}
+            >
+              Étoiles Montantes
+            </button>
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 py-6 space-y-8">
+      {/* Content */}
+      <main className="flex-1 p-4 pb-24 overflow-y-auto">
         {/* Become Expert Banner */}
-        <div className="p-6 bg-gradient-to-r from-accent-cyan/20 to-accent-purple/20 rounded-2xl border border-accent-cyan/30">
+        <div className="mb-6 p-6 bg-gradient-to-r from-accent-cyan/20 to-accent-purple/20 rounded-2xl border border-accent-cyan/30">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-display font-bold text-text-primary text-lg">
                 Devenez Expert
               </h2>
               <p className="text-text-secondary mt-1">
-                60%+ de réussite sur 50 pronostics = statut Expert Bronze
+                Créez du contenu et monétisez vos analyses
               </p>
             </div>
             <button
@@ -88,38 +143,70 @@ export default async function ExpertsPage() {
           </div>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          {/* Left Column - Experts */}
-          <div className="lg:col-span-2 space-y-6">
-            <h2 className="text-lg font-display font-semibold text-text-primary">
-              Top Experts
+        {/* Experts List */}
+        {isLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-bg-secondary rounded-xl p-4 animate-pulse h-32" />
+            ))}
+          </div>
+        ) : filteredExperts.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-4">
+            <div className="text-6xl">🔍</div>
+            <h2 className="font-display text-xl text-text-primary">
+              {searchQuery ? `Aucun expert trouvé pour "${searchQuery}"` : "Aucun expert trouvé"}
             </h2>
-            <div className="space-y-4">
-              {MOCK_EXPERTS.map((expert) => (
-                <ExpertCard
-                  key={expert.id}
-                  id={expert.id}
-                  name={expert.name}
-                  level={expert.level}
-                  winRate={expert.winRate}
-                  totalPredictions={expert.totalPredictions}
-                  monthlyProfit={expert.monthlyProfit}
-                  streak={expert.streak}
-                  specialties={expert.specialties}
-                />
-              ))}
-            </div>
+            <p className="text-text-tertiary text-center max-w-md">
+              {searchQuery && "Essayez un autre terme de recherche"}
+            </p>
           </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredExperts.map((expert) => (
+              <div
+                key={expert.id}
+                className="bg-bg-secondary rounded-xl p-4 border border-bg-tertiary hover:border-accent-cyan transition-colors"
+              >
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-full bg-bg-tertiary flex items-center justify-center text-xl">
+                    {expert.user.avatarUrl ? (
+                      <img
+                        src={expert.user.avatarUrl}
+                        alt={expert.user.displayName ?? expert.user.username}
+                        className="w-full h-full rounded-full object-cover"
+                      />
+                    ) : (
+                      "👤"
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-display font-semibold text-text-primary">
+                      {expert.user.displayName ?? expert.user.username}
+                    </h3>
+                    <p className="text-sm text-text-secondary">
+                      {expert.followerCount} abonnés
+                    </p>
+                    {expert.expertiseAreas.length > 0 && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {expert.expertiseAreas.slice(0, 3).map((area, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-1 bg-bg-tertiary text-text-tertiary text-xs rounded-full"
+                          >
+                            {area}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
 
-          {/* Right Column - Leaderboard */}
-          <div>
-            <ExpertLeaderboard
-              entries={MOCK_LEADERBOARD}
-              period="month"
-            />
-          </div>
-        </div>
-      </div>
+      <DashboardNav />
     </div>
   )
 }
