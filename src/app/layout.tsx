@@ -8,6 +8,7 @@ import { SessionProvider } from "~/components/providers/SessionProvider";
 import { InstallPrompt } from "~/components/features/pwa/InstallPrompt";
 import { UpdatePrompt } from "~/components/features/pwa/UpdatePrompt";
 import { OfflineIndicator } from "~/components/features/pwa/OfflineIndicator";
+import { PerformanceMonitor } from "~/components/features/observability/PerformanceMonitor";
 
 // Configure fonts with next/font for optimal performance
 const inter = Inter({
@@ -74,6 +75,7 @@ export default function RootLayout({
       <body className="safe-area-insets bg-bg-primary text-text-primary antialiased">
         <SessionProvider>
           <TRPCReactProvider>
+            <PerformanceMonitor />
             <OfflineIndicator />
             {children}
             <InstallPrompt />
