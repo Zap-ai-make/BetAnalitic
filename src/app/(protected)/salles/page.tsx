@@ -7,7 +7,7 @@
 
 import * as React from "react"
 import { api } from "~/trpc/react"
-import { Users, MessageSquare, Clock, Crown, Plus, Search, X, Filter } from "lucide-react"
+import { Users, MessageSquare, Clock, Crown, Plus, Search, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
 import { DashboardNav } from "~/components/shared/DashboardNav"
@@ -256,8 +256,8 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
     return publicRooms.filter(
       (r) =>
         r.name.toLowerCase().includes(query) ||
-        r.description?.toLowerCase().includes(query) ||
-        r.owner.displayName?.toLowerCase().includes(query) ||
+        (r.description?.toLowerCase().includes(query) ?? false) ||
+        (r.owner.displayName?.toLowerCase().includes(query) ?? false) ||
         r.owner.username.toLowerCase().includes(query)
     )
   }, [publicRooms, searchQuery])

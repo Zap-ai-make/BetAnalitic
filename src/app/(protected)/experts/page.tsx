@@ -7,9 +7,7 @@
 import * as React from "react"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
-import { ExpertCard } from "~/components/features/expert/ExpertBadge"
-import { ExpertLeaderboard } from "~/components/features/expert/ExpertLeaderboard"
-import { Search, X, Filter } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { api } from "~/trpc/react"
 
@@ -30,7 +28,7 @@ export default function ExpertsPage() {
       const query = searchQuery.toLowerCase()
       filtered = filtered.filter(
         (e) =>
-          e.user.displayName?.toLowerCase().includes(query) ||
+          (e.user.displayName?.toLowerCase().includes(query) ?? false) ||
           e.user.username.toLowerCase().includes(query) ||
           e.expertiseAreas.some((area) => area.toLowerCase().includes(query))
       )
