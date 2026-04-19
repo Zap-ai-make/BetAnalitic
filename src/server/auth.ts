@@ -17,6 +17,7 @@ declare module "next-auth" {
       id: string
       username: string
       subscriptionTier: "FREE" | "PREMIUM" | "EXPERT"
+      role: "USER" | "MODERATOR" | "ADMIN"
     } & DefaultSession["user"]
     sessionId?: string
   }
@@ -25,6 +26,7 @@ declare module "next-auth" {
     id: string
     username: string
     subscriptionTier: "FREE" | "PREMIUM" | "EXPERT"
+    role: "USER" | "MODERATOR" | "ADMIN"
     dbSessionId?: string
   }
 }
@@ -183,6 +185,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           username: user.username,
           image: user.avatarUrl,
           subscriptionTier: user.subscriptionTier,
+          role: user.role,
           dbSessionId: dbSession.id,
         }
       },
@@ -194,6 +197,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.id = user.id
         token.username = user.username
         token.subscriptionTier = user.subscriptionTier
+        token.role = user.role
         token.sessionId = user.dbSessionId
       }
       return token
@@ -203,6 +207,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         session.user.id = token.id as string
         session.user.username = token.username as string
         session.user.subscriptionTier = token.subscriptionTier as "FREE" | "PREMIUM" | "EXPERT"
+        session.user.role = token.role as "USER" | "MODERATOR" | "ADMIN"
         session.sessionId = token.sessionId as string | undefined
       }
       return session

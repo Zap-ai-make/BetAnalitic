@@ -1,5 +1,6 @@
 import { accountRouter } from "~/server/api/routers/account";
 import { achievementsRouter } from "~/server/api/routers/achievements";
+import { adminRouter } from "~/server/api/routers/admin";
 import { agentsRouter } from "~/server/api/routers/agents";
 import { authRouter } from "~/server/api/routers/auth";
 import { contestsRouter } from "~/server/api/routers/contests";
@@ -30,6 +31,7 @@ import { createCallerFactory, createTRPCRouter } from "~/server/api/trpc";
 export const appRouter = createTRPCRouter({
   account: accountRouter,
   achievements: achievementsRouter,
+  admin: adminRouter,
   agents: agentsRouter,
   auth: authRouter,
   contests: contestsRouter,

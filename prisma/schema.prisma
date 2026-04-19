@@ -36,20 +36,20 @@ model User {
   subscriptionEndsAt DateTime?
 
   // Credits & Rewards (Story 11.2)
-  credits           Float    @default(0) // Virtual credits for rewards
-  lifetimeCredits   Float    @default(0) // Total credits ever earned
+  credits           Float   @default(0) // Virtual credits for rewards
+  lifetimeCredits   Float   @default(0) // Total credits ever earned
   referredByCode    String? // Referral code used at signup
-  welcomeBonusGiven Boolean  @default(false) // Whether signup bonus was given
+  welcomeBonusGiven Boolean @default(false) // Whether signup bonus was given
 
   // Gamification Points (Story 11.3)
-  points         Int      @default(0) // Current points balance
-  lifetimePoints Int      @default(0) // Total points ever earned
-  level          Int      @default(1) // User level based on points
+  points         Int       @default(0) // Current points balance
+  lifetimePoints Int       @default(0) // Total points ever earned
+  level          Int       @default(1) // User level based on points
   lastDailyLogin DateTime? // Last daily login reward claim
 
   // Streak Tracking (Story 11.6)
-  currentStreak  Int      @default(0) // Current consecutive days
-  longestStreak  Int      @default(0) // Best streak ever
+  currentStreak  Int       @default(0) // Current consecutive days
+  longestStreak  Int       @default(0) // Best streak ever
   lastStreakDate DateTime? // Last day streak was maintained
 
   // User Preferences
@@ -85,6 +85,9 @@ model User {
   // Data Export
   lastExportAt DateTime?
 
+  // Role-based access (Epic 14)
+  role UserRole @default(USER)
+
   // Relations
   sessions           Session[]
   verificationTokens VerificationToken[]
@@ -103,11 +106,11 @@ model User {
   expertApplication ExpertApplication?
   expertProfile     ExpertProfile?
   expertContent     ExpertContent[] // Story 10.5
-  follows           ExpertFollow[]  @relation("UserFollows") // Story 10.6
-  followers         ExpertFollow[]  @relation("ExpertFollowers") // Story 10.6
+  follows           ExpertFollow[]       @relation("UserFollows") // Story 10.6
+  followers         ExpertFollow[]       @relation("ExpertFollowers") // Story 10.6
   subscriptions     ExpertSubscription[] @relation("UserSubscriptions") // Story 10.6
   subscribers       ExpertSubscription[] @relation("ExpertSubscribers") // Story 10.6
-  payoutRequests    PayoutRequest[] @relation("ExpertPayouts") // Story 10.7
+  payoutRequests    PayoutRequest[]      @relation("ExpertPayouts") // Story 10.7
 
   // Referral & Growth (Epic 11)
   referralsMade      Referral[]          @relation("UserReferrals") // Story 11.1
@@ -116,9 +119,19 @@ model User {
   achievements       UserAchievement[]   @relation("UserAchievements") // Story 11.5
   contestEntries     ContestEntry[]      @relation("ContestEntries") // Story 11.7
 
+  // Moderation & Admin (Epic 14)
+  contentReports    ContentReport[]        @relation("ReporterReports") // Story 14.4
+  reportedIn        ContentReport[]        @relation("ReportedUserReports") // Story 14.4
+  sanctions         UserSanction[]         @relation("UserSanctions") // Story 14.10
+  appliedSanctions  UserSanction[]         @relation("AdminSanctions") // Story 14.10
+  auditLogsCreated  AuditLog[]             @relation("AdminAuditLogs") // Story 14.9
+  announcements     PlatformAnnouncement[] @relation("AdminAnnouncements") // Story 14.11
+  announcementReads AnnouncementRead[]     @relation("UserAnnouncementReads") // Story 14.11
+
   @@index([email])
   @@index([phone])
   @@index([username])
+  @@index([role])
 }
 
 model Session {
@@ -449,10 +462,10 @@ model Room {
   color       String  @default("#00D4FF")
   badge       String?
 
-  visibility RoomVisibility @default(PUBLIC)
-  type       RoomType       @default(PRIVATE)
-  expertOnly Boolean        @default(false) // Story 10.8: Experts only
-  expertHosted Boolean      @default(false) // Story 10.8: Hosted by verified expert
+  visibility   RoomVisibility @default(PUBLIC)
+  type         RoomType       @default(PRIVATE)
+  expertOnly   Boolean        @default(false) // Story 10.8: Experts only
+  expertHosted Boolean        @default(false) // Story 10.8: Hosted by verified expert
 
   ownerId String
   owner   User   @relation("RoomOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -581,18 +594,18 @@ model ExpertApplication {
   userId String @unique
 
   // Application Details
-  bio               String
-  expertiseAreas    String[] // e.g., ["Ligue 1", "Champions League", "xG Analysis"]
-  socialProofLinks  String[] // LinkedIn, Twitter, blog, etc.
-  trackRecord       String   // Description of past predictions/successes
-  certifications    String?  // Optional certifications
-  mediaAppearances  String?  // Optional media mentions
+  bio              String
+  expertiseAreas   String[] // e.g., ["Ligue 1", "Champions League", "xG Analysis"]
+  socialProofLinks String[] // LinkedIn, Twitter, blog, etc.
+  trackRecord      String // Description of past predictions/successes
+  certifications   String? // Optional certifications
+  mediaAppearances String? // Optional media mentions
 
   // Review Process
-  status        ExpertApplicationStatus @default(PENDING)
-  submittedAt   DateTime                @default(now())
-  reviewedAt    DateTime?
-  reviewedBy    String?                 // Admin userId
+  status          ExpertApplicationStatus @default(PENDING)
+  submittedAt     DateTime                @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String? // Admin userId
   rejectionReason String?
 
   // Relations
@@ -608,21 +621,21 @@ model ExpertProfile {
 
   // Expert Status
   verifiedAt     DateTime @default(now())
-  verifiedBy     String   // Admin userId
+  verifiedBy     String // Admin userId
   isActive       Boolean  @default(true)
   expertiseAreas String[] // Verified expertise areas
 
   // Performance Metrics
-  followerCount    Int @default(0)
-  subscriberCount  Int @default(0)
-  contentCount     Int @default(0)
-  totalRevenue     Float @default(0) // In euros
-  platformRevenue  Float @default(0) // Platform's cut
-  expertRevenue    Float @default(0) // Expert's cut
+  followerCount   Int   @default(0)
+  subscriberCount Int   @default(0)
+  contentCount    Int   @default(0)
+  totalRevenue    Float @default(0) // In euros
+  platformRevenue Float @default(0) // Platform's cut
+  expertRevenue   Float @default(0) // Expert's cut
 
   // Content & Monetization
-  monthlyPrice  Float? // Expert-set monthly subscription price
-  yearlyPrice   Float? // Expert-set yearly subscription price
+  monthlyPrice    Float? // Expert-set monthly subscription price
+  yearlyPrice     Float? // Expert-set yearly subscription price
   isAcceptingSubs Boolean @default(false)
 
   // Payout Info
@@ -647,12 +660,12 @@ model ExpertContent {
   authorId String
 
   // Content
-  title       String
-  content     String   @db.Text // Rich text content
-  coverImage  String? // Optional cover image URL
-  excerpt     String? // Short description
-  tags        String[] // Content tags
-  category    String? // Content category
+  title      String
+  content    String   @db.Text // Rich text content
+  coverImage String? // Optional cover image URL
+  excerpt    String? // Short description
+  tags       String[] // Content tags
+  category   String? // Content category
 
   // Visibility & Access
   isPremium   Boolean @default(false) // Requires subscription to view
@@ -689,8 +702,8 @@ enum ExpertApplicationStatus {
 
 model ExpertFollow {
   id         String   @id @default(cuid())
-  userId     String   // Follower
-  expertId   String   // Expert being followed
+  userId     String // Follower
+  expertId   String // Expert being followed
   followedAt DateTime @default(now())
 
   user   User @relation("UserFollows", fields: [userId], references: [id], onDelete: Cascade)
@@ -702,24 +715,24 @@ model ExpertFollow {
 }
 
 model ExpertSubscription {
-  id         String                @id @default(cuid())
-  userId     String                // Subscriber
-  expertId   String                // Expert
-  status     SubscriptionStatus    @default(ACTIVE)
-  plan       SubscriptionPlan      // MONTHLY or YEARLY
-  price      Float                 // Price at time of subscription
-  currency   String                @default("EUR")
+  id       String             @id @default(cuid())
+  userId   String // Subscriber
+  expertId String // Expert
+  status   SubscriptionStatus @default(ACTIVE)
+  plan     SubscriptionPlan // MONTHLY or YEARLY
+  price    Float // Price at time of subscription
+  currency String             @default("EUR")
 
   // Stripe
   stripeSubscriptionId String? @unique
   stripeCustomerId     String?
 
   // Dates
-  startDate     DateTime  @default(now())
+  startDate        DateTime  @default(now())
   currentPeriodEnd DateTime
-  cancelAt      DateTime?
-  canceledAt    DateTime?
-  endedAt       DateTime?
+  cancelAt         DateTime?
+  canceledAt       DateTime?
+  endedAt          DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -760,9 +773,9 @@ model PayoutRequest {
   stripePayoutId String? @unique
 
   // Processing
-  requestedAt DateTime  @default(now())
-  processedAt DateTime?
-  processedBy String? // Admin userId
+  requestedAt    DateTime  @default(now())
+  processedAt    DateTime?
+  processedBy    String? // Admin userId
   rejectedReason String?
 
   // Relations
@@ -785,23 +798,23 @@ enum PayoutStatus {
 // ============================================
 
 model Referral {
-  id             String   @id @default(cuid())
-  referralCode   String   @unique // Unique code for sharing
-  referrerId     String   // User who created the referral
-  referredUserId String?  @unique // User who signed up (null until signup)
+  id             String  @id @default(cuid())
+  referralCode   String  @unique // Unique code for sharing
+  referrerId     String // User who created the referral
+  referredUserId String? @unique // User who signed up (null until signup)
 
   // Status
   status ReferralStatus @default(PENDING)
 
   // Tracking
-  shareCount    Int @default(0) // How many times shared
-  clickCount    Int @default(0) // How many times link clicked
-  rewardGiven   Boolean @default(false) // Whether referrer received reward
-  rewardAmount  Float? // Reward amount (credits or discount)
+  shareCount   Int     @default(0) // How many times shared
+  clickCount   Int     @default(0) // How many times link clicked
+  rewardGiven  Boolean @default(false) // Whether referrer received reward
+  rewardAmount Float? // Reward amount (credits or discount)
 
   // Timestamps
-  createdAt   DateTime  @default(now())
-  convertedAt DateTime? // When referred user signed up
+  createdAt      DateTime  @default(now())
+  convertedAt    DateTime? // When referred user signed up
   firstPaymentAt DateTime? // When referred user made first payment
 
   // Relations
@@ -814,10 +827,10 @@ model Referral {
 }
 
 enum ReferralStatus {
-  PENDING    // Link created but not used
-  ACTIVE     // Referred user signed up and is active
-  CHURNED    // Referred user churned/unsubscribed
-  INVALID    // Fraud detected or invalidated
+  PENDING // Link created but not used
+  ACTIVE // Referred user signed up and is active
+  CHURNED // Referred user churned/unsubscribed
+  INVALID // Fraud detected or invalidated
 }
 
 // ============================================
@@ -847,14 +860,14 @@ model PointsTransaction {
 }
 
 enum PointsActionType {
-  DAILY_LOGIN        // +10 points
-  AGENT_INVOCATION   // +25 points
-  SHARE_ANALYSIS     // +50 points
+  DAILY_LOGIN // +10 points
+  AGENT_INVOCATION // +25 points
+  SHARE_ANALYSIS // +50 points
   CORRECT_PREDICTION // +100 points
   SUCCESSFUL_REFERRAL // +200 points
-  LEVEL_UP           // Bonus points for leveling up
-  MANUAL_ADJUSTMENT  // Admin adjustment
-  REWARD_REDEMPTION  // -X points when redeeming
+  LEVEL_UP // Bonus points for leveling up
+  MANUAL_ADJUSTMENT // Admin adjustment
+  REWARD_REDEMPTION // -X points when redeeming
 }
 
 // ============================================
@@ -862,13 +875,13 @@ enum PointsActionType {
 // ============================================
 
 model UserAchievement {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   userId        String
-  achievementId String   // Achievement identifier (e.g., "first_prediction", "10_wins")
+  achievementId String // Achievement identifier (e.g., "first_prediction", "10_wins")
 
   // Progress
-  progress      Int      @default(0) // Current progress toward achievement
-  unlockedAt    DateTime? // When the achievement was unlocked (null if not yet unlocked)
+  progress   Int       @default(0) // Current progress toward achievement
+  unlockedAt DateTime? // When the achievement was unlocked (null if not yet unlocked)
 
   // Metadata
   createdAt DateTime @default(now())
@@ -898,9 +911,9 @@ model UserAchievement {
 // ============================================
 
 model PredictionContest {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   name        String
-  description String   @db.Text
+  description String      @db.Text
   type        ContestType @default(WEEKLY)
 
   // Timing
@@ -936,8 +949,8 @@ model ContestEntry {
   userId    String
 
   // Scoring
-  totalPoints Int     @default(0) // Total points earned in contest
-  rank        Int? // Final rank (calculated when contest ends)
+  totalPoints  Int     @default(0) // Total points earned in contest
+  rank         Int? // Final rank (calculated when contest ends)
   prizeClaimed Boolean @default(false)
 
   // Metadata
@@ -945,8 +958,8 @@ model ContestEntry {
   updatedAt DateTime @updatedAt
 
   // Relations
-  contest     PredictionContest @relation(fields: [contestId], references: [id], onDelete: Cascade)
-  user        User              @relation("ContestEntries", fields: [userId], references: [id], onDelete: Cascade)
+  contest     PredictionContest   @relation(fields: [contestId], references: [id], onDelete: Cascade)
+  user        User                @relation("ContestEntries", fields: [userId], references: [id], onDelete: Cascade)
   predictions ContestPrediction[]
 
   @@unique([contestId, userId])
@@ -965,8 +978,8 @@ model ContestPrediction {
   metadata   Json? // Additional prediction data (exact score, etc.)
 
   // Result
-  isCorrect Boolean? // null until match is finished
-  pointsEarned Int @default(0)
+  isCorrect    Boolean? // null until match is finished
+  pointsEarned Int      @default(0)
 
   // Metadata
   createdAt DateTime @default(now())
@@ -1002,11 +1015,266 @@ enum ContestType {
 }
 
 enum ContestStatus {
-  UPCOMING  // Not started yet
-  ACTIVE    // Currently running
-  ENDED     // Finished, calculating results
+  UPCOMING // Not started yet
+  ACTIVE // Currently running
+  ENDED // Finished, calculating results
   COMPLETED // Results calculated, prizes awarded
   CANCELLED // Contest cancelled
+}
+
+// ============================================
+// MODERATION & ADMIN (Epic 14)
+// ============================================
+
+enum UserRole {
+  USER // Regular user
+  MODERATOR // Content moderator
+  ADMIN // Platform admin
+}
+
+model AuditLog {
+  id String @id @default(cuid())
+
+  // Action details
+  action     String // e.g., "USER_BANNED", "CONFIG_UPDATED", "EXPERT_VERIFIED"
+  actorId    String // Admin/moderator who performed the action
+  targetType String // "user", "room", "content", "config"
+  targetId   String? // ID of the affected entity
+  details    Json // Additional context and metadata
+
+  // Metadata
+  createdAt DateTime @default(now())
+  ipAddress String?
+  userAgent String?
+
+  // Relations
+  actor User @relation("AdminAuditLogs", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([actorId])
+  @@index([action])
+  @@index([targetType, targetId])
+  @@index([createdAt])
+}
+
+model ContentReport {
+  id String @id @default(cuid())
+
+  // Report details
+  reporterId     String
+  reportedType   ContentReportType // Message, Profile, Room, AgentResponse
+  reportedId     String // ID of the reported content
+  reportedUserId String? // ID of user who created the content (if applicable)
+  reason         ReportReason
+  description    String?
+  evidence       Json? // Screenshots, links, etc.
+
+  // Review
+  status      ReportStatus @default(PENDING)
+  reviewedAt  DateTime?
+  reviewedBy  String? // Moderator userId
+  resolution  String? // Resolution notes
+  actionTaken String? // "APPROVED", "REMOVED", "USER_WARNED", etc.
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  reporter     User  @relation("ReporterReports", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser User? @relation("ReportedUserReports", fields: [reportedUserId], references: [id], onDelete: SetNull)
+
+  @@index([reporterId])
+  @@index([reportedUserId])
+  @@index([status])
+  @@index([reportedType, reportedId])
+  @@index([createdAt])
+}
+
+enum ContentReportType {
+  ROOM_MESSAGE
+  USER_PROFILE
+  ROOM
+  AGENT_RESPONSE
+  EXPERT_CONTENT
+}
+
+enum ReportReason {
+  SPAM
+  HARASSMENT
+  HATE_SPEECH
+  INAPPROPRIATE_CONTENT
+  FALSE_INFORMATION
+  IMPERSONATION
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  DISMISSED
+  ESCALATED
+}
+
+model UserSanction {
+  id String @id @default(cuid())
+
+  // Target user
+  userId String
+
+  // Sanction details
+  type      SanctionType
+  reason    String
+  duration  Int? // Duration in hours (null for permanent ban)
+  expiresAt DateTime? // When suspension ends
+  isActive  Boolean      @default(true)
+
+  // Admin who applied sanction
+  appliedBy String
+  appliedAt DateTime @default(now())
+
+  // Appeal
+  appealedAt       DateTime?
+  appealReason     String?
+  appealReviewedAt DateTime?
+  appealApproved   Boolean?
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  user  User @relation("UserSanctions", fields: [userId], references: [id], onDelete: Cascade)
+  admin User @relation("AdminSanctions", fields: [appliedBy], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([type])
+  @@index([isActive])
+  @@index([expiresAt])
+}
+
+enum SanctionType {
+  WARNING
+  MUTE
+  SUSPENSION
+  BAN
+}
+
+model PlatformAnnouncement {
+  id String @id @default(cuid())
+
+  // Content
+  title   String
+  content String
+  type    AnnouncementType @default(INFO)
+
+  // Targeting
+  targetAudience Json // { "all": true } or { "tiers": ["PREMIUM"], "userIds": ["..."] }
+
+  // Display options
+  displayAs   AnnouncementDisplay @default(BANNER)
+  dismissible Boolean             @default(true)
+
+  // Scheduling
+  publishAt DateTime? // null = published immediately
+  expiresAt DateTime?
+  isActive  Boolean   @default(true)
+
+  // Author
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  author User               @relation("AdminAnnouncements", fields: [createdBy], references: [id], onDelete: Cascade)
+  reads  AnnouncementRead[]
+
+  @@index([createdBy])
+  @@index([isActive])
+  @@index([publishAt])
+  @@index([expiresAt])
+}
+
+enum AnnouncementType {
+  INFO
+  WARNING
+  CRITICAL
+  MAINTENANCE
+}
+
+enum AnnouncementDisplay {
+  BANNER
+  MODAL
+  NOTIFICATION
+}
+
+model AnnouncementRead {
+  id String @id @default(cuid())
+
+  userId         String
+  announcementId String
+  readAt         DateTime @default(now())
+
+  // Relations
+  user         User                 @relation("UserAnnouncementReads", fields: [userId], references: [id], onDelete: Cascade)
+  announcement PlatformAnnouncement @relation(fields: [announcementId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, announcementId])
+  @@index([userId])
+  @@index([announcementId])
+}
+
+model AutomatedFilter {
+  id String @id @default(cuid())
+
+  // Filter configuration
+  name      String
+  type      FilterType
+  pattern   String // Regex or keyword list
+  severity  FilterSeverity
+  isActive  Boolean        @default(true)
+  autoBlock Boolean        @default(false) // Auto-block high confidence matches
+
+  // Stats
+  matchCount     Int @default(0)
+  falsePositives Int @default(0)
+
+  // Metadata
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type])
+  @@index([isActive])
+}
+
+enum FilterType {
+  PROFANITY
+  SPAM
+  MALICIOUS_LINK
+  HATE_SPEECH
+}
+
+enum FilterSeverity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+model SystemConfig {
+  id String @id @default(cuid())
+
+  // Config key
+  key   String @unique
+  value Json
+
+  // Metadata
+  description String?
+  category    String? // "rate_limits", "features", "ai_agents", etc.
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+
+  @@index([category])
 }
 
 // ============================================
