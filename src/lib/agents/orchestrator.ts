@@ -1,12 +1,16 @@
 import { agentRegistry } from "./registry"
-import { openclawClient } from "./openclawClient"
+import { betanalyticAgentClient } from "./betanalyticClient"
 import { ollamaClient } from "./llm/ollamaClient"
 import { soulLoader } from "./soulLoader"
 import { matchDataService } from "../services/matchDataService"
 
 interface QueryContext {
   userId: string
+  userToken?: string      // BetAnalytic api_key — required when matchId is provided
   matchId?: string
+  homeTeam?: string       // Required by BetAnalytic when matchId is set
+  awayTeam?: string
+  competition?: string
   conversationHistory?: Array<{ role: "system" | "user" | "assistant"; content: string }>
   userPreferences?: {
     mode?: "analytical" | "supporter"
@@ -19,38 +23,17 @@ interface OrchestrationResult {
   response: string
   model?: string
   latency: number
-  source: "openclaw" | "ollama-local" | "fallback"
+  source: "betanalytic" | "ollama-local" | "fallback"
+  confidence?: number
+  keyInsights?: string[]
+  warnings?: string | null
+  dataCompleteness?: number
 }
 
 export class AgentOrchestrator {
-  private useOpenClaw = true // Toggle between OpenClaw (VPS) and local Ollama
-  private defaultModel = "llama2"
-  private modelMap: Record<string, string> = {
-    // Data agents - fast responses
-    scout: "llama2",
-    analyst: "llama2",
-    insider: "llama2",
-
-    // Analysis agents - more sophisticated
-    tactic: "mistral",
-    context: "mistral",
-    momentum: "mistral",
-
-    // Market agents - precision
-    wall: "llama2",
-    goal: "llama2",
-    corner: "llama2",
-    card: "llama2",
-
-    // Intel & Live - fast
-    crowd: "llama2",
-    live: "llama2",
-    debate: "mistral",
-    debrief: "mistral",
-  }
-
   /**
-   * Route query to specific agent
+   * Route a single-agent query.
+   * Priority: BetAnalytic (if matchId + userToken) → local Ollama → error
    */
   async routeQuery(
     agentId: string,
@@ -59,229 +42,153 @@ export class AgentOrchestrator {
   ): Promise<OrchestrationResult> {
     const startTime = Date.now()
 
-    // Validate agent exists
     const agent = agentRegistry.getById(agentId)
-    if (!agent) {
-      throw new Error(`Agent ${agentId} not found`)
-    }
+    if (!agent) throw new Error(`Agent ${agentId} not found`)
+    if (!agent.isEnabled) throw new Error(`Agent ${agentId} is currently disabled`)
 
-    if (!agent.isEnabled) {
-      throw new Error(`Agent ${agentId} is currently disabled`)
-    }
+    // ── BetAnalytic path ────────────────────────────────────────────────────
+    const canUseBetAnalytic =
+      context.matchId &&
+      context.userToken &&
+      context.homeTeam &&
+      context.awayTeam &&
+      betanalyticAgentClient.getHealthStatus()
 
-    // Try OpenClaw first if enabled
-    if (this.useOpenClaw && openclawClient.getHealthStatus()) {
+    if (canUseBetAnalytic) {
       try {
-        const response = await openclawClient.invoke({
-          agentId,
-          query: userQuery,
-          context: {
-            userId: context.userId,
-            matchId: context.matchId,
-            conversationHistory: context.conversationHistory,
-            userPreferences: context.userPreferences,
-          },
+        const result = await betanalyticAgentClient.invoke(context.userToken!, {
+          matchId: context.matchId!,
+          homeTeam: context.homeTeam!,
+          awayTeam: context.awayTeam!,
+          agentType: agent.betanalyticType,
+          question: userQuery,
+          competition: context.competition,
         })
 
         const latency = Date.now() - startTime
-        console.log(`✅ Agent ${agentId} (OpenClaw) responded in ${latency}ms`)
+        console.log(`✅ Agent ${agentId} (BetAnalytic/${agent.betanalyticType}) in ${latency}ms`)
 
         return {
           agentId,
-          response,
+          response: result.content,
           latency,
-          source: "openclaw",
+          source: "betanalytic",
+          confidence: result.confidence,
+          keyInsights: result.keyInsights,
+          warnings: result.warnings,
+          dataCompleteness: result.dataCompleteness,
         }
       } catch (error) {
-        console.error(`❌ OpenClaw failed, falling back to local:`, error)
-        // Fall through to local Ollama
+        console.error(`❌ BetAnalytic failed for ${agentId}, falling back to Ollama:`, error)
       }
     }
 
-    // Fallback to local Ollama
-
-    // Load SOUL configuration
+    // ── Ollama fallback ─────────────────────────────────────────────────────
     const soul = soulLoader.loadSoul(agentId)
-
-    // Build system prompt
     const systemPrompt = soulLoader.buildSystemPrompt(soul, context)
 
-    // Enrich context with match data if matchId provided
     let enrichedQuery = userQuery
-    if (context?.matchId) {
+    if (context.matchId) {
       const matchData = await matchDataService.getMatchData(context.matchId)
       if (matchData.data) {
-        enrichedQuery = `${userQuery}\n\n[Context - Match Data Available]\n`
-        enrichedQuery += `Home: ${matchData.match.homeTeam.name}\n`
-        enrichedQuery += `Away: ${matchData.match.awayTeam.name}\n`
-        enrichedQuery += `Competition: ${matchData.match.competition.name}\n`
+        enrichedQuery += `\n\n[Context]\nHome: ${matchData.match.homeTeam.name}\nAway: ${matchData.match.awayTeam.name}\nCompetition: ${matchData.match.competition.name}`
       }
     }
 
-    // Select model
-    const model = this.modelMap[agentId] ?? this.defaultModel
-
-    // Check Ollama health
     if (!ollamaClient.getHealthStatus()) {
-      throw new Error("LLM service is currently unavailable")
+      throw new Error("LLM service is currently unavailable (BetAnalytic + Ollama both failed)")
     }
 
-    try {
-      // Build messages
-      const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
-        { role: "system", content: systemPrompt },
-      ]
+    const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
+      { role: "system", content: systemPrompt },
+      ...(context.conversationHistory ?? []),
+      { role: "user", content: enrichedQuery },
+    ]
 
-      // Add conversation history if provided
-      if (context?.conversationHistory) {
-        messages.push(...context.conversationHistory)
-      }
+    const response = await ollamaClient.chat({
+      model: "llama2",
+      messages,
+      options: { temperature: 0.7, top_p: 0.9, num_predict: 1000 },
+    })
 
-      // Add user query
-      messages.push({ role: "user", content: enrichedQuery })
+    const latency = Date.now() - startTime
+    console.log(`✅ Agent ${agentId} (Ollama fallback) in ${latency}ms`)
 
-      // Generate response
-      const response = await ollamaClient.chat({
-        model,
-        messages,
-        options: {
-          temperature: 0.7,
-          top_p: 0.9,
-          num_predict: 1000,
-        },
-      })
-
-      const latency = Date.now() - startTime
-
-      console.log(`✅ Agent ${agentId} (local Ollama) responded in ${latency}ms`)
-
-      return {
-        agentId,
-        response,
-        model,
-        latency,
-        source: "ollama-local",
-      }
-    } catch (error) {
-      const latency = Date.now() - startTime
-      console.error(`❌ Agent ${agentId} failed after ${latency}ms:`, error)
-      throw error
-    }
+    return { agentId, response, latency, source: "ollama-local" }
   }
 
   /**
-   * Route query with streaming response
+   * Stream version — BetAnalytic doesn't support SSE yet so we simulate
+   * streaming by yielding words progressively (see adapter-cote-vps.md §1).
    */
   async *routeQueryStream(
     agentId: string,
     userQuery: string,
     context: QueryContext
   ): AsyncGenerator<string, void, unknown> {
-    // Validate agent exists
     const agent = agentRegistry.getById(agentId)
-    if (!agent) {
-      throw new Error(`Agent ${agentId} not found`)
-    }
+    if (!agent) throw new Error(`Agent ${agentId} not found`)
+    if (!agent.isEnabled) throw new Error(`Agent ${agentId} is currently disabled`)
 
-    if (!agent.isEnabled) {
-      throw new Error(`Agent ${agentId} is currently disabled`)
-    }
+    const canUseBetAnalytic =
+      context.matchId &&
+      context.userToken &&
+      context.homeTeam &&
+      context.awayTeam &&
+      betanalyticAgentClient.getHealthStatus()
 
-    // Try OpenClaw first if enabled
-    if (this.useOpenClaw && openclawClient.getHealthStatus()) {
+    if (canUseBetAnalytic) {
       try {
-        for await (const chunk of openclawClient.invokeStream({
-          agentId,
-          query: userQuery,
-          context: {
-            userId: context.userId,
-            matchId: context.matchId,
-            conversationHistory: context.conversationHistory,
-            userPreferences: context.userPreferences,
-          },
+        for await (const chunk of betanalyticAgentClient.invokeStream(context.userToken!, {
+          matchId: context.matchId!,
+          homeTeam: context.homeTeam!,
+          awayTeam: context.awayTeam!,
+          agentType: agent.betanalyticType,
+          question: userQuery,
+          competition: context.competition,
         })) {
-          if (chunk.type === "token" && chunk.content) {
-            yield chunk.content
-          } else if (chunk.type === "error") {
-            throw new Error(chunk.message ?? "OpenClaw streaming error")
-          }
+          yield chunk
         }
         return
       } catch (error) {
-        console.error(`❌ OpenClaw stream failed, falling back to local:`, error)
-        // Fall through to local Ollama
+        console.error(`❌ BetAnalytic stream failed for ${agentId}, falling back to Ollama:`, error)
       }
     }
 
-    // Fallback to local Ollama streaming
-
-    // Load SOUL configuration
+    // Ollama streaming fallback
     const soul = soulLoader.loadSoul(agentId)
-
-    // Build system prompt
     const systemPrompt = soulLoader.buildSystemPrompt(soul, context)
 
-    // Enrich context with match data if matchId provided
     let enrichedQuery = userQuery
-    if (context?.matchId) {
+    if (context.matchId) {
       const matchData = await matchDataService.getMatchData(context.matchId)
       if (matchData.data) {
-        enrichedQuery = `${userQuery}\n\n[Context - Match Data Available]\n`
-        enrichedQuery += `Home: ${matchData.match.homeTeam.name}\n`
-        enrichedQuery += `Away: ${matchData.match.awayTeam.name}\n`
-        enrichedQuery += `Competition: ${matchData.match.competition.name}\n`
+        enrichedQuery += `\n\n[Context]\nHome: ${matchData.match.homeTeam.name}\nAway: ${matchData.match.awayTeam.name}`
       }
     }
 
-    // Select model
-    const model = this.modelMap[agentId] ?? this.defaultModel
-
-    // Check Ollama health
     if (!ollamaClient.getHealthStatus()) {
-      throw new Error("LLM service is currently unavailable")
+      throw new Error("LLM service unavailable")
     }
 
-    // Build messages
     const messages: Array<{ role: "system" | "user" | "assistant"; content: string }> = [
       { role: "system", content: systemPrompt },
+      ...(context.conversationHistory ?? []),
+      { role: "user", content: enrichedQuery },
     ]
 
-    // Add conversation history if provided
-    if (context?.conversationHistory) {
-      messages.push(...context.conversationHistory)
-    }
-
-    // Add user query
-    messages.push({ role: "user", content: enrichedQuery })
-
-    // Stream response
     for await (const chunk of ollamaClient.chatStream({
-      model,
+      model: "llama2",
       messages,
-      options: {
-        temperature: 0.7,
-        top_p: 0.9,
-        num_predict: 1000,
-      },
+      options: { temperature: 0.7, top_p: 0.9, num_predict: 1000 },
     })) {
       yield chunk
     }
   }
 
-  /**
-   * Get recommended model for agent
-   */
-  getModelForAgent(agentId: string): string {
-    return this.modelMap[agentId] ?? this.defaultModel
-  }
-
-  /**
-   * List available models
-   */
   async listAvailableModels(): Promise<Array<{ name: string; size: number }>> {
     return ollamaClient.listModels()
   }
 }
 
-// Singleton instance
 export const agentOrchestrator = new AgentOrchestrator()

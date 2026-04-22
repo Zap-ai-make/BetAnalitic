@@ -19,6 +19,17 @@ export const env = createEnv({
       .default("development"),
     AUTH_SECRET: z.string().min(1),
     AUTH_TRUST_HOST: z.string().optional(),
+    // BetAnalytic API
+    BETANALYTIC_API_URL: z.string().url().optional(),
+    BETANALYTIC_INTERNAL_SECRET: z.string().optional(),
+    BETANALYTIC_ADMIN_KEY: z.string().optional(),
+    BETANALYTIC_JWT_SECRET: z.string().optional(),
+    // Legacy / fallback
+    OPENCLAW_BASE_URL: z.string().url().optional(),
+    OPENCLAW_API_KEY: z.string().optional(),
+    OLLAMA_BASE_URL: z.string().url().optional(),
+    SPORTMONKS_API_KEY: z.string().optional(),
+    CRON_SECRET: z.string().optional(),
   },
 
   /**
@@ -26,7 +37,7 @@ export const env = createEnv({
    * isn't built with invalid env vars. To expose them to the client, prefix them with `NEXT_PUBLIC_`.
    */
   client: {
-    // NEXT_PUBLIC_CLIENTVAR: z.string(),
+    NEXT_PUBLIC_ABLY_KEY: z.string().optional(),
   },
 
   /**
@@ -38,7 +49,18 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     AUTH_SECRET: process.env.AUTH_SECRET,
     AUTH_TRUST_HOST: process.env.AUTH_TRUST_HOST,
-    // NEXT_PUBLIC_CLIENTVAR: process.env.NEXT_PUBLIC_CLIENTVAR,
+    // BetAnalytic API
+    BETANALYTIC_API_URL: process.env.BETANALYTIC_API_URL,
+    BETANALYTIC_INTERNAL_SECRET: process.env.BETANALYTIC_INTERNAL_SECRET,
+    BETANALYTIC_ADMIN_KEY: process.env.BETANALYTIC_ADMIN_KEY,
+    BETANALYTIC_JWT_SECRET: process.env.BETANALYTIC_JWT_SECRET,
+    // Legacy / fallback
+    OPENCLAW_BASE_URL: process.env.OPENCLAW_BASE_URL,
+    OPENCLAW_API_KEY: process.env.OPENCLAW_API_KEY,
+    OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
+    SPORTMONKS_API_KEY: process.env.SPORTMONKS_API_KEY,
+    CRON_SECRET: process.env.CRON_SECRET,
+    NEXT_PUBLIC_ABLY_KEY: process.env.NEXT_PUBLIC_ABLY_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

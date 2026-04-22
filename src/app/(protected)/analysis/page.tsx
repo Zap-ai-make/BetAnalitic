@@ -347,8 +347,9 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
     if (!selectedAgent || matches.length === 0) return
 
     setIsInvoking(true)
+    const agent = AGENTS.find((a) => a.id === selectedAgent)
+    const firstMatch = matches[0]!
 
-    // Add user message
     const userMessage: ConversationMessage = {
       id: `msg-${Date.now()}`,
       type: "user",
@@ -357,31 +358,81 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
     }
     setMessages((prev) => [...prev, userMessage])
 
-    // Simulate agent response (mock for now)
-    setTimeout(() => {
-      const agent = AGENTS.find((a) => a.id === selectedAgent)
-      const agentMessage: ConversationMessage = {
-        id: `msg-${Date.now() + 1}`,
-        type: "agent",
-        agentId: selectedAgent,
-        agentName: agent?.name,
-        content: getPersonalizedResponse(
-          agent?.emoji ?? "",
-          agent?.name ?? "",
-          matches.length,
-          mode,
-          expertiseLevel,
-          analysisDepth,
-          learnMode
-        ),
-        timestamp: new Date(),
-        confidence: Math.floor(Math.random() * 55) + 40, // Random 40-95
+    // Placeholder while streaming
+    const agentMsgId = `msg-${Date.now() + 1}`
+    const agentMessage: ConversationMessage = {
+      id: agentMsgId,
+      type: "agent",
+      agentId: selectedAgent,
+      agentName: agent?.name,
+      content: "",
+      timestamp: new Date(),
+    }
+    setMessages((prev) => [...prev, agentMessage])
+
+    try {
+      const res = await fetch("/api/agents/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          agentId: selectedAgent,
+          query: agentInput || `Analyse ${firstMatch.homeTeam} vs ${firstMatch.awayTeam}`,
+          matchId: firstMatch.id,
+          homeTeam: firstMatch.homeTeam,
+          awayTeam: firstMatch.awayTeam,
+          competition: firstMatch.league,
+        }),
+      })
+
+      if (!res.ok || !res.body) throw new Error(`Stream error: ${res.status}`)
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ""
+      let accumulated = ""
+
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split("\n")
+        buffer = lines.pop() ?? ""
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue
+          try {
+            const parsed = JSON.parse(line.slice(6)) as { type: string; content?: string; confidence?: number }
+            if (parsed.type === "token" && parsed.content) {
+              accumulated += parsed.content
+              setMessages((prev) =>
+                prev.map((m) => m.id === agentMsgId ? { ...m, content: accumulated } : m)
+              )
+            }
+            if (parsed.type === "done") {
+              setMessages((prev) =>
+                prev.map((m) => m.id === agentMsgId
+                  ? { ...m, confidence: parsed.confidence ? Math.round(parsed.confidence * 100) : undefined }
+                  : m
+                )
+              )
+            }
+          } catch { /* ignore malformed SSE lines */ }
+        }
       }
-      setMessages((prev) => [...prev, agentMessage])
+    } catch (err) {
+      console.error("Agent invocation failed:", err)
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === agentMsgId
+            ? { ...m, content: "❌ Erreur lors de la connexion au backend. Vérifiez votre connexion." }
+            : m
+        )
+      )
+    } finally {
       setIsInvoking(false)
       setAgentInput("")
       setSelectedAgent(null)
-    }, 1500)
+    }
   }
 
   const handleClearCoupon = () => {
@@ -406,62 +457,90 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
     setFullAnalysisProgress(0)
 
     const startTime = Date.now()
+    const firstMatch = matches[0]!
 
-    // Add system message
-    const systemMessage: ConversationMessage = {
-      id: `msg-${Date.now()}`,
-      type: "user",
-      content: "⚡ Analyse Complète (14 agents)",
-      timestamp: new Date(),
-    }
-    setMessages((prev) => [...prev, systemMessage])
+    setMessages((prev) => [
+      ...prev,
+      { id: `msg-${Date.now()}`, type: "user", content: `⚡ Analyse Complète — ${firstMatch.homeTeam} vs ${firstMatch.awayTeam}`, timestamp: new Date() },
+    ])
 
-    // Invoke all agents sequentially
-    for (let i = 0; i < AGENTS.length; i++) {
-      const agent = AGENTS[i]
-      if (!agent) continue
+    try {
+      const qs = new URLSearchParams({
+        home_team: firstMatch.homeTeam,
+        away_team: firstMatch.awayTeam,
+        ...(firstMatch.league ? { competition: firstMatch.league } : {}),
+      })
 
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      const res = await fetch(
+        `/api/beta/matches/${firstMatch.id}/analyze-full?${qs.toString()}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: "Pronostic complet pour ce match" }),
+        }
+      )
 
-      const agentMessage: ConversationMessage = {
-        id: `msg-${Date.now()}-${i}`,
-        type: "agent",
-        agentId: agent.id,
-        agentName: agent.name,
-        content: getPersonalizedResponse(
-          agent.emoji,
-          agent.name,
-          matches.length,
-          mode,
-          expertiseLevel,
-          analysisDepth,
-          learnMode
-        ),
-        timestamp: new Date(),
-        confidence: Math.floor(Math.random() * 55) + 40,
+      if (!res.ok) throw new Error(`analyze-full error: ${res.status}`)
+
+      const data = await res.json() as {
+        agents_results: Record<string, { agent_type: string; content: string; confidence: number; key_insights?: string[] }>
+        consensus?: { main_prediction: string; average_confidence: number }
       }
 
-      setMessages((prev) => [...prev, agentMessage])
-      setFullAnalysisProgress(i + 1)
+      const agentEntries = Object.entries(data.agents_results)
+
+      for (let i = 0; i < agentEntries.length; i++) {
+        const [agentType, result] = agentEntries[i]!
+        const agent = AGENTS.find((a) => a.betanalyticType === agentType)
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-${Date.now()}-${i}`,
+            type: "agent",
+            agentId: agent?.id ?? agentType.toLowerCase(),
+            agentName: agent?.name ?? agentType,
+            content: result.content,
+            timestamp: new Date(),
+            confidence: Math.round(result.confidence * 100),
+          },
+        ])
+        setFullAnalysisProgress(i + 1)
+      }
+
+      // Consensus summary
+      if (data.consensus) {
+        const duration = ((Date.now() - startTime) / 1000).toFixed(1)
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `msg-summary-${Date.now()}`,
+            type: "agent",
+            agentId: "advisor",
+            agentName: "Synthèse finale",
+            content: `🎓 Analyse complète en ${duration}s\n\n${data.consensus!.main_prediction}`,
+            timestamp: new Date(),
+            confidence: Math.round(data.consensus!.average_confidence * 100),
+          },
+        ])
+      }
+    } catch (err) {
+      console.error("Full analysis failed:", err)
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `msg-err-${Date.now()}`,
+          type: "agent",
+          agentId: "scout",
+          agentName: "Système",
+          content: "❌ Analyse complète échouée. Vérifiez que le backend BetAnalytic est accessible.",
+          timestamp: new Date(),
+        },
+      ])
+    } finally {
+      setIsFullAnalysis(false)
+      setFullAnalysisProgress(0)
     }
-
-    // Add summary message
-    const duration = ((Date.now() - startTime) / 1000).toFixed(1)
-    await new Promise((resolve) => setTimeout(resolve, 500))
-
-    const summaryMessage: ConversationMessage = {
-      id: `msg-summary-${Date.now()}`,
-      type: "agent",
-      agentId: "advisor",
-      agentName: "Synthèse",
-      content: `🎓 Analyse complète terminée en ${duration}s\n\n✅ ${AGENTS.length} agents consultés\n📊 ${matches.length} match(s) analysés\n\nRésumé des insights clés (backend à implémenter)`,
-      timestamp: new Date(),
-      confidence: Math.floor(Math.random() * 20) + 75, // Higher for summary: 75-95
-    }
-    setMessages((prev) => [...prev, summaryMessage])
-
-    setIsFullAnalysis(false)
-    setFullAnalysisProgress(0)
   }
 
   return (
@@ -785,7 +864,7 @@ Comprendre ces concepts vous aide à évaluer objectivement un match au-delà de
                         <div>• Analyse ({AGENTS.filter((a) => a.category === "Analyse").length} agents)</div>
                         <div>• Marché ({AGENTS.filter((a) => a.category === "Marché").length} agents)</div>
                         <div>• Intel ({AGENTS.filter((a) => a.category === "Intel").length} agents)</div>
-                        <div>• Live ({AGENTS.filter((a) => a.category === "Live").length} agents)</div>
+                        <div>• Synthèse ({AGENTS.filter((a) => a.category === "Synthèse").length} agents)</div>
                       </div>
                       <div className="flex gap-2">
                         <Button

@@ -37,7 +37,7 @@ export const agentsRouter = createTRPCRouter({
   getByCategory: protectedProcedure
     .input(
       z.object({
-        category: z.enum(["Data", "Analyse", "Marché", "Intel", "Live"]),
+        category: z.enum(["Data", "Analyse", "Marché", "Intel", "Synthèse"]),
       })
     )
     .query(({ input }) => {

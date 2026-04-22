@@ -31,6 +31,10 @@ model User {
   termsAcceptedAt        DateTime?
   riskDisclaimerAccepted Boolean   @default(false)
 
+  // BetAnalytic API sync
+  betanalyticId     String? @unique // BetAnalytic user UUID
+  betanalyticApiKey String? @unique // BetAnalytic api_key (ba-xxx)
+
   // Subscription
   subscriptionTier   SubscriptionTier @default(FREE)
   subscriptionEndsAt DateTime?

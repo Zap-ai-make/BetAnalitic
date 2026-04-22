@@ -1,16 +1,70 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect, useCallback } from "react"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { MatchCard } from "~/components/features/match/MatchCard"
+import { BetSlip } from "~/components/features/betting/BetSlip"
+import { MatchBettingCard } from "~/components/features/betting/MatchBettingCard"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
-import { ChevronDown, Calendar, Search, X } from "lucide-react"
+import { ChevronDown, Calendar, Search, X, Brain, TrendingUp } from "lucide-react"
 
 type MatchStatus = "all" | "upcoming" | "live" | "finished"
+type PageMode = "analyse" | "paris"
+
+interface VpsMatch {
+  match_id: string
+  home_team: string
+  away_team: string
+  competition: string
+  date_iso: string
+  status: string
+  odds: { "1": number | null; X: number | null; "2": number | null }
+}
 
 export default function MatchesPage() {
+  const [mode, setMode] = useState<PageMode>("analyse")
+  const [vpsMatches, setVpsMatches] = useState<VpsMatch[]>([])
+  const [vpsLoading, setVpsLoading] = useState(false)
+  const [vpsSearch, setVpsSearch] = useState("")
+
+  const loadVpsMatches = useCallback(async () => {
+    setVpsLoading(true)
+    try {
+      const res = await fetch("/api/beta/matches")
+      if (res.ok) {
+        const data = await res.json() as { matches_by_competition: Record<string, VpsMatch[]> }
+        setVpsMatches(Object.values(data.matches_by_competition ?? {}).flat())
+      }
+    } finally {
+      setVpsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (mode === "paris" && vpsMatches.length === 0) void loadVpsMatches()
+  }, [mode, vpsMatches.length, loadVpsMatches])
+
+  const filteredVpsMatches = useMemo(() => {
+    if (!vpsSearch.trim()) return vpsMatches
+    const q = vpsSearch.toLowerCase()
+    return vpsMatches.filter(
+      (m) =>
+        m.home_team.toLowerCase().includes(q) ||
+        m.away_team.toLowerCase().includes(q) ||
+        m.competition.toLowerCase().includes(q)
+    )
+  }, [vpsMatches, vpsSearch])
+
+  const vpsGrouped = useMemo(() => {
+    return filteredVpsMatches.reduce<Record<string, VpsMatch[]>>((acc, m) => {
+      if (!acc[m.competition]) acc[m.competition] = []
+      acc[m.competition]!.push(m)
+      return acc
+    }, {})
+  }, [filteredVpsMatches])
+
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<MatchStatus>("all")
@@ -117,6 +171,30 @@ export default function MatchesPage() {
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
 
+      {/* Mode Toggle */}
+      <div className="flex border-b border-bg-tertiary">
+        <button
+          onClick={() => setMode("analyse")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors",
+            mode === "analyse" ? "border-accent-cyan text-accent-cyan" : "border-transparent text-text-tertiary"
+          )}
+        >
+          <Brain className="w-4 h-4" />
+          Analyse
+        </button>
+        <button
+          onClick={() => setMode("paris")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors",
+            mode === "paris" ? "border-accent-cyan text-accent-cyan" : "border-transparent text-text-tertiary"
+          )}
+        >
+          <TrendingUp className="w-4 h-4" />
+          Paris
+        </button>
+      </div>
+
       {/* Filter Bar */}
       <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary p-4">
         <div className="space-y-3">
@@ -124,7 +202,7 @@ export default function MatchesPage() {
             <h1 className="font-display text-xl font-bold text-text-primary">
               Matchs
             </h1>
-            {activeFiltersCount > 0 && (
+            {activeFiltersCount > 0 && mode === "analyse" && (
               <button
                 onClick={clearFilters}
                 className="flex items-center gap-2 text-sm text-accent-cyan hover:text-accent-cyan/80"
@@ -140,8 +218,8 @@ export default function MatchesPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={mode === "paris" ? vpsSearch : searchQuery}
+              onChange={(e) => mode === "paris" ? setVpsSearch(e.target.value) : setSearchQuery(e.target.value)}
               placeholder="Rechercher une équipe, compétition..."
               className={cn(
                 "w-full pl-10 pr-10 py-3 rounded-xl bg-bg-secondary",
@@ -328,6 +406,39 @@ export default function MatchesPage() {
       </div>
 
       <main className="flex-1 p-4 pb-20 overflow-y-auto">
+
+        {/* ── MODE PARIS ── */}
+        {mode === "paris" && (
+          <>
+            {vpsLoading && (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="bg-bg-secondary rounded-xl h-32 animate-pulse" />
+                ))}
+              </div>
+            )}
+            {!vpsLoading && filteredVpsMatches.length === 0 && (
+              <div className="text-center py-16">
+                <TrendingUp className="w-12 h-12 text-text-tertiary mx-auto mb-3" />
+                <p className="text-text-secondary">Aucun match disponible</p>
+              </div>
+            )}
+            {!vpsLoading && Object.entries(vpsGrouped).map(([competition, compMatches]) => (
+              <div key={competition} className="mb-6 space-y-3">
+                <h2 className="font-display font-semibold text-text-primary text-sm uppercase tracking-wide">
+                  {competition}
+                </h2>
+                {compMatches.map((m) => (
+                  <MatchBettingCard key={m.match_id} match={m} />
+                ))}
+              </div>
+            ))}
+          </>
+        )}
+
+        {/* ── MODE ANALYSE ── */}
+        {mode === "analyse" && (
+          <>
         {/* Loading State */}
         {isLoading && (
           <div className="space-y-6">
@@ -432,8 +543,11 @@ export default function MatchesPage() {
             )}
           </>
         )}
+          </>
+        )}
       </main>
 
+      <BetSlip />
       <DashboardNav />
     </div>
   )

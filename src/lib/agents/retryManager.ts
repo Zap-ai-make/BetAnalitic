@@ -89,19 +89,23 @@ function sleep(ms: number): Promise<void> {
 }
 
 /**
- * Agent fallback mapping
+ * Agent fallback mapping (BetAnalytic agent IDs)
  */
 const AGENT_FALLBACKS: Record<string, string[]> = {
-  "data-scout": ["terrain-tracker", "pattern-analyst"],
-  "terrain-tracker": ["data-scout"],
-  "value-hunter": ["odds-oracle", "market-pulse"],
-  "pattern-analyst": ["data-scout", "value-hunter"],
-  "odds-oracle": ["market-pulse", "value-hunter"],
-  "market-pulse": ["odds-oracle"],
-  "insider-intel": ["social-sentinel"],
-  "social-sentinel": ["insider-intel"],
-  "live-pulse": ["momentum-meter"],
-  "momentum-meter": ["live-pulse"],
+  scout: ["analyst"],
+  analyst: ["scout", "stats"],
+  historian: ["momentum"],
+  momentum: ["historian"],
+  motivation: ["momentum"],
+  referee: [],
+  stats: ["analyst"],
+  odds: ["risk"],
+  risk: ["odds"],
+  social: ["motivation"],
+  weather: [],
+  lineup: ["scout"],
+  predictor: ["advisor"],
+  advisor: ["predictor"],
 }
 
 /**

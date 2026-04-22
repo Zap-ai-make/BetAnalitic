@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "~/lib/utils"
 import { useHaptic } from "~/hooks/useHaptic"
 
-export type NavItem = "home" | "matches" | "analysis" | "rooms" | "profile"
+export type NavItem = "home" | "matches" | "analysis" | "paris" | "profile"
 
 export interface BottomNavProps {
   activeItem: NavItem
@@ -42,11 +42,11 @@ const NAV_ITEMS: { id: NavItem; icon: React.ReactNode; label: string }[] = [
     ),
   },
   {
-    id: "rooms",
-    label: "Salles",
+    id: "paris",
+    label: "Paris",
     icon: (
       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
       </svg>
     ),
   },

@@ -1,34 +1,22 @@
-import { SportmonksProvider } from "./sportmonksProvider"
 import { CachedDataProvider } from "./cachedDataProvider"
+import { BetAnalyticProvider } from "./betanalyticProvider"
 import type { DataProvider } from "./dataProvider"
 
 export * from "./types"
 export * from "./dataProvider"
-export { SportmonksProvider } from "./sportmonksProvider"
+export { BetAnalyticProvider } from "./betanalyticProvider"
 export { CachedDataProvider } from "./cachedDataProvider"
 
 /**
- * Create the default data provider
- * Uses Sportmonks with caching
+ * Default data provider: BetAnalytic with in-memory cache.
  */
 export function createDataProvider(): DataProvider {
-  const apiKey = process.env.SPORTMONKS_API_KEY
-
-  if (!apiKey) {
-    throw new Error(
-      "SPORTMONKS_API_KEY environment variable is required"
-    )
+  if (!process.env.BETANALYTIC_API_URL) {
+    throw new Error("BETANALYTIC_API_URL environment variable is required")
   }
-
-  const sportmonks = new SportmonksProvider(apiKey)
-  const cached = new CachedDataProvider(sportmonks)
-
-  return cached
+  return new CachedDataProvider(new BetAnalyticProvider())
 }
 
-/**
- * Singleton instance for server-side use
- */
 let _dataProvider: DataProvider | null = null
 
 export function getDataProvider(): DataProvider {

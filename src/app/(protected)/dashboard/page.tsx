@@ -82,6 +82,30 @@ export default function DashboardPage() {
 
       <main className="flex-1 p-4 pb-24 overflow-y-auto">
         <div className="space-y-6">
+          {/* Quick Access — Paris */}
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => router.push("/paris")}
+              className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3 hover:bg-bg-tertiary transition-colors text-left"
+            >
+              <span className="text-2xl">🎰</span>
+              <div>
+                <p className="font-semibold text-text-primary text-sm">Paris Virtuels</p>
+                <p className="text-xs text-text-tertiary">Parier sur les matchs</p>
+              </div>
+            </button>
+            <button
+              onClick={() => router.push("/coupons")}
+              className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3 hover:bg-bg-tertiary transition-colors text-left"
+            >
+              <span className="text-2xl">🎫</span>
+              <div>
+                <p className="font-semibold text-text-primary text-sm">Mes Coupons</p>
+                <p className="text-xs text-text-tertiary">Historique des paris</p>
+              </div>
+            </button>
+          </div>
+
           {/* Live Matches Section */}
           {(isLoading || liveMatches.length > 0) && (
             <section className="space-y-3">

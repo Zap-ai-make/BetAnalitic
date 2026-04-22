@@ -2,33 +2,37 @@
  * Agent system types
  */
 
-export type AgentCategory = "Data" | "Analyse" | "Marché" | "Intel" | "Live"
+export type AgentCategory = "Data" | "Analyse" | "Marché" | "Intel" | "Synthèse"
+
+export type AgentTier = "FREE" | "PREMIUM" | "EXPERT"
 
 export interface AgentHistoricalAccuracy {
-  overallAccuracy: number // 0-100 (overall prediction accuracy)
-  recentForm: number // 0-100 (last 30 days accuracy)
+  overallAccuracy: number
+  recentForm: number
   predictionBreakdown: {
-    result: number // Match outcome accuracy
-    goals: number // Goals market accuracy
-    corners: number // Corners market accuracy
-    cards: number // Cards market accuracy
+    result: number
+    goals: number
+    corners: number
+    cards: number
   }
-  totalPredictions: number // Total predictions made
+  totalPredictions: number
 }
 
 export interface AgentMetadata {
-  id: string // kebab-case: "data-scout"
-  name: string // Display name: "Data Scout"
-  description: string // Brief purpose
-  color: string // Hex color for UI theming
-  emoji: string // Emoji icon
+  id: string               // kebab-case: "form-analyst"
+  name: string             // Display name
+  description: string
+  color: string            // Hex
+  emoji: string
   category: AgentCategory
-  soulPath: string // Path to SOUL.md file
+  soulPath: string
   isEnabled: boolean
-  order: number // Display order within category
-  expertise?: string[] // Areas of expertise
-  examples?: string[] // Example queries
-  historicalAccuracy?: AgentHistoricalAccuracy // Historical prediction accuracy
+  order: number
+  tier: AgentTier          // Minimum subscription tier required
+  betanalyticType: string  // BetAnalytic API agent_type: FORM, H2H, PREDICT, etc.
+  expertise?: string[]
+  examples?: string[]
+  historicalAccuracy?: AgentHistoricalAccuracy
 }
 
 export interface AgentCapability {
@@ -40,8 +44,11 @@ export interface AgentResponse {
   agentId: string
   content: string
   sources?: AgentSource[]
-  confidence?: number // 0-100
-  processingTime?: number // ms
+  confidence?: number       // 0-100
+  keyInsights?: string[]
+  warnings?: string | null
+  dataCompleteness?: number // 0-100
+  processingTime?: number   // ms
   metadata?: Record<string, unknown>
 }
 

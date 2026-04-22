@@ -127,6 +127,21 @@ export const authRouter = createTRPCRouter({
       },
     });
 
+    // Sync user to BetAnalytic backend (non-blocking — registration succeeds even if this fails)
+    try {
+      const { createBetaUser } = await import("~/lib/betanalytic");
+      const betaResult = await createBetaUser({ email: email ?? undefined, username, tier: "FREE" });
+      await ctx.db.user.update({
+        where: { id: user.id },
+        data: {
+          betanalyticId: betaResult.user.id ?? null,
+          betanalyticApiKey: betaResult.user.api_key ?? null,
+        },
+      });
+    } catch (betaError) {
+      console.error("BetAnalytic user sync failed (non-blocking):", betaError);
+    }
+
     // Generate verification token
     const verificationToken = randomBytes(32).toString("hex");
     await ctx.db.verificationToken.create({
