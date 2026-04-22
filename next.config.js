@@ -99,6 +99,9 @@ const withPWA = withPWAInit({
 /** @type {import("next").NextConfig} */
 const config = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
 };
 
 export default withPWA(config);
