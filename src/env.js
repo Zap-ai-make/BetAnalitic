@@ -30,6 +30,8 @@ export const env = createEnv({
     OLLAMA_BASE_URL: z.string().url().optional(),
     SPORTMONKS_API_KEY: z.string().optional(),
     CRON_SECRET: z.string().optional(),
+    API_SECRET: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
   },
 
   /**
@@ -38,6 +40,8 @@ export const env = createEnv({
    */
   client: {
     NEXT_PUBLIC_ABLY_KEY: z.string().optional(),
+    NEXT_PUBLIC_APP_URL: z.string().url().optional(),
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   },
 
   /**
@@ -60,7 +64,11 @@ export const env = createEnv({
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
     SPORTMONKS_API_KEY: process.env.SPORTMONKS_API_KEY,
     CRON_SECRET: process.env.CRON_SECRET,
+    API_SECRET: process.env.API_SECRET,
+    VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
     NEXT_PUBLIC_ABLY_KEY: process.env.NEXT_PUBLIC_ABLY_KEY,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
   },
   /**
    * Run `build` or `dev` with `SKIP_ENV_VALIDATION` to skip env validation. This is especially

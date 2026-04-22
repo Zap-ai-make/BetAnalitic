@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
-
+import { useSearchParams, useRouter } from "next/navigation"
 import { OnboardingFlow } from "~/components/features/onboarding"
 import { api } from "~/trpc/react"
 
 export default function OnboardingPage() {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const restart = searchParams.get("restart") === "true"
   const [showFlow, setShowFlow] = useState(false)
 
@@ -22,18 +22,20 @@ export default function OnboardingPage() {
   })
 
   useEffect(() => {
-    // Auto-restart if user manually navigated here and has completed onboarding
-    if (status && !status.needsOnboarding && !restartMutation.isPending && !showFlow) {
-      restartMutation.mutate()
-    }
-  }, [status, restartMutation, showFlow])
+    if (isLoading || restartMutation.isPending || showFlow) return
 
-  useEffect(() => {
-    // If restart param is set and onboarding is already done, restart it
-    if (restart && status && !status.needsOnboarding && !restartMutation.isPending && !showFlow) {
+    if (status?.needsOnboarding) {
+      // Needs onboarding normally
+      setShowFlow(true)
+    } else if (restart && status && !status.needsOnboarding) {
+      // Explicit restart request
       restartMutation.mutate()
+    } else if (status && !status.needsOnboarding && !restart) {
+      // Already completed, no restart requested → redirect to dashboard
+      router.replace("/dashboard")
     }
-  }, [restart, status, restartMutation, showFlow])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, isLoading, restart])
 
   if (isLoading || restartMutation.isPending) {
     return (
@@ -43,12 +45,10 @@ export default function OnboardingPage() {
     )
   }
 
-  // Show onboarding if needed or after restart
-  if (status?.needsOnboarding ?? showFlow) {
+  if (showFlow) {
     return <OnboardingFlow />
   }
 
-  // Fallback loading
   return (
     <div className="min-h-screen bg-bg-primary flex items-center justify-center">
       <div className="animate-pulse text-text-secondary">Préparation...</div>

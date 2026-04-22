@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
@@ -22,6 +23,7 @@ interface ConversationMessage {
 
 export default function AnalysisPage() {
   const router = useRouter()
+  const { data: session } = useSession()
   const { matches, removeMatch, clearCoupon, mode, setMode } = useCouponStore()
   const [agentInput, setAgentInput] = React.useState("")
   const [showAgentSuggestions, setShowAgentSuggestions] = React.useState(false)
@@ -41,7 +43,7 @@ export default function AnalysisPage() {
   const [learnMode, setLearnMode] = React.useState(false)
 
   // Burst Mode (Premium feature)
-  const [userTier] = React.useState<"FREE" | "PREMIUM" | "EXPERT">("PREMIUM") // Mock: Set to PREMIUM for demo
+  const userTier = session?.user?.subscriptionTier ?? "FREE"
   const [burstModeActive, setBurstModeActive] = React.useState(false)
   const [showBurstUpsell, setShowBurstUpsell] = React.useState(false)
 

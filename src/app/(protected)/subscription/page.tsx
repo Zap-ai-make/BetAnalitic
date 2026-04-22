@@ -5,6 +5,7 @@
  */
 
 import * as React from "react"
+import { useSession } from "next-auth/react"
 import { Crown, Sparkles, TrendingUp, Check } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { PlanCard } from "~/components/features/subscription/PlanCard"
@@ -18,16 +19,15 @@ import {
 import type { BillingCycle, PlanId } from "~/lib/subscription/plans"
 
 export default function SubscriptionPage() {
+  const { data: session } = useSession()
   const [billingCycle, setBillingCycle] = React.useState<BillingCycle>("month")
   const [showComparison, setShowComparison] = React.useState(false)
 
-  // TODO: Replace with real user query when auth is ready
-  const currentPlan: PlanId = "FREE" // Mock current plan
+  const currentPlan = (session?.user?.subscriptionTier ?? "FREE") as PlanId
 
   const handleSelectPlan = (planId: PlanId) => {
     if (planId === currentPlan) return
-    // TODO: Story 9.2 - Implement Stripe checkout
-    console.log("Selected plan:", planId)
+    window.location.href = `mailto:contact@betanalytic.app?subject=Upgrade%20vers%20${planId}`
   }
 
   return (

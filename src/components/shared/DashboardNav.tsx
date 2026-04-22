@@ -7,15 +7,17 @@ const PATH_TO_NAV_ITEM: Record<string, NavItem> = {
   "/dashboard": "home",
   "/matches": "matches",
   "/analyse": "analysis",
+  "/analysis": "analysis",
   "/paris": "paris",
   "/coupons": "paris",
+  "/salles": "home",
   "/profile": "profile",
 }
 
 const NAV_ITEM_TO_PATH: Record<NavItem, string> = {
   home: "/dashboard",
   matches: "/matches",
-  analysis: "/analyse",
+  analysis: "/analysis",
   paris: "/paris",
   profile: "/profile",
 }

@@ -187,7 +187,7 @@ function MatchOddsCard({
                 )}
               >
                 <span className="text-xs opacity-70">{m.label}</span>
-                <span className="font-bold">{m.odds!.toFixed(2)}</span>
+                <span className="font-bold">{(m.odds ?? 0).toFixed(2)}</span>
               </button>
             )
           })}

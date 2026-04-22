@@ -29,9 +29,9 @@ export function MatchBettingCard({ match }: MatchBettingCardProps) {
 
   // Resolve odds: use VPS odds if available, else cached Poisson
   const cached = getCachedOdds(match.match_id)
-  const vpsHome = match.odds["1"]
-  const vpsDraw = match.odds["X"]
-  const vpsAway = match.odds["2"]
+  const vpsHome = match.odds["1"] as number | undefined
+  const vpsDraw = match.odds.X as number | undefined
+  const vpsAway = match.odds["2"] as number | undefined
 
   const home = vpsHome ?? cached?.home ?? null
   const draw = vpsDraw ?? cached?.draw ?? null

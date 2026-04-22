@@ -8,24 +8,6 @@ import { MatchCard } from "~/components/features/match/MatchCard"
 import { cn } from "~/lib/utils"
 import { api } from "~/trpc/react"
 
-const MOCK_ROOMS = [
-  {
-    id: "1",
-    name: "Ligue 1 Masters",
-    badge: "📊",
-    onlineCount: 45,
-    memberCount: 234,
-    color: "#00D4FF",
-  },
-  {
-    id: "2",
-    name: "Champions League",
-    badge: "🏆",
-    onlineCount: 78,
-    memberCount: 512,
-    color: "#FFD93D",
-  },
-]
 
 const AGENTS = [
   { id: "scout", name: "Scout", color: "var(--color-agent-scout)" },
@@ -41,6 +23,7 @@ export default function DashboardPage() {
   const router = useRouter()
 
   const { data: matches, isLoading } = api.match.getTodaysMatches.useQuery()
+  const { data: rooms } = api.room.getPublicRooms.useQuery()
 
   // Transform matches to MatchCard format
   const transformMatch = (match: NonNullable<typeof matches>[number]) => {
@@ -82,7 +65,7 @@ export default function DashboardPage() {
 
       <main className="flex-1 p-4 pb-24 overflow-y-auto">
         <div className="space-y-6">
-          {/* Quick Access — Paris */}
+          {/* Quick Access */}
           <div className="grid grid-cols-2 gap-3">
             <button
               onClick={() => router.push("/paris")}
@@ -102,6 +85,26 @@ export default function DashboardPage() {
               <div>
                 <p className="font-semibold text-text-primary text-sm">Mes Coupons</p>
                 <p className="text-xs text-text-tertiary">Historique des paris</p>
+              </div>
+            </button>
+            <button
+              onClick={() => router.push("/salles")}
+              className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3 hover:bg-bg-tertiary transition-colors text-left"
+            >
+              <span className="text-2xl">💬</span>
+              <div>
+                <p className="font-semibold text-text-primary text-sm">Salles</p>
+                <p className="text-xs text-text-tertiary">Communauté</p>
+              </div>
+            </button>
+            <button
+              onClick={() => router.push("/analysis")}
+              className="bg-bg-secondary rounded-xl p-4 flex items-center gap-3 hover:bg-bg-tertiary transition-colors text-left"
+            >
+              <span className="text-2xl">⚡</span>
+              <div>
+                <p className="font-semibold text-text-primary text-sm">Analyse IA</p>
+                <p className="text-xs text-text-tertiary">Agents & prédictions</p>
               </div>
             </button>
           </div>
@@ -186,8 +189,18 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            {MOCK_ROOMS.map((room) => (
-              <RoomCard key={room.id} room={room} onClick={() => router.push("/salles")} />
+            {(rooms ?? []).slice(0, 3).map((room) => (
+              <RoomCard
+                key={room.id}
+                room={{
+                  id: room.id,
+                  name: room.name,
+                  badge: room.type === "OFFICIAL" ? "🏆" : "💬",
+                  memberCount: room._count.members,
+                  color: room.type === "OFFICIAL" ? "#00D4FF" : "#FFD93D",
+                }}
+                onClick={() => router.push(`/salles/${room.id}`)}
+              />
             ))}
           </section>
 
@@ -259,7 +272,6 @@ interface RoomCardProps {
     id: string
     name: string
     badge: string
-    onlineCount: number
     memberCount: number
     color: string
   }
@@ -281,10 +293,6 @@ function RoomCard({ room, onClick }: RoomCardProps) {
         <span className="text-lg">{room.badge}</span>
       </div>
       <div className="flex items-center gap-4 text-xs text-text-secondary">
-        <span className="flex items-center gap-1">
-          <span className="w-1.5 h-1.5 bg-accent-green rounded-full" />
-          {room.onlineCount} en ligne
-        </span>
         <span>{room.memberCount} membres</span>
       </div>
     </button>
