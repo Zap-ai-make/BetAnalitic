@@ -128,6 +128,45 @@ export interface BetaPoissonResponse {
   notes: string[]
 }
 
+// ─── Lazy-sync helper ─────────────────────────────────────────────────────────
+
+/**
+ * Returns the BetAnalytic API key for a user.
+ * If the user has no BetAnalytic account yet, creates one and persists it.
+ * Use this in every /api/beta/* route instead of a raw DB lookup.
+ */
+export async function getBetaApiKey(userId: string): Promise<string | null> {
+  const { db } = await import("~/server/db")
+
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: { betanalyticApiKey: true, betanalyticId: true, email: true, username: true },
+  })
+
+  if (!user) return null
+  if (user.betanalyticApiKey) return user.betanalyticApiKey
+
+  // Lazy-sync: create BetAnalytic account on first use
+  try {
+    const result = await createBetaUser({
+      email: user.email ?? undefined,
+      username: user.username,
+      tier: "FREE",
+    })
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        betanalyticId: result.user.id,
+        betanalyticApiKey: result.user.api_key,
+      },
+    })
+    return result.user.api_key
+  } catch (err) {
+    console.error("BetAnalytic lazy-sync failed:", err)
+    return null
+  }
+}
+
 // ─── Admin helpers ─────────────────────────────────────────────────────────────
 
 export async function createBetaUser(params: {

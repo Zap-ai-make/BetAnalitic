@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerAuthSession } from "~/server/auth"
-import { db } from "~/server/db"
-import { betaFetch } from "~/lib/betanalytic"
+import { betaFetch, getBetaApiKey } from "~/lib/betanalytic"
 
 export const dynamic = "force-dynamic"
 
@@ -13,18 +12,13 @@ export async function POST(
   const session = await getServerAuthSession()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { betanalyticApiKey: true },
-  })
-  if (!user?.betanalyticApiKey) {
-    return NextResponse.json({ error: "BetAnalytic account not linked" }, { status: 403 })
-  }
+  const apiKey = await getBetaApiKey(session.user.id)
+  if (!apiKey) return NextResponse.json({ error: "BetAnalytic sync failed" }, { status: 503 })
 
   const { roomId } = await params
   const res = await betaFetch(
     `/api/rooms/${roomId}/join`,
-    user.betanalyticApiKey,
+    apiKey,
     { method: "POST" }
   )
   const data = await res.json()

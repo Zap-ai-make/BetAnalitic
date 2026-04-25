@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getServerAuthSession } from "~/server/auth"
-import { db } from "~/server/db"
-import { betaFetch } from "~/lib/betanalytic"
+import { betaFetch, getBetaApiKey } from "~/lib/betanalytic"
 
 export const dynamic = "force-dynamic"
 
@@ -10,13 +9,8 @@ export async function GET(req: NextRequest) {
   const session = await getServerAuthSession()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { betanalyticApiKey: true },
-  })
-  if (!user?.betanalyticApiKey) {
-    return NextResponse.json({ error: "BetAnalytic account not linked" }, { status: 403 })
-  }
+  const apiKey = await getBetaApiKey(session.user.id)
+  if (!apiKey) return NextResponse.json({ error: "BetAnalytic sync failed" }, { status: 503 })
 
   const { searchParams } = req.nextUrl
   const qs = new URLSearchParams()
@@ -24,7 +18,7 @@ export async function GET(req: NextRequest) {
   if (searchParams.get("page")) qs.set("page", searchParams.get("page")!)
   if (searchParams.get("per_page")) qs.set("per_page", searchParams.get("per_page")!)
 
-  const res = await betaFetch(`/api/rooms?${qs.toString()}`, user.betanalyticApiKey)
+  const res = await betaFetch(`/api/rooms?${qs.toString()}`, apiKey)
   const data = await res.json()
   return NextResponse.json(data, { status: res.status })
 }
@@ -34,16 +28,11 @@ export async function POST(req: NextRequest) {
   const session = await getServerAuthSession()
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { betanalyticApiKey: true },
-  })
-  if (!user?.betanalyticApiKey) {
-    return NextResponse.json({ error: "BetAnalytic account not linked" }, { status: 403 })
-  }
+  const apiKey = await getBetaApiKey(session.user.id)
+  if (!apiKey) return NextResponse.json({ error: "BetAnalytic sync failed" }, { status: 503 })
 
   const body = await req.json()
-  const res = await betaFetch("/api/rooms", user.betanalyticApiKey, {
+  const res = await betaFetch("/api/rooms", apiKey, {
     method: "POST",
     body: JSON.stringify(body),
   })
