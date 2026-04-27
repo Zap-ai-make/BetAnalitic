@@ -142,16 +142,7 @@ export const authRouter = createTRPCRouter({
       console.error("BetAnalytic user sync failed (non-blocking):", betaError);
     }
 
-    // Generate verification token
-    const verificationToken = randomBytes(32).toString("hex");
-    await ctx.db.verificationToken.create({
-      data: {
-        userId: user.id,
-        token: verificationToken,
-        type: email ? "EMAIL_VERIFICATION" : "PHONE_VERIFICATION",
-        expiresAt: new Date(Date.now() + EMAIL_VERIFICATION_EXPIRY),
-      },
-    });
+    // Verification skipped — user is auto-verified on creation
 
     // Process referral code if provided (Story 11.2)
     let referralBonus = 0;
@@ -180,7 +171,7 @@ export const authRouter = createTRPCRouter({
     return {
       success: true,
       userId: user.id,
-      verificationRequired: true,
+      verificationRequired: false,
       verificationType: email ? "email" : "phone",
       referralBonus,
     };

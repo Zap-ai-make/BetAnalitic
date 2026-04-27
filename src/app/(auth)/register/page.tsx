@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
@@ -17,11 +18,11 @@ import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [registrationType, setRegistrationType] = useState<"email" | "phone">(
     "email"
   )
   const [showPassword, setShowPassword] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [referralCode, setReferralCode] = useState<string | null>(null)
 
   const {
@@ -50,9 +51,8 @@ export default function RegisterPage() {
 
   const registerMutation = api.auth.register.useMutation({
     onSuccess: () => {
-      // Clear referral code from localStorage after successful registration
       localStorage.removeItem("referralCode")
-      setSuccess(true)
+      router.push("/login?registered=1")
     },
   })
 
@@ -70,31 +70,6 @@ export default function RegisterPage() {
   const handleTypeChange = (type: "email" | "phone") => {
     setRegistrationType(type)
     setValue("registrationType", type)
-  }
-
-  if (success) {
-    return (
-      <main className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6 text-center">
-          <div className="w-16 h-16 mx-auto bg-accent-green/20 rounded-full flex items-center justify-center">
-            <span className="text-3xl">✉️</span>
-          </div>
-          <h1 className="font-display text-2xl font-bold text-text-primary">
-            Vérifiez votre {registrationType === "email" ? "email" : "téléphone"}
-          </h1>
-          <p className="text-text-secondary">
-            Nous avons envoyé un lien de vérification à votre{" "}
-            {registrationType === "email" ? "adresse email" : "numéro de téléphone"}.
-            Cliquez sur le lien pour activer votre compte.
-          </p>
-          <Link href="/login">
-            <Button variant="outline" className="w-full">
-              Retour à la connexion
-            </Button>
-          </Link>
-        </div>
-      </main>
-    )
   }
 
   return (
