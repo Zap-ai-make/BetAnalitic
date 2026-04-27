@@ -441,7 +441,6 @@ export default function DashboardPage() {
         id="tactical-hud"
         style={{ position: "fixed", inset: 0, background: "#030509", display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
-        <PitchStage />
         {intro && <IntroSplash onDone={() => setIntro(false)} />}
         <TopHud
           username={username}
