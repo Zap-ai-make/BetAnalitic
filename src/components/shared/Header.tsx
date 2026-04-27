@@ -1,197 +1,96 @@
 "use client"
 
 import * as React from "react"
-import Image from "next/image"
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
 import { useCouponStore } from "~/lib/stores/couponStore"
-import { useRouter } from "next/navigation"
 
-export interface HeaderProps {
-  notificationCount?: number
-  userAvatar?: string
-  userName?: string
-  onLangSwitch?: () => void
-  onNotificationClick?: () => void
-  onUserClick?: () => void
-  onSearchClick?: () => void
-}
-
-export function Header({
-  notificationCount = 0,
-  userAvatar,
-  userName = "User",
-  onLangSwitch,
-  onNotificationClick,
-  onUserClick,
-  onSearchClick,
-}: HeaderProps) {
+export function Header() {
+  const { data: session } = useSession()
   const router = useRouter()
   const couponCount = useCouponStore((state) => state.count())
+  const [lang, setLang] = React.useState<"FR" | "EN">("FR")
+
+  React.useEffect(() => {
+    const stored = localStorage.getItem("betanalytic_lang")
+    if (stored === "EN" || stored === "FR") setLang(stored)
+  }, [])
+
+  const toggleLang = () => {
+    const next = lang === "FR" ? "EN" : "FR"
+    setLang(next)
+    localStorage.setItem("betanalytic_lang", next)
+    window.dispatchEvent(new StorageEvent("storage", { key: "betanalytic_lang", newValue: next }))
+  }
+
+  const username = session?.user?.name ?? session?.user?.email?.split("@")[0] ?? "U"
+  const userAvatar = session?.user?.image ?? undefined
+  const initials = username.slice(0, 1).toUpperCase()
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 w-full",
-        "bg-bg-primary/95 backdrop-blur-sm",
-        "border-b border-bg-tertiary"
-      )}
-    >
+    <header className={cn("sticky top-0 z-50 w-full", "bg-bg-primary/95 backdrop-blur-sm", "border-b border-bg-tertiary")}>
       <div className="flex items-center justify-between h-14 px-4">
         {/* Logo */}
-        <div className="flex items-center gap-2">
-          <span
-            className="font-display font-bold text-xl bg-clip-text text-transparent"
-            style={{ backgroundImage: "var(--gradient-logo)" }}
-          >
-            BetAnalytic
-          </span>
-        </div>
+        <span
+          className="font-display font-black text-xl tracking-tight"
+          style={{ background: "linear-gradient(90deg,#fff 0%,#00f0ff 50%,oklch(0.68 0.28 330) 100%)", WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", textTransform: "uppercase" }}
+        >
+          Bet<em style={{ fontStyle: "normal" }}>Analytic</em>
+        </span>
 
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-0.5">
           {/* Search */}
           <button
-            type="button"
-            onClick={onSearchClick}
-            className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-full",
-              "text-text-secondary hover:text-text-primary hover:bg-bg-secondary",
-              "transition-colors duration-200",
-              "min-h-[44px] min-w-[44px]"
-            )}
-            aria-label="Search"
+            onClick={() => router.push("/matches")}
+            className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
+            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
             </svg>
           </button>
 
-          {/* Coupon Badge */}
+          {/* Coupon badge */}
           <button
-            type="button"
-            onClick={() => router.push("/analysis")}
-            className={cn(
-              "relative flex items-center justify-center w-10 h-10 rounded-full",
-              "text-text-secondary hover:text-text-primary hover:bg-bg-secondary",
-              "transition-colors duration-200",
-              "min-h-[44px] min-w-[44px]",
-              couponCount > 0 && "text-accent-cyan"
-            )}
-            aria-label={`Coupon${couponCount > 0 ? ` (${couponCount} matches)` : ""}`}
+            onClick={() => router.push("/coupons")}
+            className={cn("relative flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors", couponCount > 0 && "text-accent-cyan")}
           >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-              />
+            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
             </svg>
             {couponCount > 0 && (
-              <span
-                className={cn(
-                  "absolute -top-0.5 -right-0.5",
-                  "flex items-center justify-center min-w-[18px] h-[18px] px-1",
-                  "bg-accent-cyan text-bg-primary text-xs font-bold rounded-full"
-                )}
-              >
-                {couponCount}
+              <span className="absolute top-1 right-1 flex items-center justify-center w-[14px] h-[14px] bg-accent-cyan text-bg-primary text-[9px] font-bold rounded-full">
+                {couponCount > 9 ? "9+" : couponCount}
               </span>
             )}
           </button>
 
-          {/* Lang Switch */}
+          {/* Lang toggle */}
           <button
-            type="button"
-            onClick={onLangSwitch}
-            className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-full",
-              "text-text-secondary hover:text-text-primary hover:bg-bg-secondary",
-              "transition-colors duration-200",
-              "min-h-[44px] min-w-[44px]"
-            )}
-            aria-label="Switch language"
+            onClick={toggleLang}
+            className="flex items-center justify-center h-7 px-2 rounded text-accent-cyan border border-bg-tertiary hover:bg-bg-secondary transition-colors font-mono text-[10px] font-bold tracking-widest"
           >
-            <span className="text-xl">🌐</span>
+            {lang}
           </button>
 
-          {/* Notifications */}
-          <button
-            type="button"
-            onClick={onNotificationClick}
-            className={cn(
-              "relative flex items-center justify-center w-10 h-10 rounded-full",
-              "text-text-secondary hover:text-text-primary hover:bg-bg-secondary",
-              "transition-colors duration-200",
-              "min-h-[44px] min-w-[44px]"
-            )}
-            aria-label={`Notifications${notificationCount > 0 ? ` (${notificationCount} unread)` : ""}`}
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
+          {/* Bell */}
+          <button className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors">
+            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
             </svg>
-            {notificationCount > 0 && (
-              <span
-                className={cn(
-                  "absolute -top-0.5 -right-0.5",
-                  "flex items-center justify-center min-w-[18px] h-[18px] px-1",
-                  "bg-accent-red text-white text-xs font-bold rounded-full"
-                )}
-              >
-                {notificationCount > 99 ? "99+" : notificationCount}
-              </span>
-            )}
           </button>
 
-          {/* User Avatar */}
+          {/* Avatar */}
           <button
-            type="button"
-            onClick={onUserClick}
-            className={cn(
-              "flex items-center justify-center w-10 h-10 rounded-full overflow-hidden",
-              "bg-bg-secondary hover:ring-2 hover:ring-accent-cyan/50",
-              "transition-all duration-200",
-              "min-h-[44px] min-w-[44px]"
-            )}
-            aria-label="User profile"
+            onClick={() => router.push("/profile")}
+            className="flex items-center justify-center w-8 h-8 rounded-full overflow-hidden hover:ring-2 hover:ring-accent-cyan/50 transition-all ml-1"
+            style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))", flexShrink: 0 }}
           >
             {userAvatar ? (
-              <Image
-                src={userAvatar}
-                alt={userName}
-                width={40}
-                height={40}
-                className="w-full h-full object-cover"
-              />
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={userAvatar} alt={username} className="w-full h-full object-cover" />
             ) : (
-              <span className="font-display font-semibold text-sm text-text-primary">
-                {userName.charAt(0).toUpperCase()}
-              </span>
+              <span className="font-bold text-[12px]" style={{ color: "#030509" }}>{initials}</span>
             )}
           </button>
         </div>

@@ -10,8 +10,8 @@ const PATH_TO_NAV_ITEM: Record<string, NavItem> = {
   "/analysis": "analysis",
   "/paris": "paris",
   "/coupons": "paris",
-  "/salles": "home",
-  "/profile": "profile",
+  "/salles": "salles",
+  "/profile": "home",
 }
 
 const NAV_ITEM_TO_PATH: Record<NavItem, string> = {
@@ -19,7 +19,7 @@ const NAV_ITEM_TO_PATH: Record<NavItem, string> = {
   matches: "/matches",
   analysis: "/analysis",
   paris: "/paris",
-  profile: "/profile",
+  salles: "/salles",
 }
 
 export function DashboardNav() {

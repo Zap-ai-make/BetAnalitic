@@ -2,9 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 import { DashboardNav } from "~/components/shared/DashboardNav"
-import { useCouponStore } from "~/lib/stores/couponStore"
+import { Header } from "~/components/shared/Header"
 
 // ── Agent definitions ────────────────────────────────────────
 const AGENTS = [
@@ -65,85 +64,6 @@ function PitchStage() {
   )
 }
 
-// ── Top HUD ──────────────────────────────────────────────────
-interface TopHudProps {
-  username: string
-  couponCount: number
-  lang: "FR" | "EN"
-  onToggleLang: () => void
-  notifCount?: number
-}
-
-function TopHud({ username, couponCount, lang, onToggleLang, notifCount = 0 }: TopHudProps) {
-  const router = useRouter()
-  const initials = username.slice(0, 1).toUpperCase()
-
-  return (
-    <div className="top-hud">
-      <div className="brand" style={{ flex: 1, minWidth: 0 }}>
-        <div className="brand-name" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Bet<em>Analytic</em></div>
-      </div>
-
-      <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
-        {/* Search */}
-        <button
-          onClick={() => router.push("/matches")}
-          style={{ background: "none", border: "none", padding: "7px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 34, minHeight: 34 }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
-          </svg>
-        </button>
-
-        {/* Coupon badge */}
-        <button
-          onClick={() => router.push("/analysis")}
-          style={{ background: "none", border: "none", padding: "7px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 34, minHeight: 34 }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-          </svg>
-          {couponCount > 0 && (
-            <span style={{ position: "absolute", top: 3, right: 3, background: "#00f0ff", color: "#030509", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
-              {couponCount > 9 ? "9+" : couponCount}
-            </span>
-          )}
-        </button>
-
-        {/* Lang toggle FR/EN */}
-        <button
-          onClick={onToggleLang}
-          style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, padding: "3px 6px", cursor: "pointer", color: "#00f0ff", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}
-        >
-          {lang}
-        </button>
-
-        {/* Bell / notifications */}
-        <button
-          style={{ background: "none", border: "none", padding: "7px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 34, minHeight: 34 }}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
-          </svg>
-          {notifCount > 0 && (
-            <span style={{ position: "absolute", top: 3, right: 3, background: "oklch(0.66 0.26 22)", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
-              {notifCount > 9 ? "9+" : notifCount}
-            </span>
-          )}
-        </button>
-
-        {/* User avatar */}
-        <div
-          style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 700, fontSize: 12, color: "#030509", cursor: "pointer", flexShrink: 0, marginLeft: 2 }}
-          onClick={() => router.push("/profile")}
-        >
-          {initials}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Intro splash typewriter ──────────────────────────────────
 interface IntroSplashProps { onDone: () => void }
 
@@ -191,12 +111,31 @@ function IntroSplash({ onDone }: IntroSplashProps) {
 }
 
 // ── Agent greeting messages ───────────────────────────────────
-function agentGreeting(id: "Oracle" | AgentId, username: string): string {
-  if (id === "Oracle") {
-    return `Salut ${username} ! Je suis Oracle, ton assistant analytique IA. Je coordonne les 14 agents spécialisés pour t'offrir une analyse complète de chaque match. Pose ta question ou sélectionne un expert.`
+function agentGreeting(id: "Oracle" | AgentId, username: string, lang: "FR" | "EN" = "FR"): string {
+  if (lang === "EN") {
+    if (id === "Oracle") return `Hi ${username}! I'm Oracle, your AI analytics assistant. I coordinate 14 specialized agents to give you a complete analysis of every match. Ask your question or pick an expert.`
+    const a = BY_ID[id as AgentId]!
+    const en: Partial<Record<AgentId, string>> = {
+      Scout: "exploring head-to-head records and team history",
+      Insider: "analyzing team lineups and injury reports",
+      RefereeAnalyst: "decoding refereeing trends and their impact on results",
+      TacticMaster: "breaking down tactical formations and key matchups",
+      ContextKing: "contextualizing stakes, rivalries and mental pressure",
+      MomentumX: "measuring recent form and team momentum",
+      WallMaster: "analyzing defenses and clean sheet probabilities",
+      GoalMaster: "predicting goals, BTTS and offensive markets",
+      CornerKing: "analyzing corner stats and related markets",
+      CardShark: "predicting cards, tactical fouls and suspensions",
+      CrowdWatch: "measuring fan sentiment and crowd dynamics",
+      LivePulse: "tracking real-time events and live commentary",
+      DebateArena: "hosting tactical debates and delivering the final verdict",
+      Debrief: "analyzing post-match performance and key takeaways",
+    }
+    return `Hi ${username}! I'm @${id}, specialist in ${a.cat}. I'll help you analyze by ${en[id as AgentId] ?? `covering ${a.cat}`}. What's your question?`
   }
+  if (id === "Oracle") return `Salut ${username} ! Je suis Oracle, ton assistant analytique IA. Je coordonne les 14 agents spécialisés pour t'offrir une analyse complète de chaque match. Pose ta question ou sélectionne un expert.`
   const a = BY_ID[id as AgentId]!
-  const descs: Partial<Record<AgentId, string>> = {
+  const fr: Partial<Record<AgentId, string>> = {
     Scout: "explorant les confrontations directes et l'historique des équipes",
     Insider: "analysant les compositions et le suivi des blessures",
     RefereeAnalyst: "décryptant les tendances arbitrales et leur influence sur les résultats",
@@ -212,31 +151,61 @@ function agentGreeting(id: "Oracle" | AgentId, username: string): string {
     DebateArena: "animant les débats tactiques et rendant le verdict final",
     Debrief: "analysant les performances post-match et les enseignements clés",
   }
-  return `Salut ${username} ! Je suis @${id}, spécialiste en ${a.cat}. Je vais t'aider dans ton analyse en ${descs[id as AgentId] ?? `couvrant ${a.cat}`}. Quelle est ta question ?`
+  return `Salut ${username} ! Je suis @${id}, spécialiste en ${a.cat}. Je vais t'aider dans ton analyse en ${fr[id as AgentId] ?? `couvrant ${a.cat}`}. Quelle est ta question ?`
+}
+
+// ── Chat persistence helpers ──────────────────────────────────
+interface ExtraMsg { role: "user" | "oracle" | "system"; body: string; agentId?: "Oracle" | AgentId }
+interface Conversation { id: string; title: string; agentId: "Oracle" | AgentId; messages: ExtraMsg[]; ts: number }
+type TypingGreeting = { text: string; typed: string; agentId: "Oracle" | AgentId }
+
+const CONV_KEY = "betanalytic_conversations"
+const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
+
+function loadConvs(): Conversation[] {
+  if (typeof window === "undefined") return []
+  try { return JSON.parse(localStorage.getItem(CONV_KEY) ?? "[]") as Conversation[] }
+  catch { return [] }
+}
+function saveConvs(convs: Conversation[]) {
+  localStorage.setItem(CONV_KEY, JSON.stringify(convs.slice(0, 40)))
 }
 
 // ── Oracle console (ChatGPT-style) ───────────────────────────
-interface ExtraMsg { role: "user" | "oracle" | "system"; body: string; agentId?: "Oracle" | AgentId }
-type TypingGreeting = { text: string; typed: string; agentId: "Oracle" | AgentId }
-
-function OracleConsole({ username }: { username: string }) {
+function OracleConsole({ username, ready }: { username: string; ready: boolean }) {
   const [draft, setDraft] = useState("")
   const [extra, setExtra] = useState<ExtraMsg[]>([])
   const [agent, setAgent] = useState<"Oracle" | AgentId>("Oracle")
   const [open, setOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
   const [typingGreeting, setTypingGreeting] = useState<TypingGreeting | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [lang, setLang] = useState<"FR" | "EN">("FR")
+  const convIdRef = useRef<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
-  // Start Oracle greeting on mount
+  // Load lang + conversations from localStorage on mount
   useEffect(() => {
-    const text = agentGreeting("Oracle", username)
-    setTypingGreeting({ text, typed: "", agentId: "Oracle" })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    const stored = localStorage.getItem("betanalytic_lang")
+    if (stored === "FR" || stored === "EN") setLang(stored)
+    setConversations(loadConvs())
+
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "betanalytic_lang" && (e.newValue === "FR" || e.newValue === "EN")) setLang(e.newValue)
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
   }, [])
 
-  // Typewriter effect
+  // Start greeting only after intro is done
+  useEffect(() => {
+    if (!ready) return
+    setTypingGreeting({ text: agentGreeting("Oracle", username, lang), typed: "", agentId: "Oracle" })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready])
+
+  // Typewriter character-by-character
   useEffect(() => {
     if (!typingGreeting || typingGreeting.typed.length >= typingGreeting.text.length) return
     const t = setTimeout(() => {
@@ -245,7 +214,7 @@ function OracleConsole({ username }: { username: string }) {
     return () => clearTimeout(t)
   }, [typingGreeting])
 
-  // Move completed greeting to extra
+  // Commit completed greeting to messages
   useEffect(() => {
     if (!typingGreeting || typingGreeting.typed.length < typingGreeting.text.length) return
     const t = setTimeout(() => {
@@ -255,47 +224,74 @@ function OracleConsole({ username }: { username: string }) {
     return () => clearTimeout(t)
   }, [typingGreeting])
 
+  // Persist conversation on every message change
+  useEffect(() => {
+    if (extra.length === 0) return
+    const id = convIdRef.current ?? genId()
+    convIdRef.current = id
+    const title = extra.find((m) => m.role === "user")?.body.slice(0, 45) ?? (lang === "EN" ? "Conversation" : "Conversation")
+    const conv: Conversation = { id, title, agentId: agent, messages: extra, ts: Date.now() }
+    setConversations((prev) => {
+      const next = [conv, ...prev.filter((c) => c.id !== id)]
+      saveConvs(next)
+      return next
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [extra])
+
+  // Auto-scroll
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
+  }, [extra, typingGreeting])
+
   const isOracle = agent === "Oracle"
   const cur = isOracle ? null : BY_ID[agent as AgentId]
   const agentBg = cur ? agentGrad(cur.hue) : "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))"
-
-  const msgAvatarBg = (agentId?: "Oracle" | AgentId) =>
-    !agentId || agentId === "Oracle"
-      ? "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))"
-      : agentGrad(BY_ID[agentId as AgentId]?.hue ?? 200)
+  const avatarBg = (id?: "Oracle" | AgentId) =>
+    !id || id === "Oracle" ? "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" : agentGrad(BY_ID[id as AgentId]?.hue ?? 200)
 
   const pickAgent = (id: "Oracle" | AgentId) => {
-    const wasInConversation = extra.length > 0 || !!typingGreeting
+    const wasInConv = extra.length > 0 || !!typingGreeting
     setAgent(id)
     setOpen(false)
-    if (wasInConversation) {
+    if (wasInConv) {
       const label = id === "Oracle" ? "Oracle" : `@${id}`
-      setExtra((e) => [...e, { role: "system", body: `─── ${label} activé ───` }])
+      setExtra((e) => [...e, { role: "system", body: `─── ${label} ${lang === "EN" ? "activated" : "activé"} ───` }])
     }
-    setTypingGreeting({ text: agentGreeting(id, username), typed: "", agentId: id })
+    setTypingGreeting({ text: agentGreeting(id, username, lang), typed: "", agentId: id })
   }
 
   const submit = () => {
     if (!draft.trim()) return
-    setExtra((e) => [...e, { role: "user", body: draft }])
+    const body = draft.trim()
+    setExtra((e) => [...e, { role: "user", body }])
     setDraft("")
-    if (taRef.current) { taRef.current.style.height = "auto" }
+    if (taRef.current) taRef.current.style.height = "auto"
     setTimeout(() => {
       setExtra((e) => [...e, {
         role: "oracle",
         body: isOracle
-          ? "Analyse en cours via @GoalMaster + @TacticMaster…"
-          : `@${agent} traite ta requête — conf 78%`,
+          ? (lang === "EN" ? "Analyzing via @GoalMaster + @TacticMaster…" : "Analyse en cours via @GoalMaster + @TacticMaster…")
+          : (lang === "EN" ? `@${agent} processing your query — conf 78%` : `@${agent} traite ta requête — conf 78%`),
         agentId: agent,
       }])
     }, 600)
   }
 
+  const loadConversation = (conv: Conversation) => {
+    convIdRef.current = conv.id
+    setExtra(conv.messages)
+    setAgent(conv.agentId)
+    setShowHistory(false)
+    setTypingGreeting(null)
+  }
+
   const clearChat = () => {
+    convIdRef.current = null
     setExtra([])
     setAgent("Oracle")
     setShowHistory(false)
-    setTypingGreeting({ text: agentGreeting("Oracle", username), typed: "", agentId: "Oracle" })
+    setTypingGreeting({ text: agentGreeting("Oracle", username, lang), typed: "", agentId: "Oracle" })
   }
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -305,16 +301,17 @@ function OracleConsole({ username }: { username: string }) {
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`
   }
 
-  useEffect(() => {
-    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
-  }, [extra, typingGreeting])
+  const ddHeader = lang === "EN" ? "CHOOSE AN AGENT" : "CHOISIR UN AGENT"
+  const placeholder = lang === "EN" ? "Type your message here…" : "Tape ton message ici…"
+  const historyTitle = lang === "EN" ? "Conversation History" : "Historique des conversations"
+  const historyEmpty = lang === "EN" ? "No recent conversations." : "Aucune conversation récente."
 
   return (
     <div className="console">
       <div className="console-corner tl" /><div className="console-corner tr" />
       <div className="console-corner bl" /><div className="console-corner br" />
 
-      {/* ── Header — ChatGPT model-selector style ── */}
+      {/* ── Header ── */}
       <div className="gpt-header">
         <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }}>
           <div className="gpt-model-icon" style={{ background: agentBg }} />
@@ -327,10 +324,13 @@ function OracleConsole({ username }: { username: string }) {
 
         {open && (
           <div className="agent-dd" style={{ left: 0, right: 0 }}>
-            <div className="agent-dd-h">CHOISIR UN AGENT</div>
+            <div className="agent-dd-h">{ddHeader}</div>
             <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
               <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
-              <div className="ao-info"><div className="ao-name">Oracle</div><div className="ao-cat">Généraliste · routage auto</div></div>
+              <div className="ao-info">
+                <div className="ao-name">Oracle</div>
+                <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
+              </div>
             </div>
             {AGENTS.map((a) => (
               <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
@@ -339,27 +339,20 @@ function OracleConsole({ username }: { username: string }) {
                 <div className="ao-role">{a.role}</div>
               </div>
             ))}
-            <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#3a4455", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
-              14 AGENTS SPÉCIALISÉS · ORACLE ROUTAGE AUTO
+            <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, color: "#545e71", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
+              {lang === "EN" ? "14 agents ready to analyze the match for you" : "14 agents prêts à analyser le match pour vous"}
             </div>
           </div>
         )}
 
         <div style={{ flex: 1 }} />
 
-        {/* History icon */}
-        <button
-          className={`gpt-icon-btn${showHistory ? " active" : ""}`}
-          onClick={() => { setShowHistory((h) => !h); setOpen(false) }}
-          title="Historique"
-        >
+        <button className={`gpt-icon-btn${showHistory ? " active" : ""}`} onClick={() => { setShowHistory((h) => !h); setOpen(false) }} title={historyTitle}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" />
           </svg>
         </button>
-
-        {/* New chat icon */}
-        <button className="gpt-icon-btn" onClick={clearChat} title="Nouvelle conversation">
+        <button className="gpt-icon-btn" onClick={clearChat} title={lang === "EN" ? "New conversation" : "Nouvelle conversation"}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
           </svg>
@@ -369,31 +362,42 @@ function OracleConsole({ username }: { username: string }) {
       {/* ── Messages ── */}
       <div className="gpt-messages" ref={bodyRef}>
         {showHistory ? (
-          <>
-            <div className="gpt-history-title">Historique des conversations</div>
-            <div className="gpt-history-empty">Aucune conversation récente.</div>
-          </>
+          <div style={{ display: "flex", flexDirection: "column" }}>
+            <div className="gpt-history-title" style={{ marginBottom: 12 }}>{historyTitle}</div>
+            {conversations.length === 0 ? (
+              <div className="gpt-history-empty">{historyEmpty}</div>
+            ) : (
+              conversations.map((conv) => (
+                <div
+                  key={conv.id}
+                  onClick={() => loadConversation(conv)}
+                  style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: conv.id === convIdRef.current ? "rgba(0,240,255,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${conv.id === convIdRef.current ? "rgba(0,240,255,0.2)" : "rgba(255,255,255,0.06)"}`, marginBottom: 6 }}
+                >
+                  <div style={{ fontSize: 13, color: "#d4dae5", fontFamily: "var(--font-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{conv.title}</div>
+                  <div style={{ fontSize: 10, color: "#545e71", fontFamily: "var(--font-jetbrains-mono, monospace)", letterSpacing: "0.05em", marginTop: 3 }}>
+                    {new Date(conv.ts).toLocaleDateString(lang === "EN" ? "en-US" : "fr-FR", { day: "2-digit", month: "short" })} · {new Date(conv.ts).toLocaleTimeString(lang === "EN" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         ) : (
           <>
-            {/* Conversation history */}
             {extra.map((m, i) =>
               m.role === "user" ? (
-                <div key={i} className="gpt-msg-user">
-                  <div className="gpt-user-bubble">{m.body}</div>
-                </div>
+                <div key={i} className="gpt-msg-user"><div className="gpt-user-bubble">{m.body}</div></div>
               ) : m.role === "system" ? (
                 <div key={i} className="gpt-msg-system">{m.body}</div>
               ) : (
                 <div key={i} className="gpt-msg-assistant">
-                  <div className="gpt-avatar-sm" style={{ background: msgAvatarBg(m.agentId) }} />
+                  <div className="gpt-avatar-sm" style={{ background: avatarBg(m.agentId) }} />
                   <div className="gpt-msg-text">{m.body}</div>
                 </div>
               )
             )}
-            {/* Active typewriter greeting */}
             {typingGreeting && (
               <div className="gpt-msg-assistant">
-                <div className="gpt-avatar-sm" style={{ background: msgAvatarBg(typingGreeting.agentId) }} />
+                <div className="gpt-avatar-sm" style={{ background: avatarBg(typingGreeting.agentId) }} />
                 <div className="gpt-msg-text">{typingGreeting.typed}<span className="tw-caret" /></div>
               </div>
             )}
@@ -401,16 +405,12 @@ function OracleConsole({ username }: { username: string }) {
         )}
       </div>
 
-      {/* ── ChatGPT-style input ── */}
+      {/* ── Input ── */}
       <div className="gpt-input-area" style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}>
         <div className="gpt-input-box">
-          <textarea
-            ref={taRef}
-            rows={1}
-            value={draft}
-            onChange={handleInput}
+          <textarea ref={taRef} rows={1} value={draft} onChange={handleInput}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() } }}
-            placeholder="Tape ton message ici…"
+            placeholder={placeholder}
           />
           <button className="gpt-send-btn" onClick={submit} disabled={!draft.trim()}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -427,8 +427,6 @@ function OracleConsole({ username }: { username: string }) {
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [intro, setIntro] = useState(true)
-  const [lang, setLang] = useState<"FR" | "EN">("FR")
-  const couponCount = useCouponStore((state) => state.count())
 
   const username =
     session?.user?.name ??
@@ -442,13 +440,8 @@ export default function DashboardPage() {
         style={{ position: "fixed", inset: 0, background: "#030509", display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
         {intro && <IntroSplash onDone={() => setIntro(false)} />}
-        <TopHud
-          username={username}
-          couponCount={couponCount}
-          lang={lang}
-          onToggleLang={() => setLang((l) => (l === "FR" ? "EN" : "FR"))}
-        />
-        <OracleConsole username={username} />
+        <Header />
+        <OracleConsole username={username} ready={!intro} />
       </div>
       <DashboardNav />
     </>
