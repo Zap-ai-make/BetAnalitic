@@ -198,7 +198,7 @@ export const referralRouter = createTRPCRouter({
   /**
    * Process referral signup - called when new user signs up with referral code (Story 11.2)
    */
-  processReferralSignup: publicProcedure
+  processReferralSignup: protectedProcedure
     .input(
       z.object({
         referralCode: z.string(),
@@ -271,9 +271,12 @@ export const referralRouter = createTRPCRouter({
   /**
    * Give referral reward to referrer when referred user makes first payment (Story 11.2)
    */
-  giveReferralReward: publicProcedure
+  giveReferralReward: protectedProcedure
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
+      if (input.userId !== ctx.session.user.id && ctx.session.user.role !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Not authorized" })
+      }
       // Find the referral where this user is the referred user
       const referral = await ctx.db.referral.findFirst({
         where: {

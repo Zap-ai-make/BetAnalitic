@@ -7,6 +7,7 @@ import { Button } from "~/components/ui/button"
 import { Input } from "~/components/ui/Input"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
+import { formatDate } from "~/lib/formatDate"
 
 type ModalType = "export" | "delete" | "cancel-delete" | null
 
@@ -103,15 +104,6 @@ export default function AccountSettingsPage() {
     setExportData(null)
   }
 
-  const formatDate = (date: Date | null) => {
-    if (!date) return null
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    }).format(new Date(date))
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
@@ -147,7 +139,7 @@ export default function AccountSettingsPage() {
             Informations du compte
           </h2>
           <p className="text-sm text-text-secondary">
-            Compte créé le {formatDate(accountStatus?.accountCreatedAt ?? null)}
+            Compte créé le {formatDate(accountStatus?.accountCreatedAt, { day: "numeric", month: "long", year: "numeric" })}
           </p>
         </div>
 
@@ -159,7 +151,7 @@ export default function AccountSettingsPage() {
             </h2>
             <p className="text-sm text-text-secondary mb-3">
               Votre compte sera supprimé le{" "}
-              <strong>{formatDate(accountStatus.deletionWillCompleteAt)}</strong>.
+              <strong>{formatDate(accountStatus.deletionWillCompleteAt, { day: "numeric", month: "long", year: "numeric" })}</strong>.
               Toutes vos données seront définitivement effacées.
             </p>
             <Button
@@ -181,7 +173,7 @@ export default function AccountSettingsPage() {
             {!accountStatus?.canExport && accountStatus?.exportCooldownEndsAt && (
               <span className="block mt-1 text-accent-yellow">
                 Prochaine exportation possible le{" "}
-                {formatDate(accountStatus.exportCooldownEndsAt)}
+                {formatDate(accountStatus.exportCooldownEndsAt, { day: "numeric", month: "long", year: "numeric" })}
               </span>
             )}
           </p>

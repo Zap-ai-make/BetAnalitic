@@ -391,11 +391,7 @@ export const authRouter = createTRPCRouter({
         },
       });
 
-      // TODO: Send reset email/SMS
-      // In production: integrate with Resend, SendGrid, Twilio
-      // const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`;
-
-      console.log(`Password reset token for ${identifier}: ${resetToken}`);
+      // TODO: Send reset email/SMS — integrate with Resend/SendGrid/Twilio
 
       return { success: true };
     }),
@@ -569,11 +565,7 @@ export const authRouter = createTRPCRouter({
         },
       });
 
-      // TODO: Send magic link email
-      // In production: integrate with Resend, SendGrid
-      // const magicUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/magic?token=${magicToken}`;
-
-      console.log(`Magic link token for ${email}: ${magicToken}`);
+      // TODO: Send magic link email — integrate with Resend/SendGrid
 
       return { success: true };
     }),

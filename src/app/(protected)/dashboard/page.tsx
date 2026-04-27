@@ -329,7 +329,7 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
       <div className="gpt-header">
         {/* Left: selector + subtitle */}
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }}>
+          <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }} aria-label={open ? (lang === "EN" ? "Close agent selector" : "Fermer la sélection d'agent") : (lang === "EN" ? "Open agent selector" : "Ouvrir la sélection d'agent")} aria-expanded={open}>
             <div className="gpt-model-icon" style={{ background: agentBg }} />
             <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -368,12 +368,12 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 
         <div style={{ flex: 1 }} />
 
-        <button className={`gpt-icon-btn${showHistory ? " active" : ""}`} onClick={() => { setShowHistory((h) => !h); setOpen(false) }} title={historyTitle}>
+        <button className={`gpt-icon-btn${showHistory ? " active" : ""}`} onClick={() => { setShowHistory((h) => !h); setOpen(false) }} title={historyTitle} aria-label={historyTitle}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" />
           </svg>
         </button>
-        <button className="gpt-icon-btn" onClick={clearChat} title={lang === "EN" ? "New conversation" : "Nouvelle conversation"}>
+        <button className="gpt-icon-btn" onClick={clearChat} title={lang === "EN" ? "New conversation" : "Nouvelle conversation"} aria-label={lang === "EN" ? "New conversation" : "Nouvelle conversation"}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
           </svg>

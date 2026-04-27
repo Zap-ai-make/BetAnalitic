@@ -13,7 +13,7 @@ export const searchRouter = createTRPCRouter({
   global: protectedProcedure
     .input(
       z.object({
-        query: z.string().min(1),
+        query: z.string().min(1).max(200),
         limit: z.number().optional().default(3),
       })
     )

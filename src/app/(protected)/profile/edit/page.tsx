@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
@@ -87,16 +87,13 @@ export default function EditProfilePage() {
   )
   const [selectedSports, setSelectedSports] = useState<string[]>(profile?.favoriteSports ?? [])
 
-  // Update state when profile loads
-  if (profile && expertiseLevel !== profile.expertiseLevel && profile.expertiseLevel) {
-    setExpertiseLevel(profile.expertiseLevel)
-  }
-  if (profile && analysisDepth !== profile.analysisDepth && profile.analysisDepth) {
-    setAnalysisDepth(profile.analysisDepth)
-  }
-  if (profile && JSON.stringify(selectedSports) !== JSON.stringify(profile.favoriteSports)) {
+  useEffect(() => {
+    if (!profile) return
+    if (profile.expertiseLevel) setExpertiseLevel(profile.expertiseLevel)
+    if (profile.analysisDepth) setAnalysisDepth(profile.analysisDepth)
     setSelectedSports(profile.favoriteSports)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id])
 
   const updateProfileMutation = api.profile.updateProfile.useMutation({
     onSuccess: () => {

@@ -66,7 +66,7 @@ export const reengagementRouter = createTRPCRouter({
   /**
    * Get inactive users (admin/cron use)
    */
-  getInactiveUsers: publicProcedure
+  getInactiveUsers: protectedProcedure
     .input(
       z.object({
         days: z.number().min(1).default(7),
@@ -207,7 +207,7 @@ export const reengagementRouter = createTRPCRouter({
   /**
    * Track re-engagement metrics
    */
-  getReengagementMetrics: publicProcedure.query(async ({ ctx }) => {
+  getReengagementMetrics: protectedProcedure.query(async ({ ctx }) => {
     const now = new Date()
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)

@@ -49,6 +49,7 @@ export const Checkbox = React.forwardRef<HTMLInputElement, CheckboxProps>(
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              aria-hidden="true"
             >
               <path d="M2.5 6.5L5 9L9.5 3.5" />
             </svg>

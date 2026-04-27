@@ -136,6 +136,8 @@ model User {
   @@index([phone])
   @@index([username])
   @@index([role])
+  @@index([betanalyticId])
+  @@index([betanalyticApiKey])
 }
 
 model Session {
@@ -1281,15 +1283,3 @@ model SystemConfig {
   @@index([category])
 }
 
-// ============================================
-// LEGACY (to be removed)
-// ============================================
-
-model Post {
-  id        Int      @id @default(autoincrement())
-  name      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@index([name])
-}

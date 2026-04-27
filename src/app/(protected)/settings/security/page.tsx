@@ -6,6 +6,7 @@ import Link from "next/link"
 import { Button } from "~/components/ui/button"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
+import { formatDate } from "~/lib/formatDate"
 
 export default function SecuritySettingsPage() {
   const [revokeError, setRevokeError] = useState<string | null>(null)
@@ -63,14 +64,6 @@ export default function SecuritySettingsPage() {
     }
   }
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "numeric",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(date))
-  }
 
   const getRelativeTime = (date: Date) => {
     const now = new Date()
@@ -167,7 +160,7 @@ export default function SecuritySettingsPage() {
                     <span>Dernière activité: {getRelativeTime(session.lastActiveAt)}</span>
                   </div>
                   <div className="text-xs text-text-tertiary mt-1">
-                    Connecté le {formatDate(session.createdAt)}
+                    Connecté le {formatDate(session.createdAt, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                   </div>
                 </div>
                 {!session.isCurrent && (
