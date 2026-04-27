@@ -265,14 +265,26 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
     !id || id === "Oracle" ? "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" : agentGrad(BY_ID[id as AgentId]?.hue ?? 200)
 
   const pickAgent = (id: "Oracle" | AgentId) => {
-    const wasInConv = extra.length > 0 || !!typingGreeting
+    // Agent already active — do nothing, don't reset interface
+    if (id === agent) { setOpen(false); return }
+
+    const label = id === "Oracle" ? "Oracle" : `@${id}`
+    const alreadySeen = extra.some((m) => m.agentId === id)
+
     setAgent(id)
     setOpen(false)
-    if (wasInConv) {
-      const label = id === "Oracle" ? "Oracle" : `@${id}`
-      setExtra((e) => [...e, { role: "system", body: `─── ${label} ${lang === "EN" ? "activated" : "activé"} ───` }])
+
+    if (alreadySeen) {
+      // Agent was already introduced — just mark as active, no re-greeting
+      setExtra((e) => [...e, { role: "system", body: `— ${label} ${lang === "EN" ? "active" : "actif"} —` }])
+      setTypingGreeting(null)
+    } else {
+      // First time this agent appears — add separator if mid-conversation then full greeting
+      if (extra.length > 0 || typingGreeting) {
+        setExtra((e) => [...e, { role: "system", body: `─── ${label} ${lang === "EN" ? "activated" : "activé"} ───` }])
+      }
+      setTypingGreeting({ text: agentGreeting(id, username, lang), typed: "", agentId: id })
     }
-    setTypingGreeting({ text: agentGreeting(id, username, lang), typed: "", agentId: id })
   }
 
   const submit = () => {
