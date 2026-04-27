@@ -327,7 +327,8 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 
       {/* ── Header ── */}
       <div className="gpt-header">
-        <div style={{ display: "flex", flexDirection: "column", gap: 1, position: "relative" }}>
+        {/* Left: selector + subtitle */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }}>
             <div className="gpt-model-icon" style={{ background: agentBg }} />
             <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
@@ -339,29 +340,31 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
           <span style={{ fontSize: 9, color: "#444e5e", fontFamily: "var(--font-jetbrains-mono,monospace)", letterSpacing: "0.04em", paddingLeft: 2 }}>
             {lang === "EN" ? "14 agents ready to analyze" : "14 agents prêts à analyser"}
           </span>
-          {open && (
-            <div className="agent-dd" style={{ left: 0, right: 0 }}>
-              <div className="agent-dd-h">{ddHeader}</div>
-              <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
-                <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
-                <div className="ao-info">
-                  <div className="ao-name">Oracle</div>
-                  <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
-                </div>
-              </div>
-              {AGENTS.map((a) => (
-                <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
-                  <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
-                  <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
-                  <div className="ao-role">{a.role}</div>
-                </div>
-              ))}
-              <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, color: "#545e71", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
-                {lang === "EN" ? "14 agents ready to analyze the match for you" : "14 agents prêts à analyser le match pour vous"}
+        </div>
+
+        {/* Dropdown — child of gpt-header (position:relative) so left:0/right:0 spans full width */}
+        {open && (
+          <div className="agent-dd" style={{ left: 0, right: 0 }}>
+            <div className="agent-dd-h">{ddHeader}</div>
+            <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
+              <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
+              <div className="ao-info">
+                <div className="ao-name">Oracle</div>
+                <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
               </div>
             </div>
-          )}
-        </div>
+            {AGENTS.map((a) => (
+              <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
+                <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
+                <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
+                <div className="ao-role">{a.role}</div>
+              </div>
+            ))}
+            <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, color: "#545e71", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
+              {lang === "EN" ? "14 agents ready to analyze the match for you" : "14 agents prêts à analyser le match pour vous"}
+            </div>
+          </div>
+        )}
 
         <div style={{ flex: 1 }} />
 
