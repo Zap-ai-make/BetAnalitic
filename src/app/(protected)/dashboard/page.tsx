@@ -110,12 +110,12 @@ function IntroSplash({ onDone }: IntroSplashProps) {
   )
 
   useEffect(() => {
-    if (step === 0) return type("READ THE", setT1, 70, () => setStep(1))
-    if (step === 1) return type("GAME.", setT2, 90, () => setStep(2))
-    if (step === 2) return type("DECODE IT.", setT3, 65, () => setStep(3))
+    if (step === 0) return type("READ THE", setT1, 55, () => setStep(1))
+    if (step === 1) return type("GAME.", setT2, 65, () => setStep(2))
+    if (step === 2) return type("DECODE IT.", setT3, 50, () => setStep(3))
     if (step === 3) {
-      const ta = setTimeout(() => setFade(true), 700)
-      const tb = setTimeout(onDone, 1400)
+      const ta = setTimeout(() => setFade(true), 500)
+      const tb = setTimeout(onDone, 1100)
       return () => { clearTimeout(ta); clearTimeout(tb) }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -123,18 +123,11 @@ function IntroSplash({ onDone }: IntroSplashProps) {
 
   return (
     <div className={`intro-splash${fade ? " fade-out" : ""}`}>
-      <div className="intro-tag">
-        <span className="sq" />
-        BRIEFING DU SOIR
-        <span className="sep">·</span>
-        <span className="num">N°047</span>
-      </div>
       <h1 className="intro-mega">
         <div><span className="fill">{t1}</span>{step === 0 && <span className="intro-caret" />}</div>
         <div><span className="accent">{t2}</span>{step === 1 && <span className="intro-caret" />}</div>
         <div><span className="outline">{t3}</span>{step === 2 && <span className="intro-caret" />}</div>
       </h1>
-      {step >= 3 && <div className="intro-load">&gt; Initialisation Oracle...</div>}
     </div>
   )
 }
@@ -142,10 +135,8 @@ function IntroSplash({ onDone }: IntroSplashProps) {
 // ── Oracle console typewriter ────────────────────────────────
 function useTypewriter(username: string) {
   const lines = [
-    { cls: "l0", text: "Briefing activé." },
-    { cls: "l1", text: `Salut ${username}. Ici Oracle — interface 14 spécialistes.` },
-    { cls: "l2", text: "Ce soir : Clasico. 847 data points. 4 agents à l'œuvre." },
-    { cls: "l3", text: "Pose ta question. Je route vers le bon agent en <100ms." },
+    { cls: "l1", text: `Salut ${username}. Ici Oracle.` },
+    { cls: "l2", text: "Pose ta question ou choisis un agent spécialiste." },
   ]
   const [lineIdx, setLineIdx] = useState(0)
   const [typed, setTyped] = useState("")
@@ -156,7 +147,7 @@ function useTypewriter(username: string) {
     let i = 0
     setTyped("")
     const line = lines[lineIdx]!.text
-    const speed = lines[lineIdx]!.cls === "l0" ? 42 : 16
+    const speed = 18
     const start = setTimeout(() => {
       const t = setInterval(() => {
         i++
@@ -241,7 +232,7 @@ function OracleConsole({ username }: { username: string }) {
           </div>
           <div className="meta">
             <span className="online-dot" />
-            <span>{isOracle ? "14 agents · 847 data points" : cur!.cat}</span>
+            <span>{isOracle ? "14 agents disponibles" : cur!.cat}</span>
           </div>
           {open && (
             <div className="agent-dd">
@@ -260,18 +251,12 @@ function OracleConsole({ username }: { username: string }) {
             </div>
           )}
         </div>
-        <div className="hud-pill" style={{ marginLeft: 0 }}>
-          <span className="live-dot" style={{ background: "#00f0ff", boxShadow: "0 0 8px #00f0ff" }} />
-          SYNC
-        </div>
       </div>
 
       <div className="console-body" ref={bodyRef}>
-        {!isOracle && <div className="tw-line l0" style={{ marginBottom: 8 }}>@{agent}.</div>}
+        {!isOracle && <div className="tw-line l1" style={{ marginBottom: 8 }}>@{cur!.id} — {cur!.cat}</div>}
         {isOracle && lines.slice(0, lineIdx).map((l, i) => (
-          <div key={i} className={`tw-line ${l.cls}`}>
-            {l.cls === "l1" ? <>Salut <b>{username}</b>. Ici <b>Oracle</b> — interface 14 spécialistes.</> : l.text}
-          </div>
+          <div key={i} className={`tw-line ${l.cls}`}>{l.text}</div>
         ))}
         {isOracle && lineIdx < lines.length && (
           <div className={`tw-line ${lines[lineIdx]!.cls}`}>{typed}<span className="tw-caret" /></div>
@@ -282,12 +267,6 @@ function OracleConsole({ username }: { username: string }) {
             {m.role === "user" ? <><span className="prompt">&gt;</span>{m.body}</> : m.body}
           </div>
         ))}
-      </div>
-
-      <div className="console-metrics">
-        <div className="metric"><div className="lbl">AGENTS ACTIFS</div><div className="val cyan">14<span style={{ fontSize: 12, color: "#545e71", fontWeight: 500 }}>/14</span></div></div>
-        <div className="metric"><div className="lbl">DATA POINTS</div><div className="val">847K</div></div>
-        <div className="metric"><div className="lbl">PRÉCISION J-30</div><div className="val pitch">72%</div></div>
       </div>
 
       <div className="console-chips">
@@ -567,11 +546,14 @@ export default function DashboardPage() {
       <div id="tactical-hud" style={{ position: "relative", minHeight: "100svh", background: "#030509" }}>
         <PitchStage />
 
-        {/* Intro splash — pointer-events disabled when fading so nav stays clickable */}
-        {intro && <IntroSplash onDone={() => setIntro(false)} />}
-
         <div className="app" style={{ paddingBottom: 80 }}>
-          <TopHud />
+          {/* TopHud always on top — z-index 300 inside .app beats intro-splash z-index 200 */}
+          <div style={{ position: "sticky", top: 0, zIndex: 300 }}>
+            <TopHud />
+          </div>
+
+          {/* Intro splash inside .app so TopHud can sit above it */}
+          {intro && <IntroSplash onDone={() => setIntro(false)} />}
           <OracleConsole username={username} />
 
           {/* Live matches (original data, new style) */}
