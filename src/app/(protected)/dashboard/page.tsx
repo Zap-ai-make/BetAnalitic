@@ -191,61 +191,89 @@ function IntroSplash({ onDone }: IntroSplashProps) {
   )
 }
 
-// ── Oracle console typewriter ────────────────────────────────
-function useTypewriter(username: string) {
-  const lines = [
-    { cls: "l1", text: `Salut ${username}. Ici Oracle.` },
-    { cls: "l2", text: "Pose ta question ou choisis un agent spécialiste." },
-  ]
-  const [lineIdx, setLineIdx] = useState(0)
-  const [typed, setTyped] = useState("")
-  const [done, setDone] = useState(false)
-
-  useEffect(() => {
-    if (lineIdx >= lines.length) { setDone(true); return }
-    let i = 0
-    setTyped("")
-    const line = lines[lineIdx]!.text
-    const speed = 18
-    const start = setTimeout(() => {
-      const t = setInterval(() => {
-        i++
-        setTyped(line.slice(0, i))
-        if (i >= line.length) { clearInterval(t); setTimeout(() => setLineIdx((x) => x + 1), 420) }
-      }, speed)
-      return () => clearInterval(t)
-    }, lineIdx === 0 ? 500 : 100)
-    return () => clearTimeout(start)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lineIdx])
-
-  return { lineIdx, typed, done, lines }
+// ── Agent greeting messages ───────────────────────────────────
+function agentGreeting(id: "Oracle" | AgentId, username: string): string {
+  if (id === "Oracle") {
+    return `Salut ${username} ! Je suis Oracle, ton assistant analytique IA. Je coordonne les 14 agents spécialisés pour t'offrir une analyse complète de chaque match. Pose ta question ou sélectionne un expert.`
+  }
+  const a = BY_ID[id as AgentId]!
+  const descs: Partial<Record<AgentId, string>> = {
+    Scout: "explorant les confrontations directes et l'historique des équipes",
+    Insider: "analysant les compositions et le suivi des blessures",
+    RefereeAnalyst: "décryptant les tendances arbitrales et leur influence sur les résultats",
+    TacticMaster: "décryptant les formations tactiques et les duels clés",
+    ContextKing: "contextualisant les enjeux, rivalités et la pression mentale",
+    MomentumX: "mesurant la forme récente et la dynamique des équipes",
+    WallMaster: "analysant les défenses et les probabilités de clean sheet",
+    GoalMaster: "prédisant les buts, BTTS et les marchés offensifs",
+    CornerKing: "analysant les statistiques de corners et marchés associés",
+    CardShark: "prédisant les cartons, fautes tactiques et suspensions",
+    CrowdWatch: "mesurant le sentiment des fans et les dynamiques de crowd",
+    LivePulse: "suivant les événements en temps réel et le flux live",
+    DebateArena: "animant les débats tactiques et rendant le verdict final",
+    Debrief: "analysant les performances post-match et les enseignements clés",
+  }
+  return `Salut ${username} ! Je suis @${id}, spécialiste en ${a.cat}. Je vais t'aider dans ton analyse en ${descs[id as AgentId] ?? `couvrant ${a.cat}`}. Quelle est ta question ?`
 }
 
 // ── Oracle console (ChatGPT-style) ───────────────────────────
-interface ExtraMsg { role: "user" | "oracle" | "system"; body: string }
+interface ExtraMsg { role: "user" | "oracle" | "system"; body: string; agentId?: "Oracle" | AgentId }
+type TypingGreeting = { text: string; typed: string; agentId: "Oracle" | AgentId }
 
 function OracleConsole({ username }: { username: string }) {
-  const { lineIdx, typed, lines } = useTypewriter(username)
   const [draft, setDraft] = useState("")
   const [extra, setExtra] = useState<ExtraMsg[]>([])
   const [agent, setAgent] = useState<"Oracle" | AgentId>("Oracle")
   const [open, setOpen] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
+  const [typingGreeting, setTypingGreeting] = useState<TypingGreeting | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
+
+  // Start Oracle greeting on mount
+  useEffect(() => {
+    const text = agentGreeting("Oracle", username)
+    setTypingGreeting({ text, typed: "", agentId: "Oracle" })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Typewriter effect
+  useEffect(() => {
+    if (!typingGreeting || typingGreeting.typed.length >= typingGreeting.text.length) return
+    const t = setTimeout(() => {
+      setTypingGreeting((prev) => prev ? { ...prev, typed: prev.text.slice(0, prev.typed.length + 1) } : null)
+    }, 16)
+    return () => clearTimeout(t)
+  }, [typingGreeting])
+
+  // Move completed greeting to extra
+  useEffect(() => {
+    if (!typingGreeting || typingGreeting.typed.length < typingGreeting.text.length) return
+    const t = setTimeout(() => {
+      setExtra((e) => [...e, { role: "oracle", body: typingGreeting.text, agentId: typingGreeting.agentId }])
+      setTypingGreeting(null)
+    }, 300)
+    return () => clearTimeout(t)
+  }, [typingGreeting])
 
   const isOracle = agent === "Oracle"
   const cur = isOracle ? null : BY_ID[agent as AgentId]
   const agentBg = cur ? agentGrad(cur.hue) : "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))"
 
+  const msgAvatarBg = (agentId?: "Oracle" | AgentId) =>
+    !agentId || agentId === "Oracle"
+      ? "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))"
+      : agentGrad(BY_ID[agentId as AgentId]?.hue ?? 200)
+
   const pickAgent = (id: "Oracle" | AgentId) => {
+    const wasInConversation = extra.length > 0 || !!typingGreeting
     setAgent(id)
     setOpen(false)
-    if (id !== "Oracle") {
-      const a = BY_ID[id as AgentId]!
-      setExtra((e) => [...e, { role: "system", body: `Agent @${id} · ${a.cat}` }])
+    if (wasInConversation) {
+      const label = id === "Oracle" ? "Oracle" : `@${id}`
+      setExtra((e) => [...e, { role: "system", body: `─── ${label} activé ───` }])
     }
+    setTypingGreeting({ text: agentGreeting(id, username), typed: "", agentId: id })
   }
 
   const submit = () => {
@@ -259,11 +287,17 @@ function OracleConsole({ username }: { username: string }) {
         body: isOracle
           ? "Analyse en cours via @GoalMaster + @TacticMaster…"
           : `@${agent} traite ta requête — conf 78%`,
+        agentId: agent,
       }])
     }, 600)
   }
 
-  const clearChat = () => { setExtra([]); setAgent("Oracle"); setShowHistory(false) }
+  const clearChat = () => {
+    setExtra([])
+    setAgent("Oracle")
+    setShowHistory(false)
+    setTypingGreeting({ text: agentGreeting("Oracle", username), typed: "", agentId: "Oracle" })
+  }
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraft(e.target.value)
@@ -274,7 +308,7 @@ function OracleConsole({ username }: { username: string }) {
 
   useEffect(() => {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
-  }, [extra, typed, lineIdx])
+  }, [extra, typingGreeting])
 
   return (
     <div className="console">
@@ -306,6 +340,9 @@ function OracleConsole({ username }: { username: string }) {
                 <div className="ao-role">{a.role}</div>
               </div>
             ))}
+            <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 9, letterSpacing: "0.12em", textTransform: "uppercase", color: "#3a4455", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
+              14 AGENTS SPÉCIALISÉS · ORACLE ROUTAGE AUTO
+            </div>
           </div>
         )}
 
@@ -339,26 +376,7 @@ function OracleConsole({ username }: { username: string }) {
           </>
         ) : (
           <>
-            {/* Typewriter greeting */}
-            {isOracle && extra.length === 0 && lines.slice(0, lineIdx).map((l, i) => (
-              <div key={i} className="gpt-msg-assistant">
-                <div className="gpt-avatar-sm" />
-                <div className="gpt-msg-text">{l.text}</div>
-              </div>
-            ))}
-            {isOracle && extra.length === 0 && lineIdx < lines.length && (
-              <div className="gpt-msg-assistant">
-                <div className="gpt-avatar-sm" />
-                <div className="gpt-msg-text">{typed}<span className="tw-caret" /></div>
-              </div>
-            )}
-            {!isOracle && extra.length === 0 && (
-              <div className="gpt-msg-assistant">
-                <div className="gpt-avatar-sm" style={{ background: agentBg }} />
-                <div className="gpt-msg-text">@{cur!.id} — {cur!.cat}. Pose ta question.</div>
-              </div>
-            )}
-            {/* Conversation */}
+            {/* Conversation history */}
             {extra.map((m, i) =>
               m.role === "user" ? (
                 <div key={i} className="gpt-msg-user">
@@ -368,10 +386,17 @@ function OracleConsole({ username }: { username: string }) {
                 <div key={i} className="gpt-msg-system">{m.body}</div>
               ) : (
                 <div key={i} className="gpt-msg-assistant">
-                  <div className="gpt-avatar-sm" style={cur ? { background: agentBg } : undefined} />
+                  <div className="gpt-avatar-sm" style={{ background: msgAvatarBg(m.agentId) }} />
                   <div className="gpt-msg-text">{m.body}</div>
                 </div>
               )
+            )}
+            {/* Active typewriter greeting */}
+            {typingGreeting && (
+              <div className="gpt-msg-assistant">
+                <div className="gpt-avatar-sm" style={{ background: msgAvatarBg(typingGreeting.agentId) }} />
+                <div className="gpt-msg-text">{typingGreeting.typed}<span className="tw-caret" /></div>
+              </div>
             )}
           </>
         )}
@@ -386,7 +411,7 @@ function OracleConsole({ username }: { username: string }) {
             value={draft}
             onChange={handleInput}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() } }}
-            placeholder={`Message ${isOracle ? "Oracle" : cur!.id}…`}
+            placeholder="Tape ton message ici…"
           />
           <button className="gpt-send-btn" onClick={submit} disabled={!draft.trim()}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -394,7 +419,6 @@ function OracleConsole({ username }: { username: string }) {
             </svg>
           </button>
         </div>
-        <div className="gpt-disclaimer">Oracle peut faire des erreurs. Vérifiez les informations importantes.</div>
       </div>
     </div>
   )
