@@ -25,22 +25,13 @@ export function InstallPrompt() {
       return
     }
 
-    // Track visit count
-    const visitCount = parseInt(localStorage.getItem("pwa-visit-count") ?? "0")
-    localStorage.setItem("pwa-visit-count", String(visitCount + 1))
-
-    // Check if user has dismissed the banner before
+    // Check if user has permanently dismissed
     const dismissed = localStorage.getItem("pwa-install-dismissed")
     if (dismissed === "true") {
       return
     }
 
-    // Show banner after 2 visits
-    if (visitCount >= 2) {
-      setShowBanner(true)
-    }
-
-    // Listen for beforeinstallprompt event
+    // Listen for beforeinstallprompt event — show immediately
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
