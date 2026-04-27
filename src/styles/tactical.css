@@ -28,7 +28,7 @@
 #tactical-hud .pitch-stage {
   position: absolute;
   top: 0; left: -5%; right: -5%;
-  height: 58vh;
+  height: 28vh;
   perspective: 900px;
   overflow: hidden;
   pointer-events: none;
@@ -57,15 +57,15 @@
   transform: translate(-50%, -50%);
   border: 2px solid var(--pitch-bright);
   border-radius: 50%;
-  box-shadow: 0 0 30px oklch(0.78 0.25 145 / 0.5), inset 0 0 20px oklch(0.78 0.25 145 / 0.3);
-  opacity: 0.7;
+  box-shadow: 0 0 20px oklch(0.78 0.25 145 / 0.3), inset 0 0 12px oklch(0.78 0.25 145 / 0.15);
+  opacity: 0.35;
 }
 #tactical-hud .pitch-plane::after {
   content: ''; position: absolute;
   top: 35%; left: 0; right: 0; height: 2px;
   background: linear-gradient(90deg, transparent, var(--pitch-bright) 20%, var(--pitch-bright) 80%, transparent);
-  box-shadow: 0 0 20px var(--pitch-bright);
-  opacity: 0.6;
+  box-shadow: 0 0 12px var(--pitch-bright);
+  opacity: 0.25;
 }
 #tactical-hud .pitch-scanline {
   position: absolute; inset: 0;
@@ -76,8 +76,8 @@
 }
 @keyframes hudScanMove { to { transform: translateY(3px); } }
 #tactical-hud .pitch-glow-bottom {
-  position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
-  background: linear-gradient(180deg, transparent, #030509 70%);
+  position: absolute; bottom: 0; left: 0; right: 0; height: 70%;
+  background: linear-gradient(180deg, transparent 0%, #030509 55%);
   z-index: 2;
 }
 #tactical-hud .dot-player {
