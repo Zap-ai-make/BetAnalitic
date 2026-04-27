@@ -9,7 +9,6 @@ import { gamificationRouter } from "~/server/api/routers/gamification";
 import { matchRouter } from "~/server/api/routers/match";
 import { notificationsRouter } from "~/server/api/routers/notifications";
 import { onboardingRouter } from "~/server/api/routers/onboarding";
-import { postRouter } from "~/server/api/routers/post";
 import { preferencesRouter } from "~/server/api/routers/preferences";
 import { profileRouter } from "~/server/api/routers/profile";
 import { reengagementRouter } from "~/server/api/routers/reengagement";
@@ -40,7 +39,6 @@ export const appRouter = createTRPCRouter({
   match: matchRouter,
   notifications: notificationsRouter,
   onboarding: onboardingRouter,
-  post: postRouter,
   preferences: preferencesRouter,
   profile: profileRouter,
   reengagement: reengagementRouter,
