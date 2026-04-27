@@ -1,6 +1,6 @@
 import "~/app/globals.css";
 
-import { Inter, Outfit, JetBrains_Mono } from "next/font/google";
+import { Inter, Outfit, JetBrains_Mono, Archivo } from "next/font/google";
 import { type Metadata, type Viewport } from "next";
 
 import { TRPCReactProvider } from "~/trpc/react";
@@ -26,6 +26,13 @@ const outfit = Outfit({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+const archivo = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  weight: ["400", "500", "600", "700", "800", "900"],
   display: "swap",
 });
 
@@ -62,7 +69,7 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`dark ${inter.variable} ${outfit.variable} ${jetbrainsMono.variable}`}
+      className={`dark ${inter.variable} ${outfit.variable} ${jetbrainsMono.variable} ${archivo.variable}`}
     >
       <head>
         <meta name="apple-mobile-web-app-capable" content="yes" />

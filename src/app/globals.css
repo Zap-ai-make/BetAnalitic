@@ -1,6 +1,7 @@
 /* Tailwind v4 with design tokens */
 @import "tailwindcss";
 @import "../styles/tokens.css";
+@import "../styles/tactical.css";
 
 @theme {
   /* Background Colors */
