@@ -185,11 +185,24 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
   const bodyRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
+  const restoredRef = useRef(false)
+
   // Load lang + conversations from localStorage on mount
   useEffect(() => {
     const stored = localStorage.getItem("betanalytic_lang")
     if (stored === "FR" || stored === "EN") setLang(stored)
-    setConversations(loadConvs())
+
+    const convs = loadConvs()
+    setConversations(convs)
+
+    // Restore last conversation so chat is persistent across tab switches
+    if (convs.length > 0 && convs[0]) {
+      const last = convs[0]
+      convIdRef.current = last.id
+      setExtra(last.messages)
+      setAgent(last.agentId)
+      restoredRef.current = true
+    }
 
     const onStorage = (e: StorageEvent) => {
       if (e.key === "betanalytic_lang" && (e.newValue === "FR" || e.newValue === "EN")) setLang(e.newValue)
@@ -198,9 +211,10 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
     return () => window.removeEventListener("storage", onStorage)
   }, [])
 
-  // Start greeting only after intro is done
+  // Start greeting only after intro is done, and only if no restored conversation
   useEffect(() => {
     if (!ready) return
+    if (restoredRef.current) return
     setTypingGreeting({ text: agentGreeting("Oracle", username, lang), typed: "", agentId: "Oracle" })
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready])
@@ -313,37 +327,41 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 
       {/* ── Header ── */}
       <div className="gpt-header">
-        <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }}>
-          <div className="gpt-model-icon" style={{ background: agentBg }} />
-          <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-            style={{ color: "#6b7280", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
-            <path d="M6 9l6 6 6-6" />
-          </svg>
-        </button>
-
-        {open && (
-          <div className="agent-dd" style={{ left: 0, right: 0 }}>
-            <div className="agent-dd-h">{ddHeader}</div>
-            <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
-              <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
-              <div className="ao-info">
-                <div className="ao-name">Oracle</div>
-                <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 1, position: "relative" }}>
+          <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }}>
+            <div className="gpt-model-icon" style={{ background: agentBg }} />
+            <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+              style={{ color: "#6b7280", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          <span style={{ fontSize: 9, color: "#444e5e", fontFamily: "var(--font-jetbrains-mono,monospace)", letterSpacing: "0.04em", paddingLeft: 2 }}>
+            {lang === "EN" ? "14 agents ready to analyze" : "14 agents prêts à analyser"}
+          </span>
+          {open && (
+            <div className="agent-dd" style={{ left: 0, right: 0 }}>
+              <div className="agent-dd-h">{ddHeader}</div>
+              <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
+                <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
+                <div className="ao-info">
+                  <div className="ao-name">Oracle</div>
+                  <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
+                </div>
+              </div>
+              {AGENTS.map((a) => (
+                <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
+                  <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
+                  <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
+                  <div className="ao-role">{a.role}</div>
+                </div>
+              ))}
+              <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, color: "#545e71", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
+                {lang === "EN" ? "14 agents ready to analyze the match for you" : "14 agents prêts à analyser le match pour vous"}
               </div>
             </div>
-            {AGENTS.map((a) => (
-              <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
-                <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
-                <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
-                <div className="ao-role">{a.role}</div>
-              </div>
-            ))}
-            <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, color: "#545e71", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
-              {lang === "EN" ? "14 agents ready to analyze the match for you" : "14 agents prêts à analyser le match pour vous"}
-            </div>
-          </div>
-        )}
+          )}
+        </div>
 
         <div style={{ flex: 1 }} />
 
@@ -426,7 +444,18 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 // ── Main page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession()
+  // Intro plays only once per browser session
   const [intro, setIntro] = useState(true)
+  useEffect(() => {
+    if (typeof window !== "undefined" && sessionStorage.getItem("betanalytic_intro_done")) {
+      setIntro(false)
+    }
+  }, [])
+
+  const handleIntroDone = () => {
+    sessionStorage.setItem("betanalytic_intro_done", "1")
+    setIntro(false)
+  }
 
   const username =
     session?.user?.name ??
@@ -439,7 +468,7 @@ export default function DashboardPage() {
         id="tactical-hud"
         style={{ position: "fixed", inset: 0, background: "#030509", display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
-        {intro && <IntroSplash onDone={() => setIntro(false)} />}
+        {intro && <IntroSplash onDone={handleIntroDone} />}
         <Header />
         <OracleConsole username={username} ready={!intro} />
       </div>
