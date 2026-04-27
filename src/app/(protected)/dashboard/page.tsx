@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { api } from "~/trpc/react"
+import { useCouponStore } from "~/lib/stores/couponStore"
 
 // ── Agent definitions ────────────────────────────────────────
 const AGENTS = [
@@ -66,9 +67,20 @@ function PitchStage() {
 }
 
 // ── Top HUD ──────────────────────────────────────────────────
-function TopHud() {
+interface TopHudProps {
+  username: string
+  couponCount: number
+  lang: "FR" | "EN"
+  onToggleLang: () => void
+  notifCount?: number
+}
+
+function TopHud({ username, couponCount, lang, onToggleLang, notifCount = 0 }: TopHudProps) {
+  const router = useRouter()
+  const initials = username.slice(0, 1).toUpperCase()
+
   return (
-    <div className="top-hud">
+    <div className="top-hud" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div className="brand">
         <div className="brand-mark">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -78,9 +90,62 @@ function TopHud() {
         </div>
         <div className="brand-name">Bet<em>Analytic</em></div>
       </div>
-      <div className="hud-pill">
-        <span className="live-dot" />
-        LIVE · 14 AGENTS
+
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+        {/* Search */}
+        <button
+          onClick={() => router.push("/matches")}
+          style={{ background: "none", border: "none", padding: "8px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 36, minHeight: 36 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+          </svg>
+        </button>
+
+        {/* Coupon badge */}
+        <button
+          onClick={() => router.push("/analysis")}
+          style={{ background: "none", border: "none", padding: "8px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 36, minHeight: 36 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          </svg>
+          {couponCount > 0 && (
+            <span style={{ position: "absolute", top: 4, right: 4, background: "#00f0ff", color: "#030509", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
+              {couponCount > 9 ? "9+" : couponCount}
+            </span>
+          )}
+        </button>
+
+        {/* Lang toggle FR/EN */}
+        <button
+          onClick={onToggleLang}
+          style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, padding: "4px 7px", cursor: "pointer", color: "#00f0ff", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", minWidth: 36, minHeight: 36, display: "flex", alignItems: "center", justifyContent: "center" }}
+        >
+          {lang}
+        </button>
+
+        {/* Bell / notifications */}
+        <button
+          style={{ background: "none", border: "none", padding: "8px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 36, minHeight: 36 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
+          </svg>
+          {notifCount > 0 && (
+            <span style={{ position: "absolute", top: 4, right: 4, background: "oklch(0.66 0.26 22)", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
+              {notifCount > 9 ? "9+" : notifCount}
+            </span>
+          )}
+        </button>
+
+        {/* User avatar */}
+        <div
+          style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 700, fontSize: 13, color: "#030509", cursor: "pointer", flexShrink: 0 }}
+          onClick={() => router.push("/profile")}
+        >
+          {initials}
+        </div>
       </div>
     </div>
   )
@@ -204,13 +269,6 @@ function OracleConsole({ username }: { username: string }) {
     if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight
   }, [extra, typed, lineIdx])
 
-  const chips = [
-    { a: "@CornerKing", t: "CORNERS CLASICO" },
-    { a: "@GoalMaster", t: "OVER 2.5" },
-    { a: "@Insider", t: "COMPOS" },
-    { a: "@DebateArena", t: "DÉBAT LIVE" },
-  ]
-
   return (
     <div className="console">
       <div className="console-corner tl" /><div className="console-corner tr" />
@@ -269,20 +327,13 @@ function OracleConsole({ username }: { username: string }) {
         ))}
       </div>
 
-      <div className="console-chips">
-        {chips.map((c, i) => (
-          <div key={i} className="chip" onClick={() => setDraft(`${c.a} ${c.t.toLowerCase()}`)}>
-            <span className="at">{c.a}</span>{c.t}
-          </div>
-        ))}
-      </div>
-
       <div className="console-input">
-        <input
+        <textarea
+          rows={3}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
           placeholder="input_query // @mention agent"
+          style={{ resize: "none" }}
         />
         <button className="send" onClick={submit}>
           EXEC
@@ -504,6 +555,8 @@ function DemoCard() {
 export default function DashboardPage() {
   const { data: session } = useSession()
   const [intro, setIntro] = useState(true)
+  const [lang, setLang] = useState<"FR" | "EN">("FR")
+  const couponCount = useCouponStore((state) => state.count())
 
   // ── Original tRPC data calls preserved ──────────────────────
   const { data: matches, isLoading: matchesLoading } = api.match.getTodaysMatches.useQuery()
@@ -549,7 +602,12 @@ export default function DashboardPage() {
         <div className="app" style={{ paddingBottom: 80 }}>
           {/* TopHud always on top — z-index 300 inside .app beats intro-splash z-index 200 */}
           <div style={{ position: "sticky", top: 0, zIndex: 300 }}>
-            <TopHud />
+            <TopHud
+              username={username}
+              couponCount={couponCount}
+              lang={lang}
+              onToggleLang={() => setLang((l) => (l === "FR" ? "EN" : "FR"))}
+            />
           </div>
 
           {/* Intro splash inside .app so TopHud can sit above it */}

@@ -235,7 +235,7 @@
 
 /* ─── CONSOLE / CHAT ────────────────────────────────────────── */
 #tactical-hud .console {
-  margin: 22px 14px 0;
+  margin: 8px 14px 0;
   position: relative;
   min-height: calc(100svh - 130px);
   display: flex; flex-direction: column;
@@ -436,7 +436,7 @@
 #tactical-hud .chip .at { color: #00f0ff; }
 
 #tactical-hud .console-input {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: flex-end; gap: 8px;
   padding: 10px 12px 14px;
   border-top: 1px solid var(--hud-line);
   background: linear-gradient(180deg, transparent, rgba(0,240,255,0.03));
@@ -447,7 +447,8 @@
   font-family: var(--font-mono); font-weight: 700;
   font-size: 14px; padding-left: 6px;
 }
-#tactical-hud .console-input input {
+#tactical-hud .console-input input,
+#tactical-hud .console-input textarea {
   flex: 1;
   background: transparent;
   border: none; outline: none;
@@ -455,8 +456,10 @@
   font-family: var(--font-mono); font-size: 13px;
   padding: 10px 4px;
   letter-spacing: -0.005em;
+  line-height: 1.5;
 }
-#tactical-hud .console-input input::placeholder { color: var(--hud-mute-2); }
+#tactical-hud .console-input input::placeholder,
+#tactical-hud .console-input textarea::placeholder { color: var(--hud-mute-2); }
 #tactical-hud .console-input .send {
   padding: 8px 14px;
   border-radius: 3px;
