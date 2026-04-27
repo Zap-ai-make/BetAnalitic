@@ -80,22 +80,16 @@ function TopHud({ username, couponCount, lang, onToggleLang, notifCount = 0 }: T
   const initials = username.slice(0, 1).toUpperCase()
 
   return (
-    <div className="top-hud" style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <div className="brand">
-        <div className="brand-mark">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <path d="M2 12h20M12 2v20M6 5l12 14M18 5L6 19" />
-          </svg>
-        </div>
-        <div className="brand-name">Bet<em>Analytic</em></div>
+    <div className="top-hud">
+      <div className="brand" style={{ flex: 1, minWidth: 0 }}>
+        <div className="brand-name" style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Bet<em>Analytic</em></div>
       </div>
 
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 2, flexShrink: 0 }}>
         {/* Search */}
         <button
           onClick={() => router.push("/matches")}
-          style={{ background: "none", border: "none", padding: "8px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 36, minHeight: 36 }}
+          style={{ background: "none", border: "none", padding: "7px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", minWidth: 34, minHeight: 34 }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
@@ -105,13 +99,13 @@ function TopHud({ username, couponCount, lang, onToggleLang, notifCount = 0 }: T
         {/* Coupon badge */}
         <button
           onClick={() => router.push("/analysis")}
-          style={{ background: "none", border: "none", padding: "8px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 36, minHeight: 36 }}
+          style={{ background: "none", border: "none", padding: "7px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 34, minHeight: 34 }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
           </svg>
           {couponCount > 0 && (
-            <span style={{ position: "absolute", top: 4, right: 4, background: "#00f0ff", color: "#030509", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
+            <span style={{ position: "absolute", top: 3, right: 3, background: "#00f0ff", color: "#030509", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
               {couponCount > 9 ? "9+" : couponCount}
             </span>
           )}
@@ -120,20 +114,20 @@ function TopHud({ username, couponCount, lang, onToggleLang, notifCount = 0 }: T
         {/* Lang toggle FR/EN */}
         <button
           onClick={onToggleLang}
-          style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, padding: "4px 7px", cursor: "pointer", color: "#00f0ff", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", minWidth: 36, minHeight: 36, display: "flex", alignItems: "center", justifyContent: "center" }}
+          style={{ background: "none", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 4, padding: "3px 6px", cursor: "pointer", color: "#00f0ff", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, fontWeight: 700, letterSpacing: "0.06em", height: 30, display: "flex", alignItems: "center", justifyContent: "center" }}
         >
           {lang}
         </button>
 
         {/* Bell / notifications */}
         <button
-          style={{ background: "none", border: "none", padding: "8px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 36, minHeight: 36 }}
+          style={{ background: "none", border: "none", padding: "7px", cursor: "pointer", color: "#a0aaba", display: "flex", alignItems: "center", justifyContent: "center", position: "relative", minWidth: 34, minHeight: 34 }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
           </svg>
           {notifCount > 0 && (
-            <span style={{ position: "absolute", top: 4, right: 4, background: "oklch(0.66 0.26 22)", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
+            <span style={{ position: "absolute", top: 3, right: 3, background: "oklch(0.66 0.26 22)", borderRadius: "50%", width: 14, height: 14, fontSize: 9, fontWeight: 700, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-jetbrains-mono, monospace)" }}>
               {notifCount > 9 ? "9+" : notifCount}
             </span>
           )}
@@ -141,7 +135,7 @@ function TopHud({ username, couponCount, lang, onToggleLang, notifCount = 0 }: T
 
         {/* User avatar */}
         <div
-          style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 700, fontSize: 13, color: "#030509", cursor: "pointer", flexShrink: 0 }}
+          style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 700, fontSize: 12, color: "#030509", cursor: "pointer", flexShrink: 0, marginLeft: 2 }}
           onClick={() => router.push("/profile")}
         >
           {initials}
@@ -228,7 +222,7 @@ function useTypewriter(username: string) {
   return { lineIdx, typed, done, lines }
 }
 
-// ── Oracle console ───────────────────────────────────────────
+// ── Oracle console (ChatGPT-style) ───────────────────────────
 interface ExtraMsg { role: "user" | "oracle" | "system"; body: string }
 
 function OracleConsole({ username }: { username: string }) {
@@ -237,17 +231,20 @@ function OracleConsole({ username }: { username: string }) {
   const [extra, setExtra] = useState<ExtraMsg[]>([])
   const [agent, setAgent] = useState<"Oracle" | AgentId>("Oracle")
   const [open, setOpen] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
   const bodyRef = useRef<HTMLDivElement>(null)
+  const taRef = useRef<HTMLTextAreaElement>(null)
 
   const isOracle = agent === "Oracle"
   const cur = isOracle ? null : BY_ID[agent as AgentId]
+  const agentBg = cur ? agentGrad(cur.hue) : "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))"
 
   const pickAgent = (id: "Oracle" | AgentId) => {
     setAgent(id)
     setOpen(false)
     if (id !== "Oracle") {
       const a = BY_ID[id as AgentId]!
-      setExtra((e) => [...e, { role: "system", body: `↳ Connecté à @${id} · spécialiste ${a.cat}.` }])
+      setExtra((e) => [...e, { role: "system", body: `Agent @${id} · ${a.cat}` }])
     }
   }
 
@@ -255,14 +252,24 @@ function OracleConsole({ username }: { username: string }) {
     if (!draft.trim()) return
     setExtra((e) => [...e, { role: "user", body: draft }])
     setDraft("")
+    if (taRef.current) { taRef.current.style.height = "auto" }
     setTimeout(() => {
       setExtra((e) => [...e, {
         role: "oracle",
         body: isOracle
-          ? "↳ Routage: @GoalMaster + @TacticMaster. Analyse en cours…"
-          : `↳ @${agent} traite ta requête… conf 78%`,
+          ? "Analyse en cours via @GoalMaster + @TacticMaster…"
+          : `@${agent} traite ta requête — conf 78%`,
       }])
     }, 600)
+  }
+
+  const clearChat = () => { setExtra([]); setAgent("Oracle"); setShowHistory(false) }
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setDraft(e.target.value)
+    const el = e.target
+    el.style.height = "auto"
+    el.style.height = `${Math.min(el.scrollHeight, 180)}px`
   }
 
   useEffect(() => {
@@ -274,71 +281,120 @@ function OracleConsole({ username }: { username: string }) {
       <div className="console-corner tl" /><div className="console-corner tr" />
       <div className="console-corner bl" /><div className="console-corner br" />
 
-      <div className="console-head">
-        <div style={{ position: "relative" }}>
-          <div className="oracle-ring" />
-          <div className="oracle" style={cur ? { background: agentGrad(cur.hue) } : undefined} />
-        </div>
-        <div className="console-title">
-          <div className="name" onClick={() => setOpen((o) => !o)}>
-            {isOracle ? "Oracle" : cur!.id}
-            <span className="tag">{isOracle ? "GÉNÉRALISTE" : cur!.role}</span>
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#00f0ff" strokeWidth="3"
-              style={{ marginLeft: 4, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </div>
-          <div className="meta">
-            <span className="online-dot" />
-            <span>{isOracle ? "14 agents disponibles" : cur!.cat}</span>
-          </div>
-          {open && (
-            <div className="agent-dd">
-              <div className="agent-dd-h">CHOISIR UN AGENT</div>
-              <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
-                <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
-                <div className="ao-info"><div className="ao-name">Oracle</div><div className="ao-cat">Généraliste · routage auto</div></div>
-              </div>
-              {AGENTS.map((a) => (
-                <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
-                  <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
-                  <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
-                  <div className="ao-role">{a.role}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="console-body" ref={bodyRef}>
-        {!isOracle && <div className="tw-line l1" style={{ marginBottom: 8 }}>@{cur!.id} — {cur!.cat}</div>}
-        {isOracle && lines.slice(0, lineIdx).map((l, i) => (
-          <div key={i} className={`tw-line ${l.cls}`}>{l.text}</div>
-        ))}
-        {isOracle && lineIdx < lines.length && (
-          <div className={`tw-line ${lines[lineIdx]!.cls}`}>{typed}<span className="tw-caret" /></div>
-        )}
-        {extra.map((m, i) => (
-          <div key={`x-${i}`} className={`tw-line ${m.role === "user" ? "user-msg" : "sys"}`}
-            style={{ animation: "hudLineIn .3s both" }}>
-            {m.role === "user" ? <><span className="prompt">&gt;</span>{m.body}</> : m.body}
-          </div>
-        ))}
-      </div>
-
-      <div className="console-input">
-        <textarea
-          rows={3}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="input_query // @mention agent"
-          style={{ resize: "none" }}
-        />
-        <button className="send" onClick={submit}>
-          EXEC
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+      {/* ── Header — ChatGPT model-selector style ── */}
+      <div className="gpt-header">
+        <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }}>
+          <div className="gpt-model-icon" style={{ background: agentBg }} />
+          <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            style={{ color: "#6b7280", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </button>
+
+        {open && (
+          <div className="agent-dd" style={{ left: 0, right: 0 }}>
+            <div className="agent-dd-h">CHOISIR UN AGENT</div>
+            <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
+              <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
+              <div className="ao-info"><div className="ao-name">Oracle</div><div className="ao-cat">Généraliste · routage auto</div></div>
+            </div>
+            {AGENTS.map((a) => (
+              <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
+                <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
+                <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
+                <div className="ao-role">{a.role}</div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ flex: 1 }} />
+
+        {/* History icon */}
+        <button
+          className={`gpt-icon-btn${showHistory ? " active" : ""}`}
+          onClick={() => { setShowHistory((h) => !h); setOpen(false) }}
+          title="Historique"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" />
+          </svg>
+        </button>
+
+        {/* New chat icon */}
+        <button className="gpt-icon-btn" onClick={clearChat} title="Nouvelle conversation">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* ── Messages ── */}
+      <div className="gpt-messages" ref={bodyRef}>
+        {showHistory ? (
+          <>
+            <div className="gpt-history-title">Historique des conversations</div>
+            <div className="gpt-history-empty">Aucune conversation récente.</div>
+          </>
+        ) : (
+          <>
+            {/* Typewriter greeting */}
+            {isOracle && extra.length === 0 && lines.slice(0, lineIdx).map((l, i) => (
+              <div key={i} className="gpt-msg-assistant">
+                <div className="gpt-avatar-sm" />
+                <div className="gpt-msg-text">{l.text}</div>
+              </div>
+            ))}
+            {isOracle && extra.length === 0 && lineIdx < lines.length && (
+              <div className="gpt-msg-assistant">
+                <div className="gpt-avatar-sm" />
+                <div className="gpt-msg-text">{typed}<span className="tw-caret" /></div>
+              </div>
+            )}
+            {!isOracle && extra.length === 0 && (
+              <div className="gpt-msg-assistant">
+                <div className="gpt-avatar-sm" style={{ background: agentBg }} />
+                <div className="gpt-msg-text">@{cur!.id} — {cur!.cat}. Pose ta question.</div>
+              </div>
+            )}
+            {/* Conversation */}
+            {extra.map((m, i) =>
+              m.role === "user" ? (
+                <div key={i} className="gpt-msg-user">
+                  <div className="gpt-user-bubble">{m.body}</div>
+                </div>
+              ) : m.role === "system" ? (
+                <div key={i} className="gpt-msg-system">{m.body}</div>
+              ) : (
+                <div key={i} className="gpt-msg-assistant">
+                  <div className="gpt-avatar-sm" style={cur ? { background: agentBg } : undefined} />
+                  <div className="gpt-msg-text">{m.body}</div>
+                </div>
+              )
+            )}
+          </>
+        )}
+      </div>
+
+      {/* ── ChatGPT-style input ── */}
+      <div className="gpt-input-area">
+        <div className="gpt-input-box">
+          <textarea
+            ref={taRef}
+            rows={1}
+            value={draft}
+            onChange={handleInput}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() } }}
+            placeholder={`Message ${isOracle ? "Oracle" : cur!.id}…`}
+          />
+          <button className="gpt-send-btn" onClick={submit} disabled={!draft.trim()}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 5 19 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="gpt-disclaimer">Oracle peut faire des erreurs. Vérifiez les informations importantes.</div>
       </div>
     </div>
   )
