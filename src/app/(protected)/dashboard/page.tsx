@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { DashboardNav } from "~/components/shared/DashboardNav"
-import { api } from "~/trpc/react"
 import { useCouponStore } from "~/lib/stores/couponStore"
 
 // ── Agent definitions ────────────────────────────────────────
@@ -403,7 +402,7 @@ function OracleConsole({ username }: { username: string }) {
       </div>
 
       {/* ── ChatGPT-style input ── */}
-      <div className="gpt-input-area">
+      <div className="gpt-input-area" style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}>
         <div className="gpt-input-box">
           <textarea
             ref={taRef}
@@ -424,213 +423,6 @@ function OracleConsole({ username }: { username: string }) {
   )
 }
 
-// ── WC26 countdown ───────────────────────────────────────────
-function WCBanner() {
-  const TARGET = new Date("2026-06-11T18:00:00Z").getTime()
-  const [now, setNow] = useState(0)
-
-  useEffect(() => {
-    setNow(Date.now())
-    const t = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(t)
-  }, [])
-
-  const d = now > 0 ? Math.max(0, TARGET - now) : TARGET - Date.UTC(2026, 3, 27)
-  const pad = (n: number) => String(Math.floor(n)).padStart(2, "0")
-  return (
-    <div className="wc-banner">
-      <div className="flags">🇺🇸🇨🇦🇲🇽</div>
-      <div className="ctr"><div className="t1">COUPE DU MONDE</div><div className="t2">KICK-OFF 2026</div></div>
-      <div className="cd" suppressHydrationWarning>
-        <div suppressHydrationWarning>{pad(d / 86400000)}<span>J</span></div>
-        <div suppressHydrationWarning>{pad((d % 86400000) / 3600000)}<span>H</span></div>
-        <div suppressHydrationWarning>{pad((d % 3600000) / 60000)}<span>M</span></div>
-        <div suppressHydrationWarning style={{ color: "#00f0ff" }}>{pad((d % 60000) / 1000)}<span>S</span></div>
-      </div>
-    </div>
-  )
-}
-
-// ── Ticker ───────────────────────────────────────────────────
-function Ticker() {
-  const items = [
-    "[CLASICO] CornerKing projette 11.5 · conf 78%",
-    "[MAN CITY vs ARS] TacticMaster: pressing haut attendu",
-    "[SERIE A] +12% liquidité Inter-Milan",
-    "[WC26] France · Group C · kick-off T-53d",
-    "[BAYERN-BVB] GoalMaster: Over 2.5 · conf 82%",
-    "[CL] DebateArena en cours: Tactique vs Forme",
-  ]
-  const track = [...items, ...items]
-  return (
-    <div className="ticker">
-      <div className="ticker-track">
-        {track.map((t, i) => (
-          <span key={i} className="it">
-            <span className="n">●</span>
-            <b>{t.split("]")[0]}]</b>
-            {t.split("]")[1]}
-          </span>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Quick access (original functionality kept) ───────────────
-function QuickAccess() {
-  const router = useRouter()
-  const items = [
-    { path: "/paris", icon: "🎰", label: "Paris Virtuels", sub: "Parier sur les matchs" },
-    { path: "/coupons", icon: "🎫", label: "Mes Coupons", sub: "Historique des paris" },
-    { path: "/salles", icon: "💬", label: "Salles", sub: "Communauté" },
-    { path: "/analysis", icon: "⚡", label: "Analyse IA", sub: "Agents & prédictions" },
-  ]
-  return (
-    <div className="bar-section">
-      <div className="bar-head">
-        <span className="num">[00]</span>
-        <span className="title">ACCÈS RAPIDE</span>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        {items.map((item) => (
-          <button
-            key={item.path}
-            onClick={() => router.push(item.path)}
-            style={{
-              background: "rgba(10,15,26,0.85)",
-              border: "1px solid rgba(255,255,255,0.08)",
-              borderRadius: 6,
-              padding: "14px 12px",
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              cursor: "pointer",
-              textAlign: "left",
-            }}
-          >
-            <span style={{ fontSize: 22 }}>{item.icon}</span>
-            <div>
-              <div style={{ fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 700, fontSize: 13, color: "#f2f5fa", letterSpacing: "-0.01em" }}>{item.label}</div>
-              <div style={{ fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 9, color: "#545e71", letterSpacing: "0.08em", textTransform: "uppercase", marginTop: 2 }}>{item.sub}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ── Live matches section (original data + new style) ─────────
-interface MatchCardHudProps {
-  id: string
-  homeTeam: string
-  awayTeam: string
-  league: string
-  time: string
-  status: "live" | "upcoming" | "finished"
-  homeScore?: number
-  awayScore?: number
-}
-
-function MatchCardHud({ homeTeam, awayTeam, league, time, status, homeScore, awayScore }: MatchCardHudProps) {
-  const router = useRouter()
-  return (
-    <div
-      onClick={() => router.push("/matches")}
-      className="match-tile"
-      style={{ cursor: "pointer", marginBottom: 8 }}
-    >
-      <div className="match-meta-row">
-        <span className="comp">◆ {league.toUpperCase()}</span>
-        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          {status === "live" && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "oklch(0.66 0.26 22)", boxShadow: "0 0 8px oklch(0.66 0.26 22)", display: "inline-block" }} />}
-          {status === "live" ? "LIVE" : time}
-        </span>
-      </div>
-      <div className="teams-row">
-        <div className="team-col">
-          <div className="team-name">{homeTeam}</div>
-          {homeScore !== undefined && <div style={{ fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 900, fontSize: 28, color: "#f2f5fa" }}>{homeScore}</div>}
-        </div>
-        <div className="vs-col">
-          <div className="vs-big">VS</div>
-          <div className="vs-time">{status === "live" ? "LIVE ↓" : status === "finished" ? "FT" : "À VENIR"}</div>
-        </div>
-        <div className="team-col">
-          <div className="team-name">{awayTeam}</div>
-          {awayScore !== undefined && <div style={{ fontFamily: "var(--font-archivo, sans-serif)", fontWeight: 900, fontSize: 28, color: "#f2f5fa" }}>{awayScore}</div>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── Rooms section (original data + new style) ────────────────
-function RoomsSection({ rooms }: { rooms: Array<{ id: string; name: string; type: string; _count: { members: number } }> }) {
-  const router = useRouter()
-  return (
-    <div className="bar-section">
-      <div className="bar-head">
-        <span className="num">[03]</span>
-        <span className="title">SALLES ACTIVES</span>
-        <button className="link" style={{ background: "none", border: "none", padding: 0 }} onClick={() => router.push("/salles")}>
-          EXPLORER →
-        </button>
-      </div>
-      {rooms.slice(0, 3).map((room) => (
-        <div
-          key={room.id}
-          className="room-tile"
-          style={{ ["--room-c" as string]: room.type === "OFFICIAL" ? "#00f0ff" : "oklch(0.82 0.19 78)" }}
-          onClick={() => router.push(`/salles/${room.id}`)}
-        >
-          <div className="rt-main">
-            <div className="rt-name">{room.name}</div>
-            <div className="rt-meta">
-              <span>{room._count.members} MEMBRES</span>
-            </div>
-            <div className={`badge ${room.type === "OFFICIAL" ? "ana" : "sup"}`}>
-              {room.type === "OFFICIAL" ? "◆ ANALYTIQUE" : "⚽ SUPPORTER"}
-            </div>
-          </div>
-        </div>
-      ))}
-      {rooms.length === 0 && (
-        <div style={{ padding: "16px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 11, color: "#545e71", textAlign: "center", letterSpacing: "0.1em" }}>
-          AUCUNE SALLE ACTIVE
-        </div>
-      )}
-    </div>
-  )
-}
-
-// ── Demo card ────────────────────────────────────────────────
-function DemoCard() {
-  const router = useRouter()
-  return (
-    <div className="bar-section">
-      <div className="bar-head">
-        <span className="num">[01]</span>
-        <span className="title">PAPER TRADING · DEMO</span>
-        <button className="link" style={{ background: "none", border: "none", padding: 0 }} onClick={() => router.push("/paris")}>
-          LANCER →
-        </button>
-      </div>
-      <div className="demo-card" onClick={() => router.push("/paris")}>
-        <div className="demo-bg">DEMO</div>
-        <div className="demo-pill"><span className="dot" />ARGENT FICTIF · 0 RISQUE</div>
-        <div className="demo-title">APPRENDS À PARIER<br /><span className="grad">SANS PERDRE UN EURO.</span></div>
-        <div className="demo-sub">10 000 € fictifs · les 14 agents te coachent en temps réel · stats détaillées de ta progression.</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div className="demo-cta">OUVRIR LE LAB →</div>
-          <div style={{ fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 9.5, letterSpacing: "0.14em", color: "#545e71", textTransform: "uppercase" }}>2 847 traders en cours</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Main page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession()
@@ -638,120 +430,27 @@ export default function DashboardPage() {
   const [lang, setLang] = useState<"FR" | "EN">("FR")
   const couponCount = useCouponStore((state) => state.count())
 
-  // ── Original tRPC data calls preserved ──────────────────────
-  const { data: matches, isLoading: matchesLoading } = api.match.getTodaysMatches.useQuery()
-  const { data: rooms } = api.room.getPublicRooms.useQuery()
-
   const username =
     session?.user?.name ??
     session?.user?.email?.split("@")[0] ??
     "Player"
 
-  const transformMatch = (match: NonNullable<typeof matches>[number]): MatchCardHudProps => {
-    const status =
-      match.status === "LIVE" || match.status === "HALFTIME"
-        ? ("live" as const)
-        : match.status === "SCHEDULED"
-          ? ("upcoming" as const)
-          : ("finished" as const)
-    const time =
-      status === "live"
-        ? "LIVE"
-        : new Date(match.kickoffTime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
-    return {
-      id: match.id,
-      status,
-      time,
-      homeTeam: match.homeTeam.name,
-      awayTeam: match.awayTeam.name,
-      league: match.competition.name,
-      homeScore: match.homeScore ?? undefined,
-      awayScore: match.awayScore ?? undefined,
-    }
-  }
-
-  const liveMatches = matches?.filter((m) => m.status === "LIVE" || m.status === "HALFTIME").map(transformMatch) ?? []
-  const upcomingMatches = matches?.filter((m) => m.status === "SCHEDULED").map(transformMatch) ?? []
-
   return (
     <>
-      {/* ── Tactical HUD wrapper ── */}
-      <div id="tactical-hud" style={{ position: "relative", minHeight: "100svh", background: "#030509" }}>
+      <div
+        id="tactical-hud"
+        style={{ position: "fixed", inset: 0, background: "#030509", display: "flex", flexDirection: "column", overflow: "hidden" }}
+      >
         <PitchStage />
-
-        <div className="app" style={{ paddingBottom: 80 }}>
-          {/* TopHud always on top — z-index 300 inside .app beats intro-splash z-index 200 */}
-          <div style={{ position: "sticky", top: 0, zIndex: 300 }}>
-            <TopHud
-              username={username}
-              couponCount={couponCount}
-              lang={lang}
-              onToggleLang={() => setLang((l) => (l === "FR" ? "EN" : "FR"))}
-            />
-          </div>
-
-          {/* Intro splash inside .app so TopHud can sit above it */}
-          {intro && <IntroSplash onDone={() => setIntro(false)} />}
-          <OracleConsole username={username} />
-
-          {/* Live matches (original data, new style) */}
-          {(matchesLoading || liveMatches.length > 0) && (
-            <div className="bar-section">
-              <div className="bar-head">
-                <span className="num" style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "oklch(0.66 0.26 22)", boxShadow: "0 0 8px oklch(0.66 0.26 22)", display: "inline-block", animation: "hudPulse 1.2s infinite" }} />
-                  LIVE
-                </span>
-                <span className="title">{liveMatches.length} MATCHS EN DIRECT</span>
-              </div>
-              {matchesLoading ? (
-                <div style={{ height: 80, background: "rgba(10,15,26,0.6)", borderRadius: 6, animation: "pulse 1.5s infinite" }} />
-              ) : (
-                liveMatches.map((m) => <MatchCardHud key={m.id} {...m} />)
-              )}
-            </div>
-          )}
-
-          {/* Today's matches (original data, new style) */}
-          <div className="bar-section">
-            <div className="bar-head">
-              <span className="num">[02]</span>
-              <span className="title">MATCHS DU JOUR · {matches?.length ?? 0}</span>
-              <button className="link" style={{ background: "none", border: "none", padding: 0 }} onClick={() => { /* handled by link styling */ }}>
-                <a href="/matches" style={{ color: "inherit", textDecoration: "none" }}>VOIR TOUT →</a>
-              </button>
-            </div>
-            {matchesLoading ? (
-              [1, 2, 3].map((i) => (
-                <div key={i} style={{ height: 80, background: "rgba(10,15,26,0.6)", borderRadius: 6, marginBottom: 8, animation: "pulse 1.5s infinite" }} />
-              ))
-            ) : upcomingMatches.length > 0 ? (
-              upcomingMatches.slice(0, 5).map((m) => <MatchCardHud key={m.id} {...m} />)
-            ) : (
-              <div style={{ padding: "24px 0", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 11, color: "#545e71", textAlign: "center", letterSpacing: "0.1em" }}>
-                AUCUN MATCH AUJOURD&apos;HUI
-              </div>
-            )}
-          </div>
-
-          {/* Rooms (original data, new style) */}
-          <RoomsSection rooms={rooms ?? []} />
-
-          {/* Quick access */}
-          <QuickAccess />
-
-          {/* Demo card */}
-          <DemoCard />
-
-          {/* Ticker */}
-          <Ticker />
-
-          {/* WC26 Banner */}
-          <WCBanner />
-        </div>
+        {intro && <IntroSplash onDone={() => setIntro(false)} />}
+        <TopHud
+          username={username}
+          couponCount={couponCount}
+          lang={lang}
+          onToggleLang={() => setLang((l) => (l === "FR" ? "EN" : "FR"))}
+        />
+        <OracleConsole username={username} />
       </div>
-
-      {/* ── DashboardNav entirely outside #tactical-hud for clean fixed positioning ── */}
       <DashboardNav />
     </>
   )
