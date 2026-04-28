@@ -6,6 +6,19 @@
 import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"
 import { TRPCError } from "@trpc/server"
+import { type PrismaClient } from "@prisma/client"
+
+async function createDefaultChannels(db: PrismaClient, roomId: string) {
+  const existing = await db.roomChannel.count({ where: { roomId } })
+  if (existing > 0) return
+  await db.roomChannel.createMany({
+    data: [
+      { roomId, type: "GENERAL", slug: "general", name: "Général" },
+      { roomId, type: "ANNONCE", slug: "annonce", name: "Annonces" },
+      { roomId, type: "ANALYSE", slug: "analyse", name: "Analyse" },
+    ],
+  })
+}
 
 export const roomRouter = createTRPCRouter({
   /**
@@ -60,6 +73,7 @@ export const roomRouter = createTRPCRouter({
             maxMembers: 1000, // Official rooms have higher limit
           },
         })
+        await createDefaultChannels(ctx.db, room.id)
       }
 
       // Check if user is already a member
@@ -320,6 +334,8 @@ export const roomRouter = createTRPCRouter({
           role: "OWNER",
         },
       })
+
+      await createDefaultChannels(ctx.db, room.id)
 
       return room
     }),
@@ -585,6 +601,8 @@ export const roomRouter = createTRPCRouter({
     .input(
       z.object({
         roomId: z.string(),
+        channelId: z.string().optional(),
+        ticketId: z.string().optional(),
         limit: z.number().min(1).max(100).default(50),
         cursor: z.string().optional(),
       })
@@ -609,6 +627,8 @@ export const roomRouter = createTRPCRouter({
       const messages = await ctx.db.roomMessage.findMany({
         where: {
           roomId: input.roomId,
+          channelId: input.channelId ?? undefined,
+          ticketId: input.ticketId ?? undefined,
           isDeleted: false,
         },
         include: {
@@ -660,11 +680,12 @@ export const roomRouter = createTRPCRouter({
     .input(
       z.object({
         roomId: z.string(),
+        channelId: z.string().optional(),
+        ticketId: z.string().optional(),
         content: z.string().min(1).max(2000),
         type: z.enum(["TEXT", "AGENT", "SYSTEM"]).default("TEXT"),
         agentId: z.string().optional(),
         replyToId: z.string().optional(),
-        ticketId: z.string().optional(), // Story 6.10: Share ticket
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -681,10 +702,26 @@ export const roomRouter = createTRPCRouter({
       if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" })
       if (room.archivedAt) throw new TRPCError({ code: "FORBIDDEN", message: "Room is archived" })
       if (!room.members.length) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "You must be a member of this room to send messages",
-        })
+        throw new TRPCError({ code: "FORBIDDEN", message: "You must be a member of this room to send messages" })
+      }
+
+      // Enforce channel write permissions
+      if (input.channelId) {
+        const channel = await ctx.db.roomChannel.findUnique({ where: { id: input.channelId } })
+        if (channel && (channel.type === "GENERAL" || channel.type === "ANNONCE")) {
+          const myRole = room.members[0]?.role
+          if (myRole === "MEMBER") {
+            throw new TRPCError({ code: "FORBIDDEN", message: "Seul le créateur peut écrire dans ce canal" })
+          }
+        }
+      }
+
+      // Verify ticket is open if ticketId provided
+      if (input.ticketId) {
+        const ticket = await ctx.db.analyseTicket.findUnique({ where: { id: input.ticketId } })
+        if (!ticket || ticket.status === "ARCHIVED") {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Ce ticket est archivé" })
+        }
       }
 
       // Parse @mentions from content
@@ -703,13 +740,14 @@ export const roomRouter = createTRPCRouter({
       const message = await ctx.db.roomMessage.create({
         data: {
           roomId: input.roomId,
+          channelId: input.channelId,
+          ticketId: input.ticketId,
           userId,
           content: input.content,
           type: input.type,
           agentId: input.agentId,
           replyToId: input.replyToId,
           mentions: mentionedUserIds,
-          metadata: input.ticketId ? { ticketId: input.ticketId } : undefined,
         },
         include: {
           user: {
@@ -1341,5 +1379,118 @@ export const roomRouter = createTRPCRouter({
       })
 
       return { success: true }
+    }),
+
+  /**
+   * Get channels for a room (auto-creates if missing for legacy rooms)
+   */
+  getChannels: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        select: { visibility: true },
+      })
+      if (room?.visibility !== "PUBLIC") {
+        const membership = await ctx.db.roomMember.findUnique({
+          where: { roomId_userId: { roomId: input.roomId, userId } },
+        })
+        if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" })
+      }
+
+      await createDefaultChannels(ctx.db, input.roomId)
+
+      return ctx.db.roomChannel.findMany({
+        where: { roomId: input.roomId },
+        orderBy: { createdAt: "asc" },
+      })
+    }),
+
+  /**
+   * Create a ticket in the Analyse channel
+   */
+  createTicket: protectedProcedure
+    .input(z.object({
+      roomId: z.string(),
+      channelId: z.string(),
+      title: z.string().min(1).max(100),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const membership = await ctx.db.roomMember.findUnique({
+        where: { roomId_userId: { roomId: input.roomId, userId } },
+      })
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" })
+
+      const channel = await ctx.db.roomChannel.findUnique({ where: { id: input.channelId } })
+      if (!channel || channel.type !== "ANALYSE") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Tickets only allowed in Analyse channel" })
+      }
+
+      return ctx.db.analyseTicket.create({
+        data: {
+          channelId: input.channelId,
+          roomId: input.roomId,
+          authorId: userId,
+          title: input.title,
+        },
+        include: {
+          author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          _count: { select: { messages: true } },
+        },
+      })
+    }),
+
+  /**
+   * Get tickets for an Analyse channel
+   */
+  getTickets: protectedProcedure
+    .input(z.object({
+      channelId: z.string(),
+      status: z.enum(["OPEN", "ARCHIVED"]).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.analyseTicket.findMany({
+        where: {
+          channelId: input.channelId,
+          status: input.status ?? undefined,
+        },
+        include: {
+          author: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+          _count: { select: { messages: true } },
+        },
+        orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+      })
+    }),
+
+  /**
+   * Close (archive) a ticket — any member can close
+   */
+  closeTicket: protectedProcedure
+    .input(z.object({ ticketId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const ticket = await ctx.db.analyseTicket.findUnique({
+        where: { id: input.ticketId },
+      })
+      if (!ticket) throw new TRPCError({ code: "NOT_FOUND", message: "Ticket not found" })
+
+      const membership = await ctx.db.roomMember.findUnique({
+        where: { roomId_userId: { roomId: ticket.roomId, userId } },
+      })
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" })
+
+      if (ticket.status === "ARCHIVED") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Ticket already archived" })
+      }
+
+      return ctx.db.analyseTicket.update({
+        where: { id: input.ticketId },
+        data: { status: "ARCHIVED", closedAt: new Date() },
+      })
     }),
 })

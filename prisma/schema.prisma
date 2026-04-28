@@ -101,10 +101,11 @@ model User {
   agentFeedback      AgentFeedback[]
 
   // Room relations (Epic 6)
-  ownedRooms      Room[]        @relation("RoomOwner")
-  roomMemberships RoomMember[]  @relation("RoomMembership")
-  roomMessages    RoomMessage[] @relation("RoomMessages")
-  roomTickets     RoomTicket[]  @relation("RoomTickets")
+  ownedRooms      Room[]          @relation("RoomOwner")
+  roomMemberships RoomMember[]    @relation("RoomMembership")
+  roomMessages    RoomMessage[]   @relation("RoomMessages")
+  roomTickets     RoomTicket[]    @relation("RoomTickets")
+  analyseTickets  AnalyseTicket[] @relation("TicketAuthor")
 
   // Expert Program (Epic 10)
   expertApplication ExpertApplication?
@@ -483,9 +484,11 @@ model Room {
 
   settings Json @default("{\"membersCanInvite\":true,\"membersCanInvokeAgents\":true,\"dataOnlyMode\":false}")
 
-  members  RoomMember[]
-  messages RoomMessage[]
-  tickets  RoomTicket[]
+  members        RoomMember[]
+  messages       RoomMessage[]
+  tickets        RoomTicket[]
+  channels       RoomChannel[]
+  analyseTickets AnalyseTicket[]
 
   createdAt  DateTime  @default(now())
   archivedAt DateTime?
@@ -524,6 +527,12 @@ model RoomMessage {
   type    RoomMessageType @default(TEXT)
   content String          @db.Text
 
+  channelId String?
+  channel   RoomChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
+
+  ticketId  String?
+  ticket    AnalyseTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
   agentId   String?
   replyToId String?
   replyTo   RoomMessage?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: SetNull)
@@ -540,6 +549,8 @@ model RoomMessage {
 
   @@index([roomId, createdAt])
   @@index([roomId, isPinned])
+  @@index([channelId, createdAt])
+  @@index([ticketId, createdAt])
   @@index([userId])
   @@index([agentId])
 }
@@ -563,6 +574,43 @@ model RoomTicket {
   @@index([roomId])
   @@index([userId])
   @@index([status])
+}
+
+model RoomChannel {
+  id     String      @id @default(cuid())
+  roomId String
+  room   Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  type   ChannelType
+  slug   String
+  name   String
+
+  messages RoomMessage[]
+  tickets  AnalyseTicket[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([roomId, slug])
+  @@index([roomId])
+}
+
+model AnalyseTicket {
+  id        String       @id @default(cuid())
+  channelId String
+  channel   RoomChannel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  roomId    String
+  room      Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User         @relation("TicketAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  title     String
+  status    TicketStatus @default(OPEN)
+
+  messages RoomMessage[]
+
+  createdAt DateTime  @default(now())
+  closedAt  DateTime?
+
+  @@index([channelId, status])
+  @@index([roomId])
 }
 
 enum RoomVisibility {
@@ -592,6 +640,17 @@ enum RoomTicketStatus {
   ACTIVE
   WON
   LOST
+  ARCHIVED
+}
+
+enum ChannelType {
+  GENERAL
+  ANNONCE
+  ANALYSE
+}
+
+enum TicketStatus {
+  OPEN
   ARCHIVED
 }
 
