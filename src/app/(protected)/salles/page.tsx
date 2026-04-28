@@ -1,10 +1,5 @@
 "use client"
 
-/**
- * Salles Page
- * Story 6.3+: List of joined rooms with real data
- */
-
 import * as React from "react"
 import { api } from "~/trpc/react"
 import { Users, MessageSquare, Clock, Crown, Plus, Search, X } from "lucide-react"
@@ -15,12 +10,118 @@ import { Header } from "~/components/shared/Header"
 
 type ViewMode = "my-rooms" | "explore"
 
+// ── Create Room Modal ─────────────────────────────────────────
+function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const [name, setName] = React.useState("")
+  const [description, setDescription] = React.useState("")
+  const [visibility, setVisibility] = React.useState<"PUBLIC" | "PRIVATE" | "INVITE_ONLY">("PUBLIC")
+  const [error, setError] = React.useState<string | null>(null)
+
+  const createRoom = api.room.create.useMutation({
+    onSuccess: (room) => onCreated(room.id),
+    onError: (err) => setError(err.message),
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    createRoom.mutate({ name: name.trim(), description: description.trim() || undefined, visibility })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-bg-secondary border border-bg-tertiary rounded-t-2xl sm:rounded-2xl p-6 space-y-5 mx-0 sm:mx-4">
+        {/* Title */}
+        <div className="flex items-center justify-between">
+          <h2 className="font-display text-lg font-bold text-text-primary">Créer une salle</h2>
+          <button onClick={onClose} className="text-text-tertiary hover:text-text-primary transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Name */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-secondary">Nom de la salle *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ex: Ligue 1 Masters"
+              minLength={3}
+              maxLength={50}
+              required
+              className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-tertiary focus:border-accent-cyan focus:outline-none text-text-primary placeholder:text-text-tertiary transition-colors"
+            />
+            <p className="text-xs text-text-tertiary text-right">{name.length}/50</p>
+          </div>
+
+          {/* Description */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-secondary">Description <span className="text-text-tertiary">(optionnel)</span></label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Décrivez votre salle..."
+              maxLength={200}
+              rows={2}
+              className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-tertiary focus:border-accent-cyan focus:outline-none text-text-primary placeholder:text-text-tertiary transition-colors resize-none"
+            />
+          </div>
+
+          {/* Visibility */}
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium text-text-secondary">Visibilité</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["PUBLIC", "PRIVATE", "INVITE_ONLY"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setVisibility(v)}
+                  className={cn(
+                    "py-2 px-2 rounded-xl text-xs font-medium border transition-all",
+                    visibility === v
+                      ? "bg-accent-cyan/10 border-accent-cyan text-accent-cyan"
+                      : "bg-bg-primary border-bg-tertiary text-text-secondary hover:border-bg-tertiary/80"
+                  )}
+                >
+                  {v === "PUBLIC" ? "🌍 Publique" : v === "PRIVATE" ? "🔒 Privée" : "✉️ Invitation"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && (
+            <p className="text-sm text-accent-red bg-accent-red/10 border border-accent-red/20 rounded-lg px-4 py-2">{error}</p>
+          )}
+
+          <button
+            type="submit"
+            disabled={createRoom.isPending || name.trim().length < 3}
+            className="w-full py-3 bg-accent-cyan text-bg-primary rounded-xl font-semibold text-sm disabled:opacity-50 transition-opacity min-h-11"
+          >
+            {createRoom.isPending ? "Création..." : "Créer la salle"}
+          </button>
+        </form>
+      </div>
+    </div>
+  )
+}
+
 export default function SallesPage() {
   const router = useRouter()
   const [viewMode, setViewMode] = React.useState<ViewMode>("my-rooms")
   const [searchQuery, setSearchQuery] = React.useState("")
+  const [showCreate, setShowCreate] = React.useState(false)
 
-  const { data: rooms, isLoading } = api.room.getMyRooms.useQuery()
+  const { data: rooms, isLoading, refetch } = api.room.getMyRooms.useQuery()
+
+  const handleCreated = (id: string) => {
+    setShowCreate(false)
+    void refetch()
+    router.push(`/salles/${id}`)
+  }
 
   if (isLoading) {
     return (
@@ -33,15 +134,12 @@ export default function SallesPage() {
   if (!rooms || rooms.length === 0) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
-        {/* Header */}
         <header className="sticky top-0 z-20 bg-bg-primary border-b border-bg-tertiary">
           <div className="flex items-center justify-between px-4 py-3">
             <h1 className="font-display text-xl font-bold text-text-primary">Salles</h1>
             <button
-              className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-[44px] flex items-center gap-2"
-              onClick={() => {
-                alert("Fonctionnalité Premium - Story 6.4")
-              }}
+              className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-11 flex items-center gap-2"
+              onClick={() => setShowCreate(true)}
             >
               <Plus className="w-4 h-4" />
               Créer
@@ -49,15 +147,22 @@ export default function SallesPage() {
           </div>
         </header>
 
-        {/* Empty State */}
         <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
           <div className="text-6xl">💬</div>
           <h2 className="font-display text-xl text-text-primary">Aucune salle</h2>
           <p className="text-text-tertiary text-center max-w-md">
-            Rejoignez une salle officielle depuis un match ou créez votre propre salle privée
+            Rejoignez une salle officielle depuis un match ou créez votre propre salle
           </p>
+          <button
+            onClick={() => setShowCreate(true)}
+            className="px-6 py-3 bg-accent-cyan text-bg-primary rounded-xl font-semibold text-sm min-h-11 flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Créer ma première salle
+          </button>
         </div>
 
+        {showCreate && <CreateRoomModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}
         <DashboardNav />
       </div>
     )
@@ -74,10 +179,8 @@ export default function SallesPage() {
             <h1 className="font-display text-xl font-bold text-text-primary">Salles</h1>
             {viewMode === "my-rooms" && (
               <button
-                className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-[44px] flex items-center gap-2"
-                onClick={() => {
-                  alert("Fonctionnalité Premium - Story 6.4")
-                }}
+                className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-11 flex items-center gap-2"
+                onClick={() => setShowCreate(true)}
               >
                 <Plus className="w-4 h-4" />
                 Créer
@@ -236,6 +339,7 @@ export default function SallesPage() {
         )}
       </main>
 
+      {showCreate && <CreateRoomModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}
       <DashboardNav />
     </div>
   )

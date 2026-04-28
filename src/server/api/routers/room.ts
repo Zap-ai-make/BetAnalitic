@@ -271,19 +271,7 @@ export const roomRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.session.user.id
 
-      // Check if user is Premium/Expert
-      const user = await ctx.db.user.findUnique({
-        where: { id: userId },
-      })
-
-      if (user?.subscriptionTier === "FREE") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Premium subscription required to create private rooms",
-        })
-      }
-
-      // Check room limit (max 5 for Premium)
+      // Check room limit (max 5 per user)
       const ownedRooms = await ctx.db.room.count({
         where: {
           ownerId: userId,
