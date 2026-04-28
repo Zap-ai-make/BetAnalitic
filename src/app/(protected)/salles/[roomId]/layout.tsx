@@ -7,11 +7,7 @@ import { api } from "~/trpc/react"
 import { useSession } from "next-auth/react"
 import { Hash, ArrowLeft, Settings, ChevronLeft } from "lucide-react"
 import { cn } from "~/lib/utils"
-
-// ── Context so channel pages can trigger "go back to channels" on mobile ───
-interface RoomNavCtx { goToChannels: () => void }
-export const RoomNavigationContext = React.createContext<RoomNavCtx>({ goToChannels: () => {} })
-export function useRoomNavigation() { return React.useContext(RoomNavigationContext) }
+import { RoomNavigationContext } from "./room-nav-context"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Channel = {
@@ -192,7 +188,7 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
     }
   }, [pathname])
 
-  const navCtx = React.useMemo<RoomNavCtx>(
+  const navCtx = React.useMemo(
     () => ({ goToChannels: () => setMobilePanel("channels") }),
     []
   )
