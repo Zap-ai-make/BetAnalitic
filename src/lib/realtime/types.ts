@@ -22,7 +22,7 @@ export interface RealtimeMessage {
   id: string
   channelId: string
   userId: string
-  type: "text" | "agent" | "system" | "ROOM_MESSAGE" | "LIVE_UPDATE"
+  type: "text" | "agent" | "system" | "ROOM_MESSAGE" | "LIVE_UPDATE" | "TYPING"
   content?: string
   payload?: unknown
   metadata?: Record<string, unknown>

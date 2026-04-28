@@ -503,8 +503,9 @@ model RoomMember {
   userId String
   user   User   @relation("RoomMembership", fields: [userId], references: [id], onDelete: Cascade)
 
-  role     RoomRole @default(MEMBER)
-  joinedAt DateTime @default(now())
+  role       RoomRole  @default(MEMBER)
+  joinedAt   DateTime  @default(now())
+  lastReadAt DateTime?
 
   @@id([roomId, userId])
   @@index([userId])
@@ -530,12 +531,15 @@ model RoomMessage {
 
   reactions Json?
   metadata  Json? // Story 6.10: Shared tickets, polls, etc.
+  mentions  String[]
+  isPinned  Boolean @default(false)
 
   createdAt DateTime  @default(now())
   editedAt  DateTime?
   isDeleted Boolean   @default(false)
 
   @@index([roomId, createdAt])
+  @@index([roomId, isPinned])
   @@index([userId])
   @@index([agentId])
 }

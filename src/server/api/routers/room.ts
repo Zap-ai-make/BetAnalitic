@@ -186,6 +186,8 @@ export const roomRouter = createTRPCRouter({
   getById: protectedProcedure
     .input(z.object({ roomId: z.string() }))
     .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
       const room = await ctx.db.room.findUnique({
         where: { id: input.roomId },
         include: {
@@ -203,6 +205,10 @@ export const roomRouter = createTRPCRouter({
               awayTeam: true,
             },
           },
+          members: {
+            where: { userId },
+            select: { role: true },
+          },
           _count: {
             select: {
               members: true,
@@ -213,16 +219,21 @@ export const roomRouter = createTRPCRouter({
       })
 
       if (!room) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Room not found",
-        })
+        throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" })
       }
 
+      const isMember = room.members.length > 0
+      if (room.visibility !== "PUBLIC" && !isMember) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Room is private" })
+      }
+
+      const { members, _count, ...roomData } = room
       return {
-        ...room,
-        memberCount: room._count.members,
-        messageCount: room._count.messages,
+        ...roomData,
+        memberCount: _count.members,
+        messageCount: _count.messages,
+        isMember,
+        myRole: members[0]?.role ?? null,
       }
     }),
 
@@ -568,7 +579,7 @@ export const roomRouter = createTRPCRouter({
     }),
 
   /**
-   * Story 6.8: Get room messages
+   * Story 6.8: Get room messages (membership-gated for private rooms)
    */
   getMessages: protectedProcedure
     .input(
@@ -579,6 +590,22 @@ export const roomRouter = createTRPCRouter({
       })
     )
     .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      // Verify membership for non-public rooms
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        select: { visibility: true },
+      })
+      if (room?.visibility !== "PUBLIC") {
+        const membership = await ctx.db.roomMember.findUnique({
+          where: { roomId_userId: { roomId: input.roomId, userId } },
+        })
+        if (!membership) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" })
+        }
+      }
+
       const messages = await ctx.db.roomMessage.findMany({
         where: {
           roomId: input.roomId,
@@ -617,6 +644,8 @@ export const roomRouter = createTRPCRouter({
           agentId: m.agentId,
           replyToId: m.replyToId,
           reactions: m.reactions,
+          mentions: m.mentions,
+          isPinned: m.isPinned,
           createdAt: m.createdAt,
           editedAt: m.editedAt,
         })),
@@ -642,20 +671,32 @@ export const roomRouter = createTRPCRouter({
       const userId = ctx.session.user.id
 
       // Check if user is member of room
-      const membership = await ctx.db.roomMember.findUnique({
-        where: {
-          roomId_userId: {
-            roomId: input.roomId,
-            userId,
-          },
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        include: {
+          members: { where: { userId } },
         },
       })
 
-      if (!membership) {
+      if (!room) throw new TRPCError({ code: "NOT_FOUND", message: "Room not found" })
+      if (room.archivedAt) throw new TRPCError({ code: "FORBIDDEN", message: "Room is archived" })
+      if (!room.members.length) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You must be a member of this room to send messages",
         })
+      }
+
+      // Parse @mentions from content
+      const mentionMatches = [...input.content.matchAll(/@(\w+)/g)]
+      const mentionedUsernames = mentionMatches.map((m) => m[1]!).filter(Boolean)
+      const mentionedUserIds: string[] = []
+      if (mentionedUsernames.length > 0) {
+        const mentionedUsers = await ctx.db.user.findMany({
+          where: { username: { in: mentionedUsernames } },
+          select: { id: true },
+        })
+        mentionedUserIds.push(...mentionedUsers.map((u) => u.id))
       }
 
       // Create message
@@ -667,6 +708,7 @@ export const roomRouter = createTRPCRouter({
           type: input.type,
           agentId: input.agentId,
           replyToId: input.replyToId,
+          mentions: mentionedUserIds,
           metadata: input.ticketId ? { ticketId: input.ticketId } : undefined,
         },
         include: {
@@ -692,7 +734,10 @@ export const roomRouter = createTRPCRouter({
         agentId: message.agentId,
         replyToId: message.replyToId,
         reactions: message.reactions,
+        mentions: message.mentions,
+        isPinned: message.isPinned,
         createdAt: message.createdAt,
+        editedAt: message.editedAt,
       }
     }),
 
@@ -860,6 +905,150 @@ export const roomRouter = createTRPCRouter({
     }),
 
   /**
+   * Edit a message (author only)
+   */
+  editMessage: protectedProcedure
+    .input(z.object({ messageId: z.string(), content: z.string().min(1).max(2000) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const message = await ctx.db.roomMessage.findUnique({ where: { id: input.messageId } })
+      if (!message) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" })
+      if (message.userId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Only the author can edit" })
+      if (message.isDeleted) throw new TRPCError({ code: "BAD_REQUEST", message: "Cannot edit deleted message" })
+
+      const mentionMatches = [...input.content.matchAll(/@(\w+)/g)]
+      const mentionedUsernames = mentionMatches.map((m) => m[1]!).filter(Boolean)
+      const mentionedUserIds: string[] = []
+      if (mentionedUsernames.length > 0) {
+        const users = await ctx.db.user.findMany({
+          where: { username: { in: mentionedUsernames } },
+          select: { id: true },
+        })
+        mentionedUserIds.push(...users.map((u) => u.id))
+      }
+
+      const updated = await ctx.db.roomMessage.update({
+        where: { id: input.messageId },
+        data: { content: input.content, editedAt: new Date(), mentions: mentionedUserIds },
+      })
+
+      return { id: updated.id, content: updated.content, editedAt: updated.editedAt }
+    }),
+
+  /**
+   * Toggle reaction on a message (adds if absent, removes if present)
+   */
+  toggleReaction: protectedProcedure
+    .input(z.object({ messageId: z.string(), emoji: z.string().max(10) }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const message = await ctx.db.roomMessage.findUnique({ where: { id: input.messageId } })
+      if (!message || message.isDeleted) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" })
+
+      const reactions = (message.reactions as Record<string, string[]>) ?? {}
+      const existing = reactions[input.emoji] ?? []
+
+      if (existing.includes(userId)) {
+        reactions[input.emoji] = existing.filter((id) => id !== userId)
+        if (reactions[input.emoji]!.length === 0) delete reactions[input.emoji]
+      } else {
+        reactions[input.emoji] = [...existing, userId]
+      }
+
+      await ctx.db.roomMessage.update({ where: { id: input.messageId }, data: { reactions } })
+
+      return { messageId: input.messageId, reactions }
+    }),
+
+  /**
+   * Pin / unpin a message (owner or admin only)
+   */
+  pinMessage: protectedProcedure
+    .input(z.object({ messageId: z.string(), pin: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const message = await ctx.db.roomMessage.findUnique({
+        where: { id: input.messageId },
+        include: { room: { include: { members: { where: { userId } } } } },
+      })
+
+      if (!message) throw new TRPCError({ code: "NOT_FOUND", message: "Message not found" })
+
+      const myRole = message.room.members[0]?.role
+      if (message.room.ownerId !== userId && myRole !== "ADMIN") {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only owner/admin can pin messages" })
+      }
+
+      if (input.pin) {
+        // Unpin any existing pinned message first (one pinned at a time)
+        await ctx.db.roomMessage.updateMany({
+          where: { roomId: message.roomId, isPinned: true },
+          data: { isPinned: false },
+        })
+      }
+
+      await ctx.db.roomMessage.update({ where: { id: input.messageId }, data: { isPinned: input.pin } })
+
+      return { success: true, messageId: input.messageId, isPinned: input.pin }
+    }),
+
+  /**
+   * Search messages in a room
+   */
+  searchMessages: protectedProcedure
+    .input(z.object({ roomId: z.string(), query: z.string().min(1).max(100), limit: z.number().min(1).max(50).default(20) }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const membership = await ctx.db.roomMember.findUnique({
+        where: { roomId_userId: { roomId: input.roomId, userId } },
+      })
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" })
+
+      const messages = await ctx.db.roomMessage.findMany({
+        where: {
+          roomId: input.roomId,
+          isDeleted: false,
+          content: { contains: input.query, mode: "insensitive" },
+        },
+        include: { user: { select: { id: true, username: true, displayName: true, avatarUrl: true } } },
+        orderBy: { createdAt: "desc" },
+        take: input.limit,
+      })
+
+      return messages.map((m) => ({
+        id: m.id,
+        userId: m.userId,
+        userName: m.user.displayName ?? m.user.username,
+        userAvatar: m.user.avatarUrl,
+        content: m.content,
+        createdAt: m.createdAt,
+      }))
+    }),
+
+  /**
+   * Get pinned message for a room
+   */
+  getPinnedMessage: protectedProcedure
+    .input(z.object({ roomId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const message = await ctx.db.roomMessage.findFirst({
+        where: { roomId: input.roomId, isPinned: true, isDeleted: false },
+        include: { user: { select: { displayName: true, username: true } } },
+      })
+      if (!message) return null
+      return {
+        id: message.id,
+        content: message.content,
+        userName: message.user.displayName ?? message.user.username,
+        createdAt: message.createdAt,
+      }
+    }),
+
+  /**
    * Story 6.13: Get room analytics
    */
   getAnalytics: protectedProcedure
@@ -980,13 +1169,16 @@ export const roomRouter = createTRPCRouter({
     }),
 
   /**
-   * Story 6.14: Mark room as read
+   * Story 6.14: Mark room as read (updates lastReadAt)
    */
   markAsRead: protectedProcedure
     .input(z.object({ roomId: z.string() }))
-    .mutation(async ({ ctx: _ctx, input: _input }) => {
-      // TODO: Add lastReadAt field to RoomMember model to track read status
-      // For now, just return success
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      await ctx.db.roomMember.update({
+        where: { roomId_userId: { roomId: input.roomId, userId } },
+        data: { lastReadAt: new Date() },
+      })
       return { success: true }
     }),
 
@@ -998,30 +1190,24 @@ export const roomRouter = createTRPCRouter({
 
     const memberships = await ctx.db.roomMember.findMany({
       where: { userId },
-      include: {
-        room: {
-          include: {
-            messages: {
-              where: {
-                isDeleted: false,
-                userId: { not: userId }, // Don't count own messages
-              },
-              orderBy: { createdAt: "desc" },
-              take: 1,
-            },
-          },
-        },
-      },
+      select: { roomId: true, lastReadAt: true },
     })
 
-    // TODO: Add lastReadAt field to RoomMember to properly track unread messages
-    // For now, return 0 for all unread counts
-    const unreadCounts = memberships.map((m) => ({
-      roomId: m.roomId,
-      unread: 0,
-    }))
+    const counts = await Promise.all(
+      memberships.map(async (m) => {
+        const unread = await ctx.db.roomMessage.count({
+          where: {
+            roomId: m.roomId,
+            isDeleted: false,
+            userId: { not: userId },
+            createdAt: m.lastReadAt ? { gt: m.lastReadAt } : undefined,
+          },
+        })
+        return { roomId: m.roomId, unread }
+      })
+    )
 
-    return unreadCounts
+    return counts
   }),
 
   /**
