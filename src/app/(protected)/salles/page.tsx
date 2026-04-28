@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { api } from "~/trpc/react"
-import { Users, MessageSquare, Clock, Crown, Plus, Search, X } from "lucide-react"
+import { Users, Clock, Crown, Plus, Search, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
 import { DashboardNav } from "~/components/shared/DashboardNav"
@@ -117,8 +117,8 @@ export default function SallesPage() {
 
   const { data: rooms, isLoading, refetch } = api.room.getMyRooms.useQuery()
   const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, { refetchInterval: 5000 })
-  const unreadMap = React.useMemo(
-    () => new Map((unreadCounts ?? []).map((c) => [c.roomId, c.unread])),
+  const ticketMap = React.useMemo(
+    () => new Map((unreadCounts ?? []).map((c) => [c.roomId, c.openTickets])),
     [unreadCounts]
   )
 
@@ -231,7 +231,7 @@ export default function SallesPage() {
             </div>
           ) : (
             (rooms ?? []).map((room) => {
-              const unread = unreadMap.get(room.id) ?? 0
+              const openTickets = ticketMap.get(room.id) ?? 0
               return (
           <div
             key={room.id}
@@ -239,7 +239,7 @@ export default function SallesPage() {
             className={cn(
               "bg-bg-secondary rounded-xl p-4 space-y-3",
               "border transition-colors cursor-pointer",
-              unread > 0 ? "border-accent-cyan/40 hover:border-accent-cyan" : "border-bg-tertiary hover:border-accent-cyan"
+              openTickets > 0 ? "border-accent-cyan/40 hover:border-accent-cyan" : "border-bg-tertiary hover:border-accent-cyan"
             )}
           >
             {/* Header */}
@@ -257,15 +257,15 @@ export default function SallesPage() {
                   )}
                 </div>
                 {room.description && (
-                  <p className="text-sm text-text-tertiary line-clamp-2 mt-1">
+                  <p className="text-sm text-text-tertiary truncate mt-1">
                     {room.description}
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                {unread > 0 && (
-                  <span className="min-w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5 animate-pulse">
-                    {unread > 99 ? "99+" : unread}
+                {openTickets > 0 && (
+                  <span className="min-w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5">
+                    {openTickets > 99 ? "99+" : openTickets}
                   </span>
                 )}
                 {room.myRole === "OWNER" && (
@@ -279,10 +279,6 @@ export default function SallesPage() {
               <div className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
                 <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <MessageSquare className="w-4 h-4" />
-                <span>{room.messageCount} message{room.messageCount > 1 ? "s" : ""}</span>
               </div>
               {room.match && (
                 <div className="flex items-center gap-1.5">
@@ -468,7 +464,7 @@ function RoomDiscoveryCard({
             )}
           </div>
           {room.description && (
-            <p className="text-sm text-text-tertiary line-clamp-2 mt-1">{room.description}</p>
+            <p className="text-sm text-text-tertiary truncate mt-1">{room.description}</p>
           )}
           <p className="text-xs text-text-tertiary mt-1">
             Créé par {room.owner.displayName ?? room.owner.username}
@@ -482,10 +478,6 @@ function RoomDiscoveryCard({
           <div className="flex items-center gap-1.5">
             <Users className="w-4 h-4" />
             <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <MessageSquare className="w-4 h-4" />
-            <span>{room.messageCount} msg</span>
           </div>
           <span className={cn("text-xs font-medium", vis.color)}>
             {vis.emoji} {vis.label}

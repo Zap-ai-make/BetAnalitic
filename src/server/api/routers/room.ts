@@ -1253,15 +1253,10 @@ export const roomRouter = createTRPCRouter({
 
     const counts = await Promise.all(
       memberships.map(async (m) => {
-        const unread = await ctx.db.roomMessage.count({
-          where: {
-            roomId: m.roomId,
-            isDeleted: false,
-            userId: { not: userId },
-            createdAt: m.lastReadAt ? { gt: m.lastReadAt } : undefined,
-          },
+        const openTickets = await ctx.db.analyseTicket.count({
+          where: { roomId: m.roomId, status: "OPEN" },
         })
-        return { roomId: m.roomId, unread }
+        return { roomId: m.roomId, openTickets }
       })
     )
 
