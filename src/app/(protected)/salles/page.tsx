@@ -131,43 +131,6 @@ export default function SallesPage() {
     )
   }
 
-  if (!rooms || rooms.length === 0) {
-    return (
-      <div className="min-h-screen bg-bg-primary flex flex-col">
-        <header className="sticky top-0 z-20 bg-bg-primary border-b border-bg-tertiary">
-          <div className="flex items-center justify-between px-4 py-3">
-            <h1 className="font-display text-xl font-bold text-text-primary">Salles</h1>
-            <button
-              className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-11 flex items-center gap-2"
-              onClick={() => setShowCreate(true)}
-            >
-              <Plus className="w-4 h-4" />
-              Créer
-            </button>
-          </div>
-        </header>
-
-        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
-          <div className="text-6xl">💬</div>
-          <h2 className="font-display text-xl text-text-primary">Aucune salle</h2>
-          <p className="text-text-tertiary text-center max-w-md">
-            Rejoignez une salle officielle depuis un match ou créez votre propre salle
-          </p>
-          <button
-            onClick={() => setShowCreate(true)}
-            className="px-6 py-3 bg-accent-cyan text-bg-primary rounded-xl font-semibold text-sm min-h-11 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Créer ma première salle
-          </button>
-        </div>
-
-        {showCreate && <CreateRoomModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}
-        <DashboardNav />
-      </div>
-    )
-  }
-
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
@@ -247,7 +210,7 @@ export default function SallesPage() {
       <main className="flex-1 p-4 pb-24 space-y-3 overflow-y-auto">
         {viewMode === "my-rooms" ? (
           /* My Rooms List */
-          rooms.length === 0 ? (
+          (rooms ?? []).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <div className="text-6xl">💬</div>
               <h2 className="font-display text-xl text-text-primary">Aucune salle</h2>
@@ -262,7 +225,7 @@ export default function SallesPage() {
               </button>
             </div>
           ) : (
-            rooms.map((room) => (
+            (rooms ?? []).map((room) => (
           <div
             key={room.id}
             onClick={() => router.push(`/salles/${room.id}`)}
