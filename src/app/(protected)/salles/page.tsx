@@ -29,9 +29,9 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md bg-bg-secondary border border-bg-tertiary rounded-t-2xl sm:rounded-2xl p-6 space-y-5 mx-0 sm:mx-4">
+      <div className="relative w-full max-w-md bg-bg-secondary border border-bg-tertiary rounded-2xl p-6 space-y-5 max-h-[85vh] overflow-y-auto">
         {/* Title */}
         <div className="flex items-center justify-between">
           <h2 className="font-display text-lg font-bold text-text-primary">Créer une salle</h2>
