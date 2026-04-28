@@ -535,12 +535,17 @@ export default function RoomChatPage() {
 
   // Queries
   const { data: room, isLoading: roomLoading } = api.room.getById.useQuery({ roomId })
-  const { data: messagesData, refetch: refetchMessages, fetchNextPage, hasNextPage } =
-    api.room.getMessages.useQuery({ roomId, limit: 40 }) as {
+  const { data: messagesData, refetch: refetchMessages } =
+    api.room.getMessages.useQuery(
+      { roomId, limit: 60 },
+      {
+        // Poll every 2 s for near-real-time updates (MockProvider ne communique pas entre onglets)
+        refetchInterval: 2000,
+        refetchIntervalInBackground: false,
+      }
+    ) as {
       data: { messages: ChatMessage[]; nextCursor?: string } | undefined
       refetch: () => void
-      fetchNextPage?: () => void
-      hasNextPage?: boolean
     }
   const { data: members = [] } = api.room.getMembers.useQuery({ roomId }, { enabled: !!room?.isMember })
   const { data: pinnedMessage, refetch: refetchPinned } = api.room.getPinnedMessage.useQuery({ roomId }, { enabled: !!room?.isMember })
@@ -578,14 +583,16 @@ export default function RoomChatPage() {
   const handlePresenceUpdate = React.useCallback((pm: PresenceData[]) => setOnlineMembers(pm), [])
 
   const handleRealtimeMessage = React.useCallback((msg: RealtimeMessage) => {
-    if (msg.type === "ROOM_MESSAGE" && msg.payload) {
-      setOptimisticMessages((prev) => [...prev, msg.payload as ChatMessage])
+    // Ne pas ajouter en optimistic les messages des autres (le polling le fait)
+    // On déclenche juste un refetch immédiat si c'est un message d'un autre
+    if (msg.type === "ROOM_MESSAGE" && msg.userId !== currentUserId) {
+      void refetchMessages()
     }
     if (msg.type === "TYPING" && msg.userId !== currentUserId) {
       setTypingUsers((prev) => prev.includes(msg.userId) ? prev : [...prev, msg.userId])
       setTimeout(() => setTypingUsers((prev) => prev.filter((id) => id !== msg.userId)), 3000)
     }
-  }, [currentUserId])
+  }, [currentUserId, refetchMessages])
 
   useChannel(`room:${roomId}`, handleRealtimeMessage, handlePresenceUpdate)
 
@@ -597,10 +604,13 @@ export default function RoomChatPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId, room?.isMember])
 
-  // Scroll to bottom on new messages
+  // Merge DB messages + optimistic (en déduplicant par id)
   const allMessages = React.useMemo<ChatMessage[]>(() => {
     const db = (messagesData?.messages ?? []) as ChatMessage[]
-    return [...db, ...optimisticMessages]
+    const dbIds = new Set(db.map((m) => m.id))
+    // On garde les optimistic seulement si leur id n'est pas encore en DB (évite les doublons)
+    const pending = optimisticMessages.filter((m) => !dbIds.has(m.id))
+    return [...db, ...pending]
   }, [messagesData?.messages, optimisticMessages])
 
   React.useEffect(() => {
