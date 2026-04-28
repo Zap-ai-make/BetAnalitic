@@ -350,21 +350,28 @@ export default function SallesPage() {
  */
 function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
   const router = useRouter()
-  const { data: publicRooms, isLoading } = api.room.getPublicRooms.useQuery()
+  const { data: allRooms, isLoading, refetch } = api.room.getPublicRooms.useQuery()
+
+  const joinRoom = api.room.joinViaInvite.useMutation({
+    onSuccess: (room) => {
+      void refetch()
+      router.push(`/salles/${room.id}`)
+    },
+  })
 
   const filteredRooms = React.useMemo(() => {
-    if (!publicRooms) return []
-    if (!searchQuery.trim()) return publicRooms
+    if (!allRooms) return []
+    if (!searchQuery.trim()) return allRooms
 
     const query = searchQuery.toLowerCase()
-    return publicRooms.filter(
+    return allRooms.filter(
       (r) =>
         r.name.toLowerCase().includes(query) ||
         (r.description?.toLowerCase().includes(query) ?? false) ||
         (r.owner.displayName?.toLowerCase().includes(query) ?? false) ||
         r.owner.username.toLowerCase().includes(query)
     )
-  }, [publicRooms, searchQuery])
+  }, [allRooms, searchQuery])
 
   if (isLoading) {
     return (
@@ -381,43 +388,46 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <div className="text-6xl">🔍</div>
         <h2 className="font-display text-xl text-text-primary">
-          {searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucune salle publique"}
+          {searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucune salle disponible"}
         </h2>
         <p className="text-text-tertiary text-center max-w-md">
-          {searchQuery
-            ? "Essayez un autre terme de recherche"
-            : "Les salles publiques apparaîtront ici"}
+          {searchQuery ? "Essayez un autre terme de recherche" : "Les salles apparaîtront ici"}
         </p>
       </div>
     )
   }
 
-  // Group rooms by type
   const officialRooms = filteredRooms.filter((r) => r.type === "OFFICIAL")
-  const privateRooms = filteredRooms.filter((r) => r.type === "PRIVATE")
+  const communityRooms = filteredRooms.filter((r) => r.type !== "OFFICIAL")
 
   return (
     <div className="space-y-6">
-      {/* Trending/Official Rooms */}
       {officialRooms.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-display font-semibold text-text-primary">
-            Salles Officielles
-          </h2>
+          <h2 className="font-display font-semibold text-text-primary">Salles Officielles</h2>
           {officialRooms.map((room) => (
-            <RoomDiscoveryCard key={room.id} room={room} onClick={() => router.push(`/salles/${room.id}`)} />
+            <RoomDiscoveryCard
+              key={room.id}
+              room={room}
+              onAccess={() => router.push(`/salles/${room.id}`)}
+              onJoin={() => joinRoom.mutate({ roomId: room.id })}
+              isJoining={joinRoom.isPending}
+            />
           ))}
         </div>
       )}
 
-      {/* Community Rooms */}
-      {privateRooms.length > 0 && (
+      {communityRooms.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-display font-semibold text-text-primary">
-            Salles Communautaires
-          </h2>
-          {privateRooms.map((room) => (
-            <RoomDiscoveryCard key={room.id} room={room} onClick={() => router.push(`/salles/${room.id}`)} />
+          <h2 className="font-display font-semibold text-text-primary">Salles Communautaires</h2>
+          {communityRooms.map((room) => (
+            <RoomDiscoveryCard
+              key={room.id}
+              room={room}
+              onAccess={() => router.push(`/salles/${room.id}`)}
+              onJoin={() => joinRoom.mutate({ roomId: room.id })}
+              isJoining={joinRoom.isPending}
+            />
           ))}
         </div>
       )}
@@ -425,30 +435,45 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
   )
 }
 
+const VISIBILITY_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
+  PUBLIC: { emoji: "🌍", label: "Publique", color: "text-green-400" },
+  PRIVATE: { emoji: "🔒", label: "Privée", color: "text-text-tertiary" },
+  INVITE_ONLY: { emoji: "✉️", label: "Invitation", color: "text-accent-gold" },
+}
+
 function RoomDiscoveryCard({
   room,
-  onClick,
+  onAccess,
+  onJoin,
+  isJoining,
 }: {
   room: {
     id: string
     name: string
     description: string | null
     type: string
+    visibility: string
     badge: string | null
     memberCount: number
     messageCount: number
+    isMember: boolean
     owner: { displayName: string | null; username: string }
   }
-  onClick: () => void
+  onAccess: () => void
+  onJoin: () => void
+  isJoining: boolean
 }) {
+  const vis = VISIBILITY_LABELS[room.visibility] ?? VISIBILITY_LABELS.PUBLIC!
+  const isPublic = room.visibility === "PUBLIC"
+
   return (
     <div
-      onClick={onClick}
       className={cn(
         "bg-bg-secondary rounded-xl p-4 space-y-3",
-        "border border-bg-tertiary",
-        "hover:border-accent-cyan transition-colors cursor-pointer"
+        "border border-bg-tertiary transition-colors",
+        (room.isMember || isPublic) && "hover:border-accent-cyan cursor-pointer"
       )}
+      onClick={room.isMember ? onAccess : undefined}
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -465,26 +490,48 @@ function RoomDiscoveryCard({
             )}
           </div>
           {room.description && (
-            <p className="text-sm text-text-tertiary line-clamp-2 mt-1">
-              {room.description}
-            </p>
+            <p className="text-sm text-text-tertiary line-clamp-2 mt-1">{room.description}</p>
           )}
-          <p className="text-xs text-text-tertiary mt-2">
+          <p className="text-xs text-text-tertiary mt-1">
             Créé par {room.owner.displayName ?? room.owner.username}
           </p>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex items-center gap-4 text-xs text-text-secondary">
-        <div className="flex items-center gap-1.5">
-          <Users className="w-4 h-4" />
-          <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
+      {/* Footer: stats + action */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-4 text-xs text-text-secondary">
+          <div className="flex items-center gap-1.5">
+            <Users className="w-4 h-4" />
+            <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <MessageSquare className="w-4 h-4" />
+            <span>{room.messageCount} msg</span>
+          </div>
+          <span className={cn("text-xs font-medium", vis.color)}>
+            {vis.emoji} {vis.label}
+          </span>
         </div>
-        <div className="flex items-center gap-1.5">
-          <MessageSquare className="w-4 h-4" />
-          <span>{room.messageCount} message{room.messageCount > 1 ? "s" : ""}</span>
-        </div>
+
+        {room.isMember ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onAccess() }}
+            className="px-3 py-1.5 bg-accent-cyan/10 text-accent-cyan text-xs font-semibold rounded-lg hover:bg-accent-cyan/20 transition-colors shrink-0"
+          >
+            Accéder →
+          </button>
+        ) : isPublic ? (
+          <button
+            onClick={(e) => { e.stopPropagation(); onJoin() }}
+            disabled={isJoining}
+            className="px-3 py-1.5 bg-accent-cyan text-bg-primary text-xs font-semibold rounded-lg hover:bg-accent-cyan/90 transition-colors shrink-0 disabled:opacity-50"
+          >
+            {isJoining ? "..." : "Rejoindre"}
+          </button>
+        ) : (
+          <span className="text-xs text-text-tertiary shrink-0">🔒 Sur invitation</span>
+        )}
       </div>
     </div>
   )
