@@ -595,6 +595,7 @@ export const roomRouter = createTRPCRouter({
         isAgent: false,
         agentEmoji: null as string | null,
         agentColor: null as string | null,
+        agentDescription: null as string | null,
       }))
 
       const agentMembers = getEnabledAgents().map((agent) => ({
@@ -607,6 +608,7 @@ export const roomRouter = createTRPCRouter({
         isAgent: true,
         agentEmoji: agent.emoji,
         agentColor: agent.color,
+        agentDescription: agent.description as string | null,
       }))
 
       return [...humanMembers, ...agentMembers]

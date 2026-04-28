@@ -6,13 +6,13 @@ import { useSession } from "next-auth/react"
 import { api } from "~/trpc/react"
 import {
   Send, Pin, Reply, Pencil, Trash2, X, Smile, Lock,
-  Ticket, Plus, ChevronLeft, Archive, Hash, MessageSquare, Bot,
+  Ticket, Plus, ChevronLeft, Archive, Hash, MessageSquare,
 } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { useChannel, usePublish } from "~/lib/realtime/context"
 import type { RealtimeMessage } from "~/lib/realtime/types"
 import { getEnabledAgents } from "~/lib/agents/config"
-import { useAgentMention } from "~/hooks/useAgentMention"
+import { useMention } from "~/hooks/useAgentMention"
 import type { AgentMetadata } from "~/lib/agents/types"
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -37,6 +37,16 @@ interface ChatMessage {
   editedAt: Date | null
 }
 
+type MentionCandidate = {
+  id: string
+  name: string
+  avatar: string | null
+  emoji: string | null
+  color: string | null
+  description: string | null
+  isAgent: boolean
+}
+
 // ── Agent mention detection ────────────────────────────────────────────────
 function extractAgentMention(text: string): { agent: AgentMetadata; query: string } | null {
   for (const agent of ENABLED_AGENTS) {
@@ -44,7 +54,6 @@ function extractAgentMention(text: string): { agent: AgentMetadata; query: strin
     if (text.toLowerCase().startsWith(prefix.toLowerCase())) {
       return { agent, query: text.slice(prefix.length).trim() }
     }
-    // Exact @name with no query → use default prompt
     if (text.trim().toLowerCase() === `@${agent.name}`.toLowerCase()) {
       return { agent, query: "Donne-moi ton analyse sur ce sujet." }
     }
@@ -99,11 +108,7 @@ function AgentMessageCard({ msg }: { msg: ChatMessage }) {
   return (
     <div className="px-4 py-2">
       <div className="rounded-xl border overflow-hidden" style={{ borderColor: `${color}50` }}>
-        {/* Agent header */}
-        <div
-          className="flex items-center gap-2 px-3 py-2 text-xs font-semibold"
-          style={{ background: `${color}18`, color }}
-        >
+        <div className="flex items-center gap-2 px-3 py-2 text-xs font-semibold" style={{ background: `${color}18`, color }}>
           <span className="text-base">{agent?.emoji ?? "🤖"}</span>
           <span>{agent?.name ?? msg.agentId}</span>
           <span className="text-[10px] opacity-60 ml-1">· {agent?.category}</span>
@@ -111,7 +116,6 @@ function AgentMessageCard({ msg }: { msg: ChatMessage }) {
             {new Date(msg.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
           </span>
         </div>
-        {/* Response */}
         <div className="px-3 py-2.5 text-sm text-text-primary bg-bg-secondary whitespace-pre-wrap leading-relaxed">
           {msg.content}
         </div>
@@ -155,7 +159,6 @@ function MessageItem({ msg, isOwn, currentUserId, canModerate, onReply, onReact,
           }
         </div>
       )}
-
       <div className={cn("flex flex-col max-w-[75%]", isOwn ? "items-end" : "items-start")}>
         {!isOwn && (
           <div className="flex items-baseline gap-2 mb-0.5 px-1">
@@ -181,7 +184,6 @@ function MessageItem({ msg, isOwn, currentUserId, canModerate, onReply, onReact,
           <ReactionBar reactions={msg.reactions as Record<string, string[]>} currentUserId={currentUserId} onToggle={(e) => onReact(msg.id, e)} />
         )}
       </div>
-
       {showActions && (
         <div className={cn(
           "absolute top-0 flex items-center gap-0.5 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-lg px-1 py-0.5 z-10",
@@ -205,57 +207,88 @@ function MessageItem({ msg, isOwn, currentUserId, canModerate, onReply, onReact,
   )
 }
 
-// ── @Mention Autocomplete Dropdown ─────────────────────────────────────────
-function MentionDropdown({ agents, selectedIndex, onSelect }: {
-  agents: AgentMetadata[]; selectedIndex: number; onSelect: (a: AgentMetadata) => void
+// ── Mention Dropdown (agents + members unified) ────────────────────────────
+function MentionDropdown({ items, selectedIndex, onSelect }: {
+  items: MentionCandidate[]; selectedIndex: number; onSelect: (c: MentionCandidate) => void
 }) {
-  if (!agents.length) return null
+  if (!items.length) return null
   return (
     <div className="absolute bottom-full left-0 right-0 mb-1 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-2xl overflow-hidden z-50 max-h-64 overflow-y-auto">
       <div className="px-3 py-1.5 border-b border-bg-tertiary">
-        <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">Agents disponibles</p>
+        <p className="text-[10px] font-semibold text-text-tertiary uppercase tracking-wider">Membres & Agents</p>
       </div>
-      {agents.map((agent, i) => (
+      {items.map((item, i) => (
         <button
-          key={agent.id}
-          onClick={() => onSelect(agent)}
+          key={item.id}
+          onClick={() => onSelect(item)}
           className={cn(
             "w-full flex items-center gap-3 px-3 py-2 text-left transition-colors",
             i === selectedIndex ? "bg-accent-cyan/10" : "hover:bg-bg-tertiary"
           )}
         >
-          <span className="text-lg shrink-0">{agent.emoji}</span>
+          {item.isAgent ? (
+            <span className="text-lg shrink-0">{item.emoji ?? "🤖"}</span>
+          ) : item.avatar ? (
+            <img src={item.avatar} alt={item.name} className="w-7 h-7 rounded-full object-cover shrink-0" />
+          ) : (
+            <div className="w-7 h-7 rounded-full bg-accent-cyan/20 flex items-center justify-center text-xs font-bold text-accent-cyan shrink-0">
+              {item.name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-text-primary">{agent.name}</p>
-            <p className="text-xs text-text-tertiary truncate">{agent.description}</p>
+            <p className="text-sm font-medium text-text-primary">{item.name}</p>
+            {item.isAgent && item.description && (
+              <p className="text-xs text-text-tertiary truncate">{item.description}</p>
+            )}
           </div>
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
-            style={{ background: `${agent.color}20`, color: agent.color }}>
-            {agent.category}
-          </span>
+          {item.isAgent && item.color && (
+            <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0"
+              style={{ background: `${item.color}20`, color: item.color }}>
+              Agent
+            </span>
+          )}
         </button>
       ))}
     </div>
   )
 }
 
-// ── Analyse Input (with @mention) ──────────────────────────────────────────
-function AnalyseInput({ onSend, disabled, disabledMsg, onTyping, isInvoking }: {
+// ── Unified Chat Input ─────────────────────────────────────────────────────
+function ChatInput({ roomId, onSend, disabled, disabledMsg, replyTo, onCancelReply, editValue, onCancelEdit, onTyping, isInvoking }: {
+  roomId: string
   onSend: (content: string) => Promise<void>
   disabled?: boolean
   disabledMsg?: string
+  replyTo?: ChatMessage | null
+  onCancelReply?: () => void
+  editValue?: string
+  onCancelEdit?: () => void
   onTyping?: () => void
   isInvoking?: boolean
 }) {
-  const [value, setValue] = React.useState("")
+  const [value, setValue] = React.useState(editValue ?? "")
   const [sending, setSending] = React.useState(false)
   const textareaRef = React.useRef<HTMLTextAreaElement>(null)
   const lastTypingRef = React.useRef(0)
-  const containerRef = React.useRef<HTMLDivElement>(null)
 
-  const { isOpen, filteredAgents, selectedIndex, handleKeyDown, handleInput, selectAgent, closeDropdown } =
-    useAgentMention((agent: AgentMetadata) => {
-      // Replace @...fragment with @AgentName
+  React.useEffect(() => { if (editValue !== undefined) setValue(editValue) }, [editValue])
+
+  const { data: members } = api.room.getMembers.useQuery({ roomId })
+  const candidates = React.useMemo<MentionCandidate[]>(
+    () => (members ?? []).map((m) => ({
+      id: m.userId,
+      name: m.userName,
+      avatar: m.userAvatar,
+      emoji: m.agentEmoji ?? null,
+      color: m.agentColor ?? null,
+      description: m.agentDescription ?? null,
+      isAgent: m.isAgent,
+    })),
+    [members]
+  )
+
+  const { isOpen, filteredItems, selectedIndex, handleKeyDown, handleInput, selectItem, closeDropdown } =
+    useMention<MentionCandidate>(candidates, (candidate) => {
       const el = textareaRef.current
       if (!el) return
       const text = value
@@ -263,11 +296,11 @@ function AnalyseInput({ onSend, disabled, disabledMsg, onTyping, isInvoking }: {
       const before = text.substring(0, cursor)
       const atIdx = before.lastIndexOf("@")
       if (atIdx === -1) return
-      const newText = text.substring(0, atIdx) + `@${agent.name} ` + text.substring(cursor)
+      const newText = text.substring(0, atIdx) + `@${candidate.name} ` + text.substring(cursor)
       setValue(newText)
       setTimeout(() => {
         el.focus()
-        const pos = atIdx + agent.name.length + 2
+        const pos = atIdx + candidate.name.length + 2
         el.setSelectionRange(pos, pos)
       }, 0)
     })
@@ -279,9 +312,7 @@ function AnalyseInput({ onSend, disabled, disabledMsg, onTyping, isInvoking }: {
     try {
       await onSend(trimmed)
       setValue("")
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto"
-      }
+      if (textareaRef.current) textareaRef.current.style.height = "auto"
     } finally {
       setSending(false)
     }
@@ -292,10 +323,7 @@ function AnalyseInput({ onSend, disabled, disabledMsg, onTyping, isInvoking }: {
     setValue(v)
     handleInput(v, e.target.selectionStart ?? v.length)
     const now = Date.now()
-    if (onTyping && now - lastTypingRef.current > 2000) {
-      lastTypingRef.current = now
-      onTyping()
-    }
+    if (onTyping && now - lastTypingRef.current > 2000) { lastTypingRef.current = now; onTyping() }
   }
 
   if (disabled) {
@@ -304,84 +332,6 @@ function AnalyseInput({ onSend, disabled, disabledMsg, onTyping, isInvoking }: {
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-bg-secondary border border-bg-tertiary text-text-tertiary text-sm">
           <Lock className="w-4 h-4 shrink-0" />
           {disabledMsg ?? "Lecture seule"}
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="px-4 py-3 border-t border-bg-tertiary shrink-0">
-      <div ref={containerRef} className="relative flex items-end gap-2">
-        {isOpen && (
-          <MentionDropdown agents={filteredAgents} selectedIndex={selectedIndex} onSelect={selectAgent} />
-        )}
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={(e) => {
-            if (isOpen) {
-              handleKeyDown(e)
-              if (["ArrowUp", "ArrowDown", "Tab"].includes(e.key)) return
-            }
-            if (e.key === "Escape" && isOpen) { closeDropdown(); return }
-            if (e.key === "Enter" && !e.shiftKey && !isOpen) {
-              e.preventDefault()
-              void handleSend()
-            }
-          }}
-          rows={1}
-          placeholder="Écrire un message… utilisez @ pour appeler un agent"
-          className="flex-1 resize-none bg-bg-secondary border border-bg-tertiary rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan/50 transition-colors max-h-32 overflow-y-auto"
-          onInput={(e) => {
-            const el = e.currentTarget
-            el.style.height = "auto"
-            el.style.height = Math.min(el.scrollHeight, 128) + "px"
-          }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!value.trim() || sending || isInvoking}
-          className="shrink-0 p-2.5 rounded-xl bg-accent-cyan text-bg-primary disabled:opacity-40 hover:bg-accent-cyan/80 transition-colors"
-        >
-          {isInvoking ? (
-            <div className="w-4 h-4 border-2 border-bg-primary border-t-transparent rounded-full animate-spin" />
-          ) : (
-            <Send className="w-4 h-4" />
-          )}
-        </button>
-      </div>
-      <p className="text-[10px] text-text-tertiary mt-1.5 px-1">
-        Tapez <strong>@</strong> pour appeler un agent · <strong>Shift+Entrée</strong> pour saut de ligne
-      </p>
-    </div>
-  )
-}
-
-// ── Regular Chat Input ─────────────────────────────────────────────────────
-function ChatInput({ onSend, disabled, disabledMsg, replyTo, onCancelReply, editValue, onCancelEdit, onTyping }: {
-  onSend: (content: string) => Promise<void>; disabled?: boolean; disabledMsg?: string
-  replyTo?: ChatMessage | null; onCancelReply?: () => void
-  editValue?: string; onCancelEdit?: () => void; onTyping?: () => void
-}) {
-  const [value, setValue] = React.useState(editValue ?? "")
-  const [sending, setSending] = React.useState(false)
-  const lastTypingRef = React.useRef(0)
-
-  React.useEffect(() => { if (editValue !== undefined) setValue(editValue) }, [editValue])
-
-  async function handleSend() {
-    const t = value.trim()
-    if (!t || sending || disabled) return
-    setSending(true)
-    try { await onSend(t); setValue("") } finally { setSending(false) }
-  }
-
-  if (disabled) {
-    return (
-      <div className="px-4 py-3 border-t border-bg-tertiary shrink-0">
-        <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-bg-secondary border border-bg-tertiary text-text-tertiary text-sm">
-          <Lock className="w-4 h-4 shrink-0" />{disabledMsg ?? "Lecture seule"}
         </div>
       </div>
     )
@@ -403,23 +353,37 @@ function ChatInput({ onSend, disabled, disabledMsg, replyTo, onCancelReply, edit
           <button onClick={onCancelEdit} className="text-text-tertiary hover:text-text-primary"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
-      <div className="flex items-end gap-2">
+      <div className="relative flex items-end gap-2">
+        {isOpen && filteredItems.length > 0 && (
+          <MentionDropdown items={filteredItems} selectedIndex={selectedIndex} onSelect={selectItem} />
+        )}
         <textarea
+          ref={textareaRef}
           value={value}
-          onChange={(e) => {
-            setValue(e.target.value)
-            const now = Date.now()
-            if (onTyping && now - lastTypingRef.current > 2000) { lastTypingRef.current = now; onTyping() }
+          onChange={handleChange}
+          onKeyDown={(e) => {
+            if (isOpen) {
+              handleKeyDown(e)
+              if (["ArrowUp", "ArrowDown", "Tab"].includes(e.key)) return
+            }
+            if (e.key === "Escape" && isOpen) { closeDropdown(); return }
+            if (e.key === "Enter" && !e.shiftKey && !isOpen) { e.preventDefault(); void handleSend() }
           }}
-          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void handleSend() } }}
           rows={1}
-          placeholder="Écrire un message…"
+          placeholder="Écrire un message… tapez @ pour mentionner"
           className="flex-1 resize-none bg-bg-secondary border border-bg-tertiary rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan/50 transition-colors max-h-32 overflow-y-auto"
           onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = Math.min(el.scrollHeight, 128) + "px" }}
         />
-        <button onClick={handleSend} disabled={!value.trim() || sending}
-          className="shrink-0 p-2.5 rounded-xl bg-accent-cyan text-bg-primary disabled:opacity-40 hover:bg-accent-cyan/80 transition-colors">
-          <Send className="w-4 h-4" />
+        <button
+          onClick={handleSend}
+          disabled={!value.trim() || sending || isInvoking}
+          className="shrink-0 p-2.5 rounded-xl bg-accent-cyan text-bg-primary disabled:opacity-40 hover:bg-accent-cyan/80 transition-colors"
+        >
+          {isInvoking ? (
+            <div className="w-4 h-4 border-2 border-bg-primary border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
         </button>
       </div>
     </div>
@@ -447,35 +411,6 @@ function useTypingUsers(currentUserId: string) {
   return { names, addTyping }
 }
 
-// ── Agents Panel ───────────────────────────────────────────────────────────
-function AgentsPanel({ onCallAgent }: { onCallAgent: (agent: AgentMetadata) => void }) {
-  const categories = ["Data", "Analyse", "Marché", "Intel", "Synthèse"] as const
-  return (
-    <div className="border-b border-bg-tertiary bg-bg-secondary/50 shrink-0">
-      <div className="px-4 py-2 flex items-center gap-2">
-        <Bot className="w-3.5 h-3.5 text-accent-cyan" />
-        <p className="text-[11px] font-semibold text-text-tertiary uppercase tracking-wider">14 Agents</p>
-      </div>
-      <div className="overflow-x-auto pb-2 px-3">
-        <div className="flex gap-1.5" style={{ width: "max-content" }}>
-          {ENABLED_AGENTS.map((agent) => (
-            <button
-              key={agent.id}
-              onClick={() => onCallAgent(agent)}
-              title={agent.description}
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border transition-all hover:scale-105 shrink-0 group"
-              style={{ borderColor: `${agent.color}40`, background: `${agent.color}10` }}
-            >
-              <span className="text-sm">{agent.emoji}</span>
-              <span className="text-xs font-medium text-text-primary whitespace-nowrap">{agent.name}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ── Channel Chat (General / Annonce) ────────────────────────────────────────
 function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUserName, currentUserAvatar, myRole, ownerId, readOnly }: {
   roomId: string; channelId: string; channelName: string
@@ -498,6 +433,7 @@ function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUse
   const deleteMutation = api.room.deleteMessage.useMutation()
   const reactionMutation = api.room.toggleReaction.useMutation()
   const pinMutation = api.room.pinMessage.useMutation()
+  const invokeAgentMutation = api.room.invokeAgentInRoom.useMutation()
 
   useChannel(channelId, (msg: RealtimeMessage) => {
     if (msg.type === "TYPING") { addTyping(msg.userId, msg.content ?? msg.userId); return }
@@ -534,6 +470,11 @@ function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUse
     try {
       await sendMutation.mutateAsync({ roomId, channelId, content, replyToId: replyTo?.id })
       await refetch(); setOptimisticMessages([])
+      const mention = extractAgentMention(content)
+      if (mention) {
+        await invokeAgentMutation.mutateAsync({ roomId, channelId, agentId: mention.agent.id, query: mention.query })
+        await refetch()
+      }
     } catch { setOptimisticMessages((prev) => prev.filter((m) => m.id !== optId)) }
   }
 
@@ -553,14 +494,32 @@ function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUse
             onDelete={(id) => void deleteMutation.mutateAsync({ roomId, messageId: id }).then(() => refetch())}
           />
         ))}
+        {invokeAgentMutation.isPending && (
+          <div className="px-4 py-2">
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-bg-secondary border border-bg-tertiary">
+              <div className="flex gap-1">
+                {[0, 150, 300].map((d) => (
+                  <span key={d} className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                ))}
+              </div>
+              <span className="text-xs text-text-tertiary italic">L'agent analyse…</span>
+            </div>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
       <TypingIndicator names={typingNames} />
-      <ChatInput onSend={handleSend} disabled={readOnly}
+      <ChatInput
+        roomId={roomId}
+        onSend={handleSend}
+        disabled={readOnly}
         disabledMsg="Seul le créateur peut écrire dans ce canal"
-        replyTo={replyTo} onCancelReply={() => setReplyTo(null)}
-        editValue={editingMsg?.content} onCancelEdit={() => setEditingMsg(null)}
+        replyTo={replyTo}
+        onCancelReply={() => setReplyTo(null)}
+        editValue={editingMsg?.content}
+        onCancelEdit={() => setEditingMsg(null)}
         onTyping={() => publish({ userId: currentUserId, type: "TYPING", content: currentUserName })}
+        isInvoking={invokeAgentMutation.isPending}
       />
     </div>
   )
@@ -597,10 +556,9 @@ function TicketCard({ ticket, onSelect }: {
 }
 
 // ── Ticket List ────────────────────────────────────────────────────────────
-function TicketList({ channelId, roomId, onSelect, onCallAgent }: {
+function TicketList({ channelId, roomId, onSelect }: {
   channelId: string; roomId: string
   onSelect: (t: { id: string; title: string; status: string }) => void
-  onCallAgent: (agent: AgentMetadata) => void
 }) {
   const utils = api.useUtils()
   const [showCreate, setShowCreate] = React.useState(false)
@@ -620,7 +578,6 @@ function TicketList({ channelId, roomId, onSelect, onCallAgent }: {
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-bg-tertiary shrink-0">
         <div className="flex items-center gap-2">
           <Ticket className="w-4 h-4 text-text-tertiary" />
@@ -632,10 +589,6 @@ function TicketList({ channelId, roomId, onSelect, onCallAgent }: {
         </button>
       </div>
 
-      {/* 14 Agents panel */}
-      <AgentsPanel onCallAgent={onCallAgent} />
-
-      {/* Create form */}
       <div className={cn("overflow-hidden transition-all duration-300 ease-in-out shrink-0",
         showCreate ? "max-h-24 opacity-100" : "max-h-0 opacity-0")}>
         <div className="px-4 py-3 border-b border-bg-tertiary bg-bg-secondary/50">
@@ -659,14 +612,13 @@ function TicketList({ channelId, roomId, onSelect, onCallAgent }: {
         </div>
       </div>
 
-      {/* Tickets */}
       <div className="flex-1 overflow-y-auto py-3 px-3 flex flex-col gap-2">
         {open.length === 0 && archived.length === 0 && (
           <div className="flex flex-col items-center justify-center h-32 gap-3 text-center">
             <Ticket className="w-8 h-8 text-text-tertiary/50" />
             <div>
               <p className="text-sm font-medium text-text-secondary">Aucun ticket</p>
-              <p className="text-xs text-text-tertiary mt-0.5">Clique sur un agent ou ouvre un ticket pour analyser</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Ouvre un ticket pour commencer une analyse</p>
             </div>
           </div>
         )}
@@ -733,13 +685,11 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
       agentId: null, replyToId: null, reactions: null, mentions: [], isPinned: false,
       createdAt: new Date(), editedAt: null,
     }])
-
     const mention = extractAgentMention(content)
     try {
       await sendMutation.mutateAsync({ roomId, channelId, ticketId: ticket.id, content })
       await refetch()
       setOptimisticMessages([])
-
       if (mention) {
         await invokeAgentMutation.mutateAsync({
           roomId, channelId, ticketId: ticket.id,
@@ -773,7 +723,6 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
       <div className="flex-1 overflow-y-auto py-2">
         {allMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-6">
-            <Bot className="w-8 h-8 text-text-tertiary/50" />
             <p className="text-xs text-text-tertiary">Tapez <strong className="text-accent-cyan">@NomAgent</strong> pour appeler un agent d'analyse</p>
           </div>
         )}
@@ -799,8 +748,8 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
       </div>
 
       <TypingIndicator names={typingNames} />
-
-      <AnalyseInput
+      <ChatInput
+        roomId={roomId}
         onSend={handleSend}
         disabled={isArchived}
         disabledMsg="Ce ticket est archivé — lecture seule"
@@ -816,22 +765,7 @@ function AnalyseChannel({ roomId, channelId, currentUserId, currentUserName, cur
   roomId: string; channelId: string
   currentUserId: string; currentUserName: string; currentUserAvatar?: string
 }) {
-  const utils = api.useUtils()
   const [activeTicket, setActiveTicket] = React.useState<{ id: string; title: string; status: string } | null>(null)
-  const createTicketMutation = api.room.createTicket.useMutation({
-    onSuccess: (ticket) => {
-      void utils.room.getTickets.invalidate({ channelId })
-      setActiveTicket(ticket)
-    },
-  })
-
-  function handleCallAgent(agent: AgentMetadata) {
-    // Create a ticket named after the agent and open it
-    createTicketMutation.mutate({
-      roomId, channelId,
-      title: `${agent.emoji} ${agent.name} — Analyse`,
-    })
-  }
 
   if (activeTicket) {
     return (
@@ -847,7 +781,6 @@ function AnalyseChannel({ roomId, channelId, currentUserId, currentUserName, cur
     <TicketList
       channelId={channelId} roomId={roomId}
       onSelect={setActiveTicket}
-      onCallAgent={handleCallAgent}
     />
   )
 }
