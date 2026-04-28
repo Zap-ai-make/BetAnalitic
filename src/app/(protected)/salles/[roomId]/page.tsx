@@ -147,7 +147,7 @@ function MessageItem({
 
   if (message.type === "SYSTEM") {
     return (
-      <div className="flex justify-center py-1">
+      <div className="flex justify-center py-1.5 px-4">
         <span className="px-3 py-1 bg-bg-tertiary rounded-full text-xs text-text-tertiary">
           {message.content}
         </span>
@@ -160,134 +160,146 @@ function MessageItem({
     '<span class="text-accent-cyan font-semibold">@$1</span>'
   )
 
-  return (
-    <div
-      className="group relative flex items-start gap-3 px-4 py-2 hover:bg-bg-secondary/40 rounded-xl transition-colors"
-      onMouseLeave={() => { setShowMenu(false); setShowEmojiPicker(false) }}
-    >
-      {/* Avatar */}
-      <div className="w-9 h-9 rounded-full bg-bg-tertiary flex items-center justify-center shrink-0 mt-0.5">
-        {message.userAvatar ? (
-          <img src={message.userAvatar} alt={message.userName} className="w-9 h-9 rounded-full object-cover" />
-        ) : (
-          <span className="text-text-secondary text-sm font-semibold">
-            {message.userName.charAt(0).toUpperCase()}
-          </span>
-        )}
-      </div>
+  const time = new Date(message.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
 
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        {/* Reply parent snippet */}
+  // ── Own message (right-aligned bubble) ──────────────────────────────────
+  if (isOwn) {
+    return (
+      <div className="group flex flex-col items-end px-4 py-1 gap-1">
+        {/* Reply parent */}
         {replyParent && (
-          <div className="mb-1 pl-3 border-l-2 border-bg-tertiary text-xs text-text-tertiary line-clamp-1">
-            <span className="font-semibold text-text-secondary">{replyParent.userName}</span>{" "}
+          <div className="max-w-[75%] mr-1 pl-3 border-l-2 border-accent-cyan/40 text-xs text-text-tertiary line-clamp-1 text-right">
+            <span className="font-semibold text-accent-cyan/80">{replyParent.userName}</span>{" "}
             {replyParent.content}
           </div>
         )}
 
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="font-semibold text-sm text-text-primary">{message.userName}</span>
-          {message.isPinned && <Pin className="w-3 h-3 text-accent-cyan" />}
-          <span className="text-xs text-text-tertiary">
-            {new Date(message.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-          </span>
-          {message.editedAt && <span className="text-xs text-text-tertiary">(modifié)</span>}
-        </div>
+        <div className="flex items-end gap-2 max-w-[80%]">
+          {/* Actions (left of own bubble) */}
+          <div ref={menuRef} className="relative flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+            <button onClick={() => onReply(message)} className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary text-text-tertiary" title="Répondre">
+              <Reply className="w-3.5 h-3.5" />
+            </button>
+            <div className="relative">
+              <button onClick={() => { setShowEmojiPicker((v) => !v); setShowMenu(false) }} className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary text-text-tertiary" title="Réagir">
+                <Smile className="w-3.5 h-3.5" />
+              </button>
+              {showEmojiPicker && (
+                <div className="absolute right-0 bottom-8 z-20 flex gap-1 p-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-lg">
+                  {QUICK_EMOJIS.map((e) => (
+                    <button key={e} onClick={() => { onReact(message.id, e); setShowEmojiPicker(false) }} className="text-base hover:scale-125 transition-transform">{e}</button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="relative">
+              <button onClick={() => { setShowMenu((v) => !v); setShowEmojiPicker(false) }} className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary text-text-tertiary" title="Plus">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </button>
+              {showMenu && (
+                <div className="absolute right-0 bottom-8 z-20 w-36 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-lg overflow-hidden">
+                  {canEdit && <button onClick={() => { onEdit(message); setShowMenu(false) }} className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-text-secondary hover:bg-bg-tertiary"><Pencil className="w-3.5 h-3.5" /> Modifier</button>}
+                  {canPin && <button onClick={() => { onPin(message.id, !message.isPinned); setShowMenu(false) }} className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-text-secondary hover:bg-bg-tertiary"><Pin className="w-3.5 h-3.5" /> {message.isPinned ? "Désépingler" : "Épingler"}</button>}
+                  {canDelete && <button onClick={() => { onDelete(message.id); setShowMenu(false) }} className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-accent-red hover:bg-accent-red/10"><Trash2 className="w-3.5 h-3.5" /> Supprimer</button>}
+                </div>
+              )}
+            </div>
+          </div>
 
-        {/* Text */}
-        <div
-          className="text-sm text-text-primary leading-relaxed break-words"
-          dangerouslySetInnerHTML={{ __html: contentWithMentions }}
-        />
+          {/* Bubble */}
+          <div className="flex flex-col items-end">
+            <div className="bg-accent-cyan text-bg-primary rounded-2xl rounded-br-sm px-4 py-2.5 max-w-full">
+              <div className="text-sm leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: contentWithMentions.replace(/class="text-accent-cyan/g, 'class="text-bg-primary/70 underline') }} />
+            </div>
+            <div className="flex items-center gap-1 mt-0.5 pr-1">
+              {message.isPinned && <Pin className="w-2.5 h-2.5 text-accent-cyan" />}
+              {message.editedAt && <span className="text-[10px] text-text-tertiary">modifié ·</span>}
+              <span className="text-[10px] text-text-tertiary">{time}</span>
+            </div>
+          </div>
+        </div>
 
         {/* Reactions */}
         {message.reactions && (
-          <ReactionBar
-            reactions={message.reactions}
-            currentUserId={currentUserId}
-            onToggle={(emoji) => onReact(message.id, emoji)}
-          />
+          <div className="mr-1">
+            <ReactionBar reactions={message.reactions} currentUserId={currentUserId} onToggle={(e) => onReact(message.id, e)} />
+          </div>
         )}
       </div>
+    )
+  }
 
-      {/* Hover actions */}
-      <div
-        ref={menuRef}
-        className="absolute right-3 top-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
-      >
-        {/* Quick emoji */}
-        <div className="relative">
-          <button
-            onClick={() => { setShowEmojiPicker((v) => !v); setShowMenu(false) }}
-            className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary transition-colors text-text-tertiary hover:text-text-primary"
-            title="Réagir"
-          >
-            <Smile className="w-4 h-4" />
-          </button>
-          {showEmojiPicker && (
-            <div className="absolute right-0 top-8 z-20 flex gap-1 p-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-lg">
-              {QUICK_EMOJIS.map((e) => (
-                <button
-                  key={e}
-                  onClick={() => { onReact(message.id, e); setShowEmojiPicker(false) }}
-                  className="text-lg hover:scale-125 transition-transform"
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
+  // ── Other's message (left-aligned bubble) ───────────────────────────────
+  return (
+    <div className="group flex flex-col items-start px-4 py-1 gap-1">
+      {/* Reply parent */}
+      {replyParent && (
+        <div className="max-w-[75%] ml-11 pl-3 border-l-2 border-bg-tertiary text-xs text-text-tertiary line-clamp-1">
+          <span className="font-semibold text-text-secondary">{replyParent.userName}</span>{" "}
+          {replyParent.content}
+        </div>
+      )}
+
+      <div className="flex items-end gap-2 max-w-[80%]">
+        {/* Avatar */}
+        <div className="w-8 h-8 rounded-full bg-bg-tertiary flex items-center justify-center shrink-0">
+          {message.userAvatar ? (
+            <img src={message.userAvatar} alt={message.userName} className="w-8 h-8 rounded-full object-cover" />
+          ) : (
+            <span className="text-text-secondary text-xs font-bold">{message.userName.charAt(0).toUpperCase()}</span>
           )}
         </div>
 
-        <button
-          onClick={() => onReply(message)}
-          className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary transition-colors text-text-tertiary hover:text-text-primary"
-          title="Répondre"
-        >
-          <Reply className="w-4 h-4" />
-        </button>
+        {/* Bubble + meta */}
+        <div className="flex flex-col items-start">
+          <span className="text-xs font-semibold text-text-secondary mb-1 ml-1">{message.userName}</span>
+          <div className="bg-bg-secondary border border-bg-tertiary text-text-primary rounded-2xl rounded-bl-sm px-4 py-2.5 max-w-full">
+            <div className="text-sm leading-relaxed break-words" dangerouslySetInnerHTML={{ __html: contentWithMentions }} />
+          </div>
+          <div className="flex items-center gap-1 mt-0.5 ml-1">
+            {message.isPinned && <Pin className="w-2.5 h-2.5 text-accent-cyan" />}
+            {message.editedAt && <span className="text-[10px] text-text-tertiary">modifié ·</span>}
+            <span className="text-[10px] text-text-tertiary">{time}</span>
+          </div>
+        </div>
 
-        <div className="relative">
-          <button
-            onClick={() => { setShowMenu((v) => !v); setShowEmojiPicker(false) }}
-            className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary transition-colors text-text-tertiary hover:text-text-primary"
-            title="Plus"
-          >
-            <ChevronDown className="w-4 h-4" />
+        {/* Actions (right of others' bubble) */}
+        <div ref={menuRef} className="relative flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 self-center">
+          <button onClick={() => onReply(message)} className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary text-text-tertiary" title="Répondre">
+            <Reply className="w-3.5 h-3.5" />
           </button>
-          {showMenu && (
-            <div className="absolute right-0 top-8 z-20 w-40 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-lg overflow-hidden">
-              {canEdit && (
-                <button
-                  onClick={() => { onEdit(message); setShowMenu(false) }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-tertiary transition-colors"
-                >
-                  <Pencil className="w-3.5 h-3.5" /> Modifier
-                </button>
-              )}
-              {canPin && (
-                <button
-                  onClick={() => { onPin(message.id, !message.isPinned); setShowMenu(false) }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-text-secondary hover:bg-bg-tertiary transition-colors"
-                >
-                  <Pin className="w-3.5 h-3.5" />
-                  {message.isPinned ? "Désépingler" : "Épingler"}
-                </button>
-              )}
-              {canDelete && (
-                <button
-                  onClick={() => { onDelete(message.id); setShowMenu(false) }}
-                  className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-accent-red hover:bg-accent-red/10 transition-colors"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                </button>
-              )}
-            </div>
-          )}
+          <div className="relative">
+            <button onClick={() => { setShowEmojiPicker((v) => !v); setShowMenu(false) }} className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary text-text-tertiary" title="Réagir">
+              <Smile className="w-3.5 h-3.5" />
+            </button>
+            {showEmojiPicker && (
+              <div className="absolute left-0 bottom-8 z-20 flex gap-1 p-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-lg">
+                {QUICK_EMOJIS.map((e) => (
+                  <button key={e} onClick={() => { onReact(message.id, e); setShowEmojiPicker(false) }} className="text-base hover:scale-125 transition-transform">{e}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <button onClick={() => { setShowMenu((v) => !v); setShowEmojiPicker(false) }} className="p-1.5 bg-bg-secondary rounded-lg hover:bg-bg-tertiary text-text-tertiary" title="Plus">
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            {showMenu && (
+              <div className="absolute left-0 bottom-8 z-20 w-36 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-lg overflow-hidden">
+                {canPin && <button onClick={() => { onPin(message.id, !message.isPinned); setShowMenu(false) }} className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-text-secondary hover:bg-bg-tertiary"><Pin className="w-3.5 h-3.5" /> {message.isPinned ? "Désépingler" : "Épingler"}</button>}
+                {canDelete && <button onClick={() => { onDelete(message.id); setShowMenu(false) }} className="flex items-center gap-2 w-full px-3 py-2.5 text-xs text-accent-red hover:bg-accent-red/10"><Trash2 className="w-3.5 h-3.5" /> Supprimer</button>}
+              </div>
+            )}
+          </div>
         </div>
       </div>
+
+      {/* Reactions */}
+      {message.reactions && (
+        <div className="ml-10">
+          <ReactionBar reactions={message.reactions} currentUserId={currentUserId} onToggle={(e) => onReact(message.id, e)} />
+        </div>
+      )}
     </div>
   )
 }
@@ -830,10 +842,24 @@ export default function RoomChatPage() {
           </div>
         ))}
 
-        {/* Typing indicator */}
+        {/* Typing indicator — WhatsApp style */}
         {typingNames.length > 0 && (
-          <div className="px-4 py-1 text-xs text-text-tertiary">
-            {typingNames.join(", ")} est en train d&apos;écrire...
+          <div className="flex items-end gap-2 px-4 py-1">
+            <div className="w-8 h-8 rounded-full bg-bg-tertiary flex items-center justify-center shrink-0">
+              <span className="text-text-tertiary text-xs font-bold">
+                {typingNames[0]?.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <span className="text-[10px] text-text-tertiary ml-1">
+                {typingNames.join(", ")}
+              </span>
+              <div className="mt-0.5 bg-bg-secondary border border-bg-tertiary rounded-2xl rounded-bl-sm px-4 py-3 inline-flex gap-1.5 items-center">
+                <span className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce [animation-delay:0ms]" />
+                <span className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce [animation-delay:150ms]" />
+                <span className="w-2 h-2 bg-text-tertiary rounded-full animate-bounce [animation-delay:300ms]" />
+              </div>
+            </div>
           </div>
         )}
 
