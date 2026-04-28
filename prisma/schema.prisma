@@ -468,6 +468,7 @@ model Room {
   description String?
   color       String  @default("#00D4FF")
   badge       String?
+  coverImage  String?
 
   visibility   RoomVisibility @default(PUBLIC)
   type         RoomType       @default(PRIVATE)

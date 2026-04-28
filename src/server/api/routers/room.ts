@@ -383,6 +383,26 @@ export const roomRouter = createTRPCRouter({
       return updated
     }),
 
+  updateRoom: protectedProcedure
+    .input(
+      z.object({
+        roomId: z.string(),
+        name: z.string().min(3).max(50).optional(),
+        description: z.string().max(200).optional().nullable(),
+        color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
+        badge: z.string().max(4).optional().nullable(),
+        coverImage: z.string().url().optional().nullable(),
+        visibility: z.enum(["PUBLIC", "PRIVATE", "INVITE_ONLY"]).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const room = await ctx.db.room.findUnique({ where: { id: input.roomId } })
+      if (room?.ownerId !== userId) throw new TRPCError({ code: "FORBIDDEN", message: "Owner only" })
+      const { roomId, ...data } = input
+      return ctx.db.room.update({ where: { id: roomId }, data })
+    }),
+
   /**
    * Story 6.11: Invite user to room
    */
