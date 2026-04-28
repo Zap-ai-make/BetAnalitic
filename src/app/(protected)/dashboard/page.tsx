@@ -25,42 +25,96 @@ const AGENTS = [
 
 type AgentId = typeof AGENTS[number]["id"]
 const BY_ID = Object.fromEntries(AGENTS.map((a) => [a.id, a])) as Record<AgentId, typeof AGENTS[number]>
-const agentGrad = (h: number) =>
-  `radial-gradient(circle at 30% 25%, oklch(0.85 0.18 ${h}), oklch(0.58 0.22 ${h}) 55%, oklch(0.30 0.15 ${h}) 100%)`
+// ── Manga-style agent avatars ─────────────────────────────────
+type HairStyle = "short" | "spiky" | "long" | "bun" | "cap"
+type EyeStyle = "round" | "sharp" | "wide"
+type MouthStyle = "smile" | "neutral" | "serious"
+interface AvatarSpec { bg: string; hc: string; hair: HairStyle; eyes: EyeStyle; mouth: MouthStyle }
 
-// ── Pitch background ─────────────────────────────────────────
-const DOT_PLAYERS = [
-  { top: 42, left: 30, dx: 18, dy: -12 },
-  { top: 48, left: 58, dx: -14, dy: 10 },
-  { top: 62, left: 22, dx: 20, dy: -8 },
-  { top: 58, left: 78, dx: -22, dy: 14 },
-  { top: 78, left: 42, dx: -12, dy: -18 },
-  { top: 72, left: 64, dx: 16, dy: -6 },
-  { top: 35, left: 45, dx: 10, dy: 14 },
-  { top: 40, left: 72, dx: -10, dy: -10 },
-]
+const AVATAR_SPECS: Record<"Oracle" | AgentId, AvatarSpec> = {
+  Oracle:         { bg: "#00c8e0", hc: "#004e60", hair: "long",  eyes: "wide",    mouth: "smile"   },
+  Scout:          { bg: "#00CC66", hc: "#005522", hair: "short", eyes: "round",   mouth: "neutral" },
+  Insider:        { bg: "#FF6B35", hc: "#7A2000", hair: "cap",   eyes: "sharp",   mouth: "neutral" },
+  RefereeAnalyst: { bg: "#FFD93D", hc: "#7A5500", hair: "bun",   eyes: "round",   mouth: "serious" },
+  TacticMaster:   { bg: "#00D4FF", hc: "#004466", hair: "spiky", eyes: "sharp",   mouth: "serious" },
+  ContextKing:    { bg: "#9B59B6", hc: "#3D1060", hair: "long",  eyes: "round",   mouth: "smile"   },
+  MomentumX:      { bg: "#E91E63", hc: "#6A0030", hair: "spiky", eyes: "wide",    mouth: "smile"   },
+  WallMaster:     { bg: "#607D8B", hc: "#1a2a30", hair: "short", eyes: "sharp",   mouth: "serious" },
+  GoalMaster:     { bg: "#4CAF50", hc: "#1a4a1a", hair: "short", eyes: "round",   mouth: "smile"   },
+  CornerKing:     { bg: "#FF9800", hc: "#7A3300", hair: "cap",   eyes: "wide",    mouth: "smile"   },
+  CardShark:      { bg: "#F44336", hc: "#5a0000", hair: "spiky", eyes: "sharp",   mouth: "serious" },
+  CrowdWatch:     { bg: "#3F51B5", hc: "#0d1550", hair: "long",  eyes: "round",   mouth: "smile"   },
+  LivePulse:      { bg: "#00BCD4", hc: "#003a44", hair: "short", eyes: "wide",    mouth: "smile"   },
+  DebateArena:    { bg: "#FFEB3B", hc: "#7A5500", hair: "bun",   eyes: "sharp",   mouth: "neutral" },
+  Debrief:        { bg: "#8BC34A", hc: "#2a4a00", hair: "long",  eyes: "round",   mouth: "neutral" },
+}
 
-function PitchStage() {
+function AgentFace({ id, size = 36 }: { id: "Oracle" | AgentId; size?: number }) {
+  const s = AVATAR_SPECS[id] ?? AVATAR_SPECS.Oracle
+  const skin = "#FFDDBA"
+  const iris = s.bg
+  const dark = "#1a1a2e"
+
+  const hair = (() => {
+    if (s.hair === "short")  return <path d="M8 22 Q8 4 20 4 Q32 4 32 22Z" fill={s.hc}/>
+    if (s.hair === "spiky")  return <path d="M8 22 L8 18 L12 8 L15.5 16 L20 4 L24.5 16 L28 8 L32 18 L32 22Z" fill={s.hc}/>
+    if (s.hair === "bun")    return <><path d="M8 22 Q8 6 20 6 Q32 6 32 22Z" fill={s.hc}/><circle cx="20" cy="3" r="5.5" fill={s.hc}/></>
+    if (s.hair === "cap")    return <><path d="M3 20 L8 13 Q20 8 32 13 L37 20Z" fill={s.hc}/><rect x="8" y="17" width="24" height="5" rx="1" fill={s.hc}/></>
+    // long
+    return <><path d="M8 22 Q8 4 20 4 Q32 4 32 22Z" fill={s.hc}/><path d="M8 22 Q5 32 4 40 Q7 33 10 28Z" fill={s.hc}/><path d="M32 22 Q35 32 36 40 Q33 33 30 28Z" fill={s.hc}/></>
+  })()
+
+  const eyes = (() => {
+    if (s.eyes === "round") return <>
+      <ellipse cx="14.5" cy="22" rx="3.5" ry="4.2" fill={dark}/>
+      <ellipse cx="14.5" cy="22" rx="2.3" ry="3" fill={iris}/>
+      <circle cx="16" cy="20.5" r="1.2" fill="white"/>
+      <circle cx="13.2" cy="23.4" r="0.6" fill="white" opacity="0.7"/>
+      <ellipse cx="25.5" cy="22" rx="3.5" ry="4.2" fill={dark}/>
+      <ellipse cx="25.5" cy="22" rx="2.3" ry="3" fill={iris}/>
+      <circle cx="27" cy="20.5" r="1.2" fill="white"/>
+      <circle cx="24.2" cy="23.4" r="0.6" fill="white" opacity="0.7"/>
+    </>
+    if (s.eyes === "sharp") return <>
+      <path d="M11 21.5 Q14.5 17.5 18 21.5 Q14.5 25.5 11 21.5Z" fill={dark}/>
+      <path d="M12.5 21.5 Q14.5 19 16.5 21.5 Q14.5 24 12.5 21.5Z" fill={iris}/>
+      <circle cx="15.2" cy="20.5" r="1" fill="white"/>
+      <path d="M22 21.5 Q25.5 17.5 29 21.5 Q25.5 25.5 22 21.5Z" fill={dark}/>
+      <path d="M23.5 21.5 Q25.5 19 27.5 21.5 Q25.5 24 23.5 21.5Z" fill={iris}/>
+      <circle cx="26.2" cy="20.5" r="1" fill="white"/>
+    </>
+    // wide
+    return <>
+      <ellipse cx="14.5" cy="22" rx="4.2" ry="5" fill={dark}/>
+      <ellipse cx="14.5" cy="22" rx="2.9" ry="3.7" fill={iris}/>
+      <circle cx="16.3" cy="20" r="1.5" fill="white"/>
+      <circle cx="13" cy="23.8" r="0.7" fill="white" opacity="0.7"/>
+      <ellipse cx="25.5" cy="22" rx="4.2" ry="5" fill={dark}/>
+      <ellipse cx="25.5" cy="22" rx="2.9" ry="3.7" fill={iris}/>
+      <circle cx="27.3" cy="20" r="1.5" fill="white"/>
+      <circle cx="24" cy="23.8" r="0.7" fill="white" opacity="0.7"/>
+    </>
+  })()
+
+  const mouth = (() => {
+    if (s.mouth === "smile")   return <>
+      <path d="M16 30.5 Q20 34 24 30.5" stroke="#9a6040" strokeWidth="1.3" fill="none" strokeLinecap="round"/>
+      <ellipse cx="11.5" cy="27.5" rx="2.8" ry="1.4" fill="#ffb09a" opacity="0.45"/>
+      <ellipse cx="28.5" cy="27.5" rx="2.8" ry="1.4" fill="#ffb09a" opacity="0.45"/>
+    </>
+    if (s.mouth === "neutral") return <path d="M17 30.5 Q20 31.5 23 30.5" stroke="#9a6040" strokeWidth="1.1" fill="none" strokeLinecap="round"/>
+    return <path d="M16.5 30.5 L23.5 30.5" stroke="#9a6040" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+  })()
+
   return (
-    <div className="pitch-stage">
-      <div className="pitch-plane" />
-      {DOT_PLAYERS.map((d, i) => (
-        <div
-          key={i}
-          className="dot-player"
-          style={{
-            top: `${d.top}%`,
-            left: `${d.left}%`,
-            ["--dx" as string]: `${d.dx}px`,
-            ["--dy" as string]: `${d.dy}px`,
-            animationDelay: `${i * 0.6}s`,
-            animationDuration: `${6 + (i % 3)}s`,
-          }}
-        />
-      ))}
-      <div className="pitch-scanline" />
-      <div className="pitch-glow-bottom" />
-    </div>
+    <svg width={size} height={size} viewBox="0 0 40 40" style={{ borderRadius: "50%", display: "block", flexShrink: 0 }}>
+      <circle cx="20" cy="20" r="20" fill={s.bg}/>
+      {hair}
+      <ellipse cx="20" cy="25" rx="11.5" ry="12.5" fill={skin}/>
+      {eyes}
+      <path d="M19 27.5 Q20 29 21 27.5" stroke="#9a6040" strokeWidth="0.9" fill="none" strokeLinecap="round"/>
+      {mouth}
+    </svg>
   )
 }
 
@@ -260,9 +314,6 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 
   const isOracle = agent === "Oracle"
   const cur = isOracle ? null : BY_ID[agent as AgentId]
-  const agentBg = cur ? agentGrad(cur.hue) : "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))"
-  const avatarBg = (id?: "Oracle" | AgentId) =>
-    !id || id === "Oracle" ? "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" : agentGrad(BY_ID[id as AgentId]?.hue ?? 200)
 
   const pickAgent = (id: "Oracle" | AgentId) => {
     // Agent already active — do nothing, don't reset interface
@@ -342,7 +393,7 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
         {/* Left: selector + subtitle */}
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }} aria-label={open ? (lang === "EN" ? "Close agent selector" : "Fermer la sélection d'agent") : (lang === "EN" ? "Open agent selector" : "Ouvrir la sélection d'agent")} aria-expanded={open}>
-            <div className="gpt-model-icon" style={{ background: agentBg }} />
+            <AgentFace id={agent} size={22} />
             <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
               style={{ color: "#6b7280", flexShrink: 0, transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" }}>
@@ -359,7 +410,7 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
           <div className="agent-dd" style={{ left: 0, right: 0 }}>
             <div className="agent-dd-h">{ddHeader}</div>
             <div className={`agent-opt${isOracle ? " sel" : ""}`} onClick={() => pickAgent("Oracle")}>
-              <div className="ao-pip" style={{ background: "linear-gradient(135deg,#00f0ff,oklch(0.68 0.28 330))" }}>OR</div>
+              <AgentFace id="Oracle" size={28} />
               <div className="ao-info">
                 <div className="ao-name">Oracle</div>
                 <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
@@ -367,7 +418,7 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
             </div>
             {AGENTS.map((a) => (
               <div key={a.id} className={`agent-opt${agent === a.id ? " sel" : ""}`} onClick={() => pickAgent(a.id)}>
-                <div className="ao-pip" style={{ background: agentGrad(a.hue) }}>{a.glyph}</div>
+                <AgentFace id={a.id} size={28} />
                 <div className="ao-info"><div className="ao-name">@{a.id}</div><div className="ao-cat">{a.cat}</div></div>
                 <div className="ao-role">{a.role}</div>
               </div>
@@ -423,14 +474,14 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
                 <div key={i} className="gpt-msg-system">{m.body}</div>
               ) : (
                 <div key={i} className="gpt-msg-assistant">
-                  <div className="gpt-avatar-sm" style={{ background: avatarBg(m.agentId) }} />
+                  <AgentFace id={m.agentId ?? "Oracle"} size={34} />
                   <div className="gpt-msg-text">{m.body}</div>
                 </div>
               )
             )}
             {typingGreeting && (
               <div className="gpt-msg-assistant">
-                <div className="gpt-avatar-sm" style={{ background: avatarBg(typingGreeting.agentId) }} />
+                <AgentFace id={typingGreeting.agentId} size={34} />
                 <div className="gpt-msg-text">{typingGreeting.typed}<span className="tw-caret" /></div>
               </div>
             )}
