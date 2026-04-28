@@ -1283,6 +1283,31 @@ export const roomRouter = createTRPCRouter({
     return counts
   }),
 
+  getChannelUnreadCounts: protectedProcedure
+    .input(z.object({
+      channels: z.array(z.object({
+        channelId: z.string(),
+        since: z.number(),
+      }))
+    }))
+    .query(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const counts = await Promise.all(
+        input.channels.map(async ({ channelId, since }) => {
+          const count = await ctx.db.roomMessage.count({
+            where: {
+              channelId,
+              isDeleted: false,
+              userId: { not: userId },
+              ...(since > 0 ? { createdAt: { gt: new Date(since) } } : {}),
+            },
+          })
+          return { channelId, count }
+        })
+      )
+      return counts
+    }),
+
   /**
    * Story 6.15: Get archived rooms
    */
