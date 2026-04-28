@@ -7,6 +7,7 @@ import { z } from "zod"
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"
 import { TRPCError } from "@trpc/server"
 import { type PrismaClient } from "@prisma/client"
+import { getEnabledAgents } from "~/lib/agents/config"
 
 async function createDefaultChannels(db: PrismaClient, roomId: string) {
   const existing = await db.roomChannel.count({ where: { roomId } })
@@ -244,7 +245,7 @@ export const roomRouter = createTRPCRouter({
       const { members, _count, ...roomData } = room
       return {
         ...roomData,
-        memberCount: _count.members,
+        memberCount: _count.members + 14, // 14 virtual agent members
         messageCount: _count.messages,
         isMember,
         myRole: members[0]?.role ?? null,
@@ -584,14 +585,31 @@ export const roomRouter = createTRPCRouter({
         orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
       })
 
-      return members.map((m) => ({
+      const humanMembers = members.map((m) => ({
         userId: m.user.id,
         userName: m.user.displayName ?? m.user.username,
-        userAvatar: m.user.avatarUrl,
+        userAvatar: m.user.avatarUrl as string | null,
         role: m.role,
         joinedAt: m.joinedAt,
-        isOnline: false, // TODO: integrate with real-time presence
+        isOnline: false,
+        isAgent: false,
+        agentEmoji: null as string | null,
+        agentColor: null as string | null,
       }))
+
+      const agentMembers = getEnabledAgents().map((agent) => ({
+        userId: `agent:${agent.id}`,
+        userName: agent.name,
+        userAvatar: null as string | null,
+        role: "MEMBER" as const,
+        joinedAt: new Date(0),
+        isOnline: true,
+        isAgent: true,
+        agentEmoji: agent.emoji,
+        agentColor: agent.color,
+      }))
+
+      return [...humanMembers, ...agentMembers]
     }),
 
   /**
@@ -1482,6 +1500,93 @@ export const roomRouter = createTRPCRouter({
         },
         orderBy: [{ status: "asc" }, { createdAt: "desc" }],
       })
+    }),
+
+  /**
+   * Invoke an AI agent in a room channel and save its response as a message
+   */
+  invokeAgentInRoom: protectedProcedure
+    .input(z.object({
+      roomId: z.string(),
+      channelId: z.string(),
+      ticketId: z.string().optional(),
+      agentId: z.string(),
+      query: z.string().min(1).max(1000),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+
+      const membership = await ctx.db.roomMember.findUnique({
+        where: { roomId_userId: { roomId: input.roomId, userId } },
+      })
+      if (!membership) throw new TRPCError({ code: "FORBIDDEN", message: "Not a member" })
+
+      const room = await ctx.db.room.findUnique({
+        where: { id: input.roomId },
+        include: {
+          match: {
+            include: {
+              homeTeam: true,
+              awayTeam: true,
+              competition: true,
+            },
+          },
+        },
+      })
+
+      const user = await ctx.db.user.findUnique({
+        where: { id: userId },
+        select: { betanalyticApiKey: true },
+      })
+
+      let responseText: string
+      try {
+        const { agentOrchestrator } = await import("~/lib/agents/orchestrator")
+        const result = await agentOrchestrator.routeQuery(input.agentId, input.query, {
+          userId,
+          userToken: user?.betanalyticApiKey ?? undefined,
+          matchId: room?.matchId ?? undefined,
+          homeTeam: room?.match?.homeTeam.name,
+          awayTeam: room?.match?.awayTeam.name,
+          competition: room?.match?.competition.name,
+        })
+        responseText = result.response
+      } catch {
+        responseText = "⚠️ Agent indisponible — réessaie dans quelques instants."
+      }
+
+      const message = await ctx.db.roomMessage.create({
+        data: {
+          roomId: input.roomId,
+          channelId: input.channelId,
+          ticketId: input.ticketId,
+          userId,
+          type: "AGENT",
+          content: responseText,
+          agentId: input.agentId,
+          mentions: [],
+        },
+        include: {
+          user: { select: { id: true, username: true, displayName: true, avatarUrl: true } },
+        },
+      })
+
+      return {
+        id: message.id,
+        roomId: message.roomId,
+        userId: message.userId,
+        userName: message.user.displayName ?? message.user.username,
+        userAvatar: message.user.avatarUrl,
+        type: message.type,
+        content: message.content,
+        agentId: message.agentId,
+        replyToId: message.replyToId,
+        reactions: message.reactions,
+        mentions: message.mentions,
+        isPinned: message.isPinned,
+        createdAt: message.createdAt,
+        editedAt: message.editedAt,
+      }
     }),
 
   /**
