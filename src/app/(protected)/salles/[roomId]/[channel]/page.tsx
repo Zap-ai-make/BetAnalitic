@@ -5,8 +5,8 @@ import { useParams, useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { api } from "~/trpc/react"
 import {
-  Send, Pin, Reply, Pencil, Trash2, Search, X, Smile, Lock,
-  Ticket, Plus, ChevronLeft, Archive, Hash, Clock, MessageSquare,
+  Send, Pin, Reply, Pencil, Trash2, X, Smile, Lock,
+  Ticket, Plus, ChevronLeft, Archive, Hash, MessageSquare,
 } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { useChannel, usePublish } from "~/lib/realtime/context"
@@ -32,6 +32,29 @@ interface ChatMessage {
 
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "🔥", "👏"]
 
+// ── Typing Indicator ───────────────────────────────────────────────────────
+function TypingIndicator({ names }: { names: string[] }) {
+  if (names.length === 0) return null
+  const label =
+    names.length === 1
+      ? `${names[0]} est en train d'écrire`
+      : `${names.join(", ")} écrivent`
+  return (
+    <div className="flex items-center gap-2 px-4 py-1 h-6">
+      <div className="flex gap-1">
+        {[0, 150, 300].map((delay) => (
+          <span
+            key={delay}
+            className="w-1.5 h-1.5 rounded-full bg-text-tertiary animate-bounce"
+            style={{ animationDelay: `${delay}ms` }}
+          />
+        ))}
+      </div>
+      <span className="text-xs text-text-tertiary italic">{label}…</span>
+    </div>
+  )
+}
+
 // ── Reaction Bar ───────────────────────────────────────────────────────────
 function ReactionBar({ reactions, currentUserId, onToggle }: {
   reactions: Record<string, string[]>
@@ -50,7 +73,7 @@ function ReactionBar({ reactions, currentUserId, onToggle }: {
             "flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border transition-all",
             users.includes(currentUserId)
               ? "bg-accent-cyan/10 border-accent-cyan text-accent-cyan"
-              : "bg-bg-tertiary border-bg-tertiary text-text-secondary hover:border-bg-tertiary/60"
+              : "bg-bg-tertiary border-bg-tertiary text-text-secondary hover:border-accent-cyan/40"
           )}
         >
           <span>{emoji}</span>
@@ -63,15 +86,8 @@ function ReactionBar({ reactions, currentUserId, onToggle }: {
 
 // ── Message Item ───────────────────────────────────────────────────────────
 function MessageItem({
-  msg,
-  isOwn,
-  currentUserId,
-  canModerate,
-  onReply,
-  onReact,
-  onPin,
-  onEdit,
-  onDelete,
+  msg, isOwn, currentUserId, canModerate,
+  onReply, onReact, onPin, onEdit, onDelete,
 }: {
   msg: ChatMessage
   isOwn: boolean
@@ -102,7 +118,6 @@ function MessageItem({
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => { setShowActions(false); setShowEmojiPicker(false) }}
     >
-      {/* Avatar — only for others */}
       {!isOwn && (
         <div className="shrink-0 mt-0.5">
           {msg.userAvatar ? (
@@ -116,7 +131,6 @@ function MessageItem({
       )}
 
       <div className={cn("flex flex-col max-w-[75%]", isOwn ? "items-end" : "items-start")}>
-        {/* Name + time */}
         {!isOwn && (
           <div className="flex items-baseline gap-2 mb-0.5 px-1">
             <span className="text-xs font-semibold text-text-primary">{msg.userName}</span>
@@ -126,29 +140,22 @@ function MessageItem({
           </div>
         )}
 
-        {/* Bubble */}
-        <div
-          className={cn(
-            "relative px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words",
-            isOwn
-              ? "bg-accent-cyan text-bg-primary rounded-br-sm"
-              : "bg-bg-secondary border border-bg-tertiary text-text-primary rounded-bl-sm"
-          )}
-        >
+        <div className={cn(
+          "relative px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words",
+          isOwn
+            ? "bg-accent-cyan text-bg-primary rounded-br-sm"
+            : "bg-bg-secondary border border-bg-tertiary text-text-primary rounded-bl-sm"
+        )}>
           {msg.content}
-          {msg.editedAt && (
-            <span className={cn("text-[10px] ml-1.5 opacity-60")}>modifié</span>
-          )}
+          {msg.editedAt && <span className="text-[10px] ml-1.5 opacity-60">modifié</span>}
         </div>
 
-        {/* Time for own messages */}
         {isOwn && (
           <span className="text-[10px] text-text-tertiary mt-0.5 px-1">
             {new Date(msg.createdAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
 
-        {/* Reactions */}
         {msg.reactions && Object.keys(msg.reactions).length > 0 && (
           <ReactionBar
             reactions={msg.reactions as Record<string, string[]>}
@@ -160,23 +167,19 @@ function MessageItem({
 
       {/* Action toolbar */}
       {showActions && (
-        <div
-          className={cn(
-            "absolute top-0 flex items-center gap-0.5 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-lg px-1 py-0.5 z-10",
-            isOwn ? "left-2" : "right-2"
-          )}
-        >
+        <div className={cn(
+          "absolute top-0 flex items-center gap-0.5 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-lg px-1 py-0.5 z-10",
+          isOwn ? "left-2" : "right-2"
+        )}>
           <button
             onClick={() => setShowEmojiPicker((v) => !v)}
             className="p-1 text-text-tertiary hover:text-text-primary rounded transition-colors"
-            title="Réagir"
           >
             <Smile className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={() => onReply(msg)}
             className="p-1 text-text-tertiary hover:text-text-primary rounded transition-colors"
-            title="Répondre"
           >
             <Reply className="w-3.5 h-3.5" />
           </button>
@@ -184,7 +187,6 @@ function MessageItem({
             <button
               onClick={() => onPin(msg.id)}
               className="p-1 text-text-tertiary hover:text-accent-cyan rounded transition-colors"
-              title="Épingler"
             >
               <Pin className="w-3.5 h-3.5" />
             </button>
@@ -193,7 +195,6 @@ function MessageItem({
             <button
               onClick={() => onEdit(msg)}
               className="p-1 text-text-tertiary hover:text-text-primary rounded transition-colors"
-              title="Modifier"
             >
               <Pencil className="w-3.5 h-3.5" />
             </button>
@@ -202,13 +203,11 @@ function MessageItem({
             <button
               onClick={() => onDelete(msg.id)}
               className="p-1 text-text-tertiary hover:text-red-400 rounded transition-colors"
-              title="Supprimer"
             >
               <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
 
-          {/* Emoji picker */}
           {showEmojiPicker && (
             <div className="absolute top-7 left-0 bg-bg-secondary border border-bg-tertiary rounded-lg p-1.5 flex gap-1 z-20 shadow-xl">
               {QUICK_EMOJIS.map((emoji) => (
@@ -230,13 +229,10 @@ function MessageItem({
 
 // ── Chat Input ─────────────────────────────────────────────────────────────
 function ChatInput({
-  onSend,
-  disabled,
-  disabledMsg,
-  replyTo,
-  onCancelReply,
-  editValue,
-  onCancelEdit,
+  onSend, disabled, disabledMsg,
+  replyTo, onCancelReply,
+  editValue, onCancelEdit,
+  onTyping,
 }: {
   onSend: (content: string) => Promise<void>
   disabled?: boolean
@@ -245,10 +241,11 @@ function ChatInput({
   onCancelReply?: () => void
   editValue?: string
   onCancelEdit?: () => void
+  onTyping?: () => void
 }) {
   const [value, setValue] = React.useState(editValue ?? "")
   const [sending, setSending] = React.useState(false)
-  const textareaRef = React.useRef<HTMLTextAreaElement>(null)
+  const lastTypingRef = React.useRef(0)
 
   React.useEffect(() => {
     if (editValue !== undefined) setValue(editValue)
@@ -266,16 +263,19 @@ function ChatInput({
     }
   }
 
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      void handleSend()
+  function handleChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setValue(e.target.value)
+    // Throttle typing events to every 2s
+    const now = Date.now()
+    if (onTyping && now - lastTypingRef.current > 2000) {
+      lastTypingRef.current = now
+      onTyping()
     }
   }
 
   if (disabled) {
     return (
-      <div className="px-4 py-3 border-t border-bg-tertiary">
+      <div className="px-4 py-3 border-t border-bg-tertiary shrink-0">
         <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-bg-secondary border border-bg-tertiary text-text-tertiary text-sm">
           <Lock className="w-4 h-4 shrink-0" />
           {disabledMsg ?? "Lecture seule"}
@@ -285,7 +285,7 @@ function ChatInput({
   }
 
   return (
-    <div className="px-4 py-3 border-t border-bg-tertiary">
+    <div className="px-4 py-3 border-t border-bg-tertiary shrink-0">
       {replyTo && (
         <div className="flex items-center gap-2 mb-2 px-3 py-1.5 bg-bg-secondary rounded-lg border-l-2 border-accent-cyan">
           <Reply className="w-3.5 h-3.5 text-accent-cyan shrink-0" />
@@ -308,14 +308,17 @@ function ChatInput({
       )}
       <div className="flex items-end gap-2">
         <textarea
-          ref={textareaRef}
           value={value}
-          onChange={(e) => setValue(e.target.value)}
-          onKeyDown={handleKeyDown}
+          onChange={handleChange}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault()
+              void handleSend()
+            }
+          }}
           rows={1}
-          placeholder="Écrire un message..."
+          placeholder="Écrire un message…"
           className="flex-1 resize-none bg-bg-secondary border border-bg-tertiary rounded-xl px-4 py-2.5 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan/50 transition-colors max-h-32 overflow-y-auto"
-          style={{ height: "auto" }}
           onInput={(e) => {
             const el = e.currentTarget
             el.style.height = "auto"
@@ -334,17 +337,44 @@ function ChatInput({
   )
 }
 
+// ── Typing users hook ──────────────────────────────────────────────────────
+function useTypingUsers(currentUserId: string) {
+  const [typingUsers, setTypingUsers] = React.useState<Map<string, { name: string; at: number }>>(new Map())
+
+  // Auto-expire typing indicators after 3s
+  React.useEffect(() => {
+    const t = setInterval(() => {
+      setTypingUsers((prev) => {
+        const now = Date.now()
+        const next = new Map(prev)
+        for (const [id, data] of next) {
+          if (now - data.at > 3000) next.delete(id)
+        }
+        return next.size !== prev.size ? next : prev
+      })
+    }, 1000)
+    return () => clearInterval(t)
+  }, [])
+
+  const addTyping = React.useCallback((userId: string, name: string) => {
+    if (userId === currentUserId) return
+    setTypingUsers((prev) => {
+      const next = new Map(prev)
+      next.set(userId, { name, at: Date.now() })
+      return next
+    })
+  }, [currentUserId])
+
+  const names = React.useMemo(() => [...typingUsers.values()].map((u) => u.name), [typingUsers])
+
+  return { names, addTyping }
+}
+
 // ── Channel Chat (General / Annonce) ────────────────────────────────────────
 function ChannelChat({
-  roomId,
-  channelId,
-  channelName,
-  currentUserId,
-  currentUserName,
-  currentUserAvatar,
-  myRole,
-  ownerId,
-  readOnly,
+  roomId, channelId, channelName,
+  currentUserId, currentUserName, currentUserAvatar,
+  myRole, ownerId, readOnly,
 }: {
   roomId: string
   channelId: string
@@ -356,15 +386,17 @@ function ChannelChat({
   ownerId: string
   readOnly: boolean
 }) {
-  const utils = api.useUtils()
   const bottomRef = React.useRef<HTMLDivElement>(null)
   const [optimisticMessages, setOptimisticMessages] = React.useState<ChatMessage[]>([])
   const [replyTo, setReplyTo] = React.useState<ChatMessage | null>(null)
   const [editingMsg, setEditingMsg] = React.useState<ChatMessage | null>(null)
 
+  const { names: typingNames, addTyping } = useTypingUsers(currentUserId)
+  const publish = usePublish(channelId)
+
   const { data, refetch } = api.room.getMessages.useQuery(
     { roomId, channelId, limit: 50 },
-    { refetchInterval: 2000, refetchIntervalInBackground: false }
+    { refetchInterval: 1000, refetchIntervalInBackground: false, staleTime: 0 }
   )
 
   const sendMutation = api.room.sendMessage.useMutation()
@@ -373,9 +405,11 @@ function ChannelChat({
   const reactionMutation = api.room.toggleReaction.useMutation()
   const pinMutation = api.room.pinMessage.useMutation()
 
-  // Publish realtime typing / message events
-  usePublish(channelId)
   useChannel(channelId, (msg: RealtimeMessage) => {
+    if (msg.type === "TYPING") {
+      addTyping(msg.userId, (msg.content ?? msg.userId))
+      return
+    }
     if (msg.userId !== currentUserId) void refetch()
   })
 
@@ -386,11 +420,19 @@ function ChannelChat({
     [dbMessages, optimisticMessages, dbIds]
   )
 
+  const prevLengthRef = React.useRef(0)
   React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (allMessages.length > prevLengthRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    }
+    prevLengthRef.current = allMessages.length
   }, [allMessages.length])
 
   const canModerate = currentUserId === ownerId || myRole === "OWNER" || myRole === "ADMIN"
+
+  async function handleTyping() {
+    await publish({ userId: currentUserId, type: "TYPING", content: currentUserName })
+  }
 
   async function handleSend(content: string) {
     if (editingMsg) {
@@ -399,8 +441,9 @@ function ChannelChat({
       void refetch()
       return
     }
+    const optId = `opt-${Date.now()}`
     const optimistic: ChatMessage = {
-      id: `opt-${Date.now()}`,
+      id: optId,
       roomId,
       userId: currentUserId,
       userName: currentUserName,
@@ -418,26 +461,22 @@ function ChannelChat({
     setOptimisticMessages((prev) => [...prev, optimistic])
     setReplyTo(null)
     try {
-      await sendMutation.mutateAsync({
-        roomId,
-        channelId,
-        content,
-        replyToId: replyTo?.id,
-      })
-    } finally {
-      void refetch()
+      await sendMutation.mutateAsync({ roomId, channelId, content, replyToId: replyTo?.id })
+      await refetch()
+      // Clear optimistic after DB confirms — prevents doubles
+      setOptimisticMessages([])
+    } catch {
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optId))
     }
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-tertiary shrink-0">
         <Hash className="w-4 h-4 text-text-tertiary" />
         <h2 className="font-semibold text-text-primary text-sm">{channelName}</h2>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto py-2">
         {allMessages.map((msg) => (
           <MessageItem
@@ -447,22 +486,17 @@ function ChannelChat({
             currentUserId={currentUserId}
             canModerate={canModerate}
             onReply={setReplyTo}
-            onReact={(id, emoji) => {
-              void reactionMutation.mutateAsync({ messageId: id, emoji }).then(() => refetch())
-            }}
-            onPin={(id) => {
-              void pinMutation.mutateAsync({ messageId: id, pin: true }).then(() => refetch())
-            }}
+            onReact={(id, emoji) => void reactionMutation.mutateAsync({ messageId: id, emoji }).then(() => refetch())}
+            onPin={(id) => void pinMutation.mutateAsync({ messageId: id, pin: true }).then(() => refetch())}
             onEdit={setEditingMsg}
-            onDelete={(id) => {
-              void deleteMutation.mutateAsync({ roomId, messageId: id }).then(() => refetch())
-            }}
+            onDelete={(id) => void deleteMutation.mutateAsync({ roomId, messageId: id }).then(() => refetch())}
           />
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      <TypingIndicator names={typingNames} />
+
       <ChatInput
         onSend={handleSend}
         disabled={readOnly}
@@ -471,147 +505,22 @@ function ChannelChat({
         onCancelReply={() => setReplyTo(null)}
         editValue={editingMsg?.content}
         onCancelEdit={() => setEditingMsg(null)}
+        onTyping={handleTyping}
       />
     </div>
   )
 }
 
-// ── Analyse: Ticket List ───────────────────────────────────────────────────
-function TicketList({
-  channelId,
-  roomId,
-  currentUserId,
-  onSelect,
-}: {
-  channelId: string
-  roomId: string
-  currentUserId: string
-  onSelect: (ticket: { id: string; title: string; status: string }) => void
-}) {
-  const [showCreate, setShowCreate] = React.useState(false)
-  const [newTitle, setNewTitle] = React.useState("")
-  const utils = api.useUtils()
-
-  const { data: tickets } = api.room.getTickets.useQuery(
-    { channelId },
-    { refetchInterval: 3000 }
-  )
-
-  const createMutation = api.room.createTicket.useMutation({
-    onSuccess: () => {
-      setNewTitle("")
-      setShowCreate(false)
-      void utils.room.getTickets.invalidate({ channelId })
-    },
-  })
-
-  const openTickets = (tickets ?? []).filter((t) => t.status === "OPEN")
-  const archivedTickets = (tickets ?? []).filter((t) => t.status === "ARCHIVED")
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-bg-tertiary shrink-0">
-        <div className="flex items-center gap-2">
-          <Ticket className="w-4 h-4 text-text-tertiary" />
-          <h2 className="font-semibold text-text-primary text-sm">Analyse — Tickets</h2>
-        </div>
-        <button
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-1.5 text-xs font-medium text-accent-cyan hover:text-accent-cyan/80 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Nouveau ticket
-        </button>
-      </div>
-
-      {/* Create modal */}
-      {showCreate && (
-        <div className="px-4 py-3 border-b border-bg-tertiary bg-bg-secondary/50 shrink-0">
-          <p className="text-xs font-semibold text-text-secondary mb-2">Titre du ticket</p>
-          <div className="flex gap-2">
-            <input
-              autoFocus
-              value={newTitle}
-              onChange={(e) => setNewTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  if (newTitle.trim()) {
-                    createMutation.mutate({ roomId, channelId, title: newTitle.trim() })
-                  }
-                }
-                if (e.key === "Escape") setShowCreate(false)
-              }}
-              placeholder="Ex: Match PSG vs Lyon - Analyse"
-              className="flex-1 bg-bg-tertiary border border-bg-tertiary rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan/50"
-            />
-            <button
-              disabled={!newTitle.trim() || createMutation.isPending}
-              onClick={() => {
-                if (newTitle.trim()) createMutation.mutate({ roomId, channelId, title: newTitle.trim() })
-              }}
-              className="px-3 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium disabled:opacity-40"
-            >
-              Créer
-            </button>
-            <button
-              onClick={() => setShowCreate(false)}
-              className="p-2 text-text-tertiary hover:text-text-primary rounded-lg"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Ticket list */}
-      <div className="flex-1 overflow-y-auto py-3 px-3 flex flex-col gap-2">
-        {openTickets.length === 0 && archivedTickets.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-40 gap-3 text-center">
-            <Ticket className="w-8 h-8 text-text-tertiary/50" />
-            <div>
-              <p className="text-sm font-medium text-text-secondary">Aucun ticket</p>
-              <p className="text-xs text-text-tertiary mt-0.5">Ouvre un ticket pour démarrer une analyse</p>
-            </div>
-          </div>
-        )}
-
-        {openTickets.length > 0 && (
-          <>
-            <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-1">Ouverts</p>
-            {openTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} onSelect={onSelect} />
-            ))}
-          </>
-        )}
-
-        {archivedTickets.length > 0 && (
-          <>
-            <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-1 mt-3">Archivés</p>
-            {archivedTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} onSelect={onSelect} />
-            ))}
-          </>
-        )}
-      </div>
-    </div>
-  )
-}
-
+// ── Ticket Card ────────────────────────────────────────────────────────────
 function TicketCard({
-  ticket,
-  onSelect,
+  ticket, onSelect,
 }: {
   ticket: {
-    id: string
-    title: string
-    status: string
-    createdAt: Date
+    id: string; title: string; status: string; createdAt: Date
     author: { displayName: string | null; username: string; avatarUrl: string | null }
     _count: { messages: number }
   }
-  onSelect: (ticket: { id: string; title: string; status: string }) => void
+  onSelect: (t: { id: string; title: string; status: string }) => void
 }) {
   const isOpen = ticket.status === "OPEN"
   return (
@@ -625,8 +534,7 @@ function TicketCard({
       )}>
         {isOpen
           ? <Ticket className="w-3.5 h-3.5 text-accent-cyan" />
-          : <Archive className="w-3.5 h-3.5 text-text-tertiary" />
-        }
+          : <Archive className="w-3.5 h-3.5 text-text-tertiary" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-text-primary truncate group-hover:text-accent-cyan transition-colors">
@@ -656,14 +564,115 @@ function TicketCard({
   )
 }
 
+// ── Analyse: Ticket List ───────────────────────────────────────────────────
+function TicketList({
+  channelId, roomId,
+  onSelect,
+}: {
+  channelId: string
+  roomId: string
+  onSelect: (t: { id: string; title: string; status: string }) => void
+}) {
+  const utils = api.useUtils()
+  const [showCreate, setShowCreate] = React.useState(false)
+  const [newTitle, setNewTitle] = React.useState("")
+
+  const { data: tickets } = api.room.getTickets.useQuery(
+    { channelId },
+    { refetchInterval: 3000, staleTime: 0 }
+  )
+
+  const createMutation = api.room.createTicket.useMutation({
+    onSuccess: () => {
+      setNewTitle("")
+      setShowCreate(false)
+      void utils.room.getTickets.invalidate({ channelId })
+    },
+  })
+
+  const open = (tickets ?? []).filter((t) => t.status === "OPEN")
+  const archived = (tickets ?? []).filter((t) => t.status === "ARCHIVED")
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-bg-tertiary shrink-0">
+        <div className="flex items-center gap-2">
+          <Ticket className="w-4 h-4 text-text-tertiary" />
+          <h2 className="font-semibold text-text-primary text-sm">Analyse — Tickets</h2>
+        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-1.5 text-xs font-medium text-accent-cyan hover:text-accent-cyan/80 transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Nouveau
+        </button>
+      </div>
+
+      {/* Create form */}
+      <div className={cn(
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        showCreate ? "max-h-32 opacity-100" : "max-h-0 opacity-0"
+      )}>
+        <div className="px-4 py-3 border-b border-bg-tertiary bg-bg-secondary/50">
+          <div className="flex gap-2">
+            <input
+              autoFocus={showCreate}
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newTitle.trim())
+                  createMutation.mutate({ roomId, channelId, title: newTitle.trim() })
+                if (e.key === "Escape") setShowCreate(false)
+              }}
+              placeholder="Titre du ticket…"
+              className="flex-1 bg-bg-tertiary border border-bg-tertiary rounded-lg px-3 py-2 text-sm text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan/50"
+            />
+            <button
+              disabled={!newTitle.trim() || createMutation.isPending}
+              onClick={() => createMutation.mutate({ roomId, channelId, title: newTitle.trim() })}
+              className="px-3 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium disabled:opacity-40"
+            >
+              Créer
+            </button>
+            <button onClick={() => setShowCreate(false)} className="p-2 text-text-tertiary hover:text-text-primary">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto py-3 px-3 flex flex-col gap-2">
+        {open.length === 0 && archived.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-40 gap-3 text-center">
+            <Ticket className="w-8 h-8 text-text-tertiary/50" />
+            <div>
+              <p className="text-sm font-medium text-text-secondary">Aucun ticket</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Ouvre un ticket pour démarrer une analyse</p>
+            </div>
+          </div>
+        )}
+        {open.length > 0 && (
+          <>
+            <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-1">Ouverts</p>
+            {open.map((t) => <TicketCard key={t.id} ticket={t} onSelect={onSelect} />)}
+          </>
+        )}
+        {archived.length > 0 && (
+          <>
+            <p className="text-xs font-semibold text-text-tertiary uppercase tracking-wider px-1 mt-3">Archivés</p>
+            {archived.map((t) => <TicketCard key={t.id} ticket={t} onSelect={onSelect} />)}
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ── Analyse: Ticket Chat ───────────────────────────────────────────────────
 function TicketChat({
-  roomId,
-  channelId,
-  ticket,
-  currentUserId,
-  currentUserName,
-  currentUserAvatar,
+  roomId, channelId, ticket,
+  currentUserId, currentUserName, currentUserAvatar,
   onBack,
 }: {
   roomId: string
@@ -678,9 +687,12 @@ function TicketChat({
   const bottomRef = React.useRef<HTMLDivElement>(null)
   const [optimisticMessages, setOptimisticMessages] = React.useState<ChatMessage[]>([])
 
+  const { names: typingNames, addTyping } = useTypingUsers(currentUserId)
+  const publish = usePublish(channelId)
+
   const { data, refetch } = api.room.getMessages.useQuery(
     { roomId, channelId, ticketId: ticket.id, limit: 100 },
-    { refetchInterval: 2000, refetchIntervalInBackground: false }
+    { refetchInterval: 1000, refetchIntervalInBackground: false, staleTime: 0 }
   )
 
   const sendMutation = api.room.sendMessage.useMutation()
@@ -692,6 +704,7 @@ function TicketChat({
   })
 
   useChannel(channelId, (msg: RealtimeMessage) => {
+    if (msg.type === "TYPING") { addTyping(msg.userId, msg.content ?? msg.userId); return }
     if (msg.userId !== currentUserId) void refetch()
   })
 
@@ -702,40 +715,39 @@ function TicketChat({
     [dbMessages, optimisticMessages, dbIds]
   )
 
+  const prevLengthRef = React.useRef(0)
   React.useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    if (allMessages.length > prevLengthRef.current)
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" })
+    prevLengthRef.current = allMessages.length
   }, [allMessages.length])
 
   const isArchived = ticket.status === "ARCHIVED"
 
+  async function handleTyping() {
+    await publish({ userId: currentUserId, type: "TYPING", content: currentUserName })
+  }
+
   async function handleSend(content: string) {
+    const optId = `opt-${Date.now()}`
     const optimistic: ChatMessage = {
-      id: `opt-${Date.now()}`,
-      roomId,
-      userId: currentUserId,
-      userName: currentUserName,
-      userAvatar: currentUserAvatar ?? null,
-      type: "TEXT",
-      content,
-      agentId: null,
-      replyToId: null,
-      reactions: null,
-      mentions: [],
-      isPinned: false,
-      createdAt: new Date(),
-      editedAt: null,
+      id: optId, roomId,
+      userId: currentUserId, userName: currentUserName, userAvatar: currentUserAvatar ?? null,
+      type: "TEXT", content, agentId: null, replyToId: null,
+      reactions: null, mentions: [], isPinned: false, createdAt: new Date(), editedAt: null,
     }
     setOptimisticMessages((prev) => [...prev, optimistic])
     try {
       await sendMutation.mutateAsync({ roomId, channelId, ticketId: ticket.id, content })
-    } finally {
-      void refetch()
+      await refetch()
+      setOptimisticMessages([])
+    } catch {
+      setOptimisticMessages((prev) => prev.filter((m) => m.id !== optId))
     }
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="flex items-center gap-2 px-4 py-3 border-b border-bg-tertiary shrink-0">
         <button
           onClick={onBack}
@@ -747,9 +759,7 @@ function TicketChat({
           <h2 className="font-semibold text-text-primary text-sm truncate">{ticket.title}</h2>
         </div>
         {isArchived ? (
-          <span className="text-xs font-medium text-text-tertiary bg-bg-tertiary px-2 py-1 rounded-full">
-            Archivé
-          </span>
+          <span className="text-xs font-medium text-text-tertiary bg-bg-tertiary px-2 py-1 rounded-full">Archivé</span>
         ) : (
           <button
             onClick={() => closeMutation.mutate({ ticketId: ticket.id })}
@@ -762,30 +772,26 @@ function TicketChat({
         )}
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto py-2">
         {allMessages.map((msg) => (
           <MessageItem
-            key={msg.id}
-            msg={msg}
+            key={msg.id} msg={msg}
             isOwn={msg.userId === currentUserId}
             currentUserId={currentUserId}
             canModerate={false}
-            onReply={() => {}}
-            onReact={() => {}}
-            onPin={() => {}}
-            onEdit={() => {}}
-            onDelete={() => {}}
+            onReply={() => {}} onReact={() => {}} onPin={() => {}} onEdit={() => {}} onDelete={() => {}}
           />
         ))}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
+      <TypingIndicator names={typingNames} />
+
       <ChatInput
         onSend={handleSend}
         disabled={isArchived}
         disabledMsg="Ce ticket est archivé — lecture seule"
+        onTyping={handleTyping}
       />
     </div>
   )
@@ -793,41 +799,26 @@ function TicketChat({
 
 // ── Analyse Channel ────────────────────────────────────────────────────────
 function AnalyseChannel({
-  roomId,
-  channelId,
-  currentUserId,
-  currentUserName,
-  currentUserAvatar,
+  roomId, channelId,
+  currentUserId, currentUserName, currentUserAvatar,
 }: {
-  roomId: string
-  channelId: string
-  currentUserId: string
-  currentUserName: string
-  currentUserAvatar?: string
+  roomId: string; channelId: string
+  currentUserId: string; currentUserName: string; currentUserAvatar?: string
 }) {
   const [activeTicket, setActiveTicket] = React.useState<{ id: string; title: string; status: string } | null>(null)
 
   if (activeTicket) {
     return (
       <TicketChat
-        roomId={roomId}
-        channelId={channelId}
-        ticket={activeTicket}
-        currentUserId={currentUserId}
-        currentUserName={currentUserName}
-        currentUserAvatar={currentUserAvatar}
+        roomId={roomId} channelId={channelId} ticket={activeTicket}
+        currentUserId={currentUserId} currentUserName={currentUserName} currentUserAvatar={currentUserAvatar}
         onBack={() => setActiveTicket(null)}
       />
     )
   }
 
   return (
-    <TicketList
-      channelId={channelId}
-      roomId={roomId}
-      currentUserId={currentUserId}
-      onSelect={setActiveTicket}
-    />
+    <TicketList channelId={channelId} roomId={roomId} onSelect={setActiveTicket} />
   )
 }
 
@@ -838,18 +829,11 @@ export default function ChannelPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
 
-  const { data: room } = api.room.getById.useQuery(
-    { roomId },
-    { enabled: !!roomId }
-  )
-
-  const { data: channels } = api.room.getChannels.useQuery(
-    { roomId },
-    { enabled: !!roomId }
-  )
+  const { data: room } = api.room.getById.useQuery({ roomId }, { enabled: !!roomId })
+  const { data: channels } = api.room.getChannels.useQuery({ roomId }, { enabled: !!roomId })
 
   if (status === "loading") {
-    return <div className="flex items-center justify-center h-full text-text-tertiary text-sm">Chargement...</div>
+    return <div className="flex items-center justify-center h-full text-text-tertiary text-sm">Chargement…</div>
   }
 
   const currentUserId = session?.user?.id ?? ""
@@ -868,10 +852,7 @@ export default function ChannelPage() {
           <p className="font-semibold text-text-primary">Accès restreint</p>
           <p className="text-sm text-text-tertiary mt-1">Tu dois rejoindre cette salle pour accéder aux canaux</p>
         </div>
-        <button
-          onClick={() => router.push("/salles")}
-          className="text-sm text-accent-cyan hover:underline"
-        >
+        <button onClick={() => router.push("/salles")} className="text-sm text-accent-cyan hover:underline">
           Retour aux salles
         </button>
       </div>
@@ -885,33 +866,22 @@ export default function ChannelPage() {
     return <div className="flex items-center justify-center h-full text-text-tertiary text-sm">Canal introuvable</div>
   }
 
-  // Analyse channel
   if (activeChannel.type === "ANALYSE") {
     return (
       <AnalyseChannel
-        roomId={roomId}
-        channelId={activeChannel.id}
-        currentUserId={currentUserId}
-        currentUserName={currentUserName}
-        currentUserAvatar={currentUserAvatar}
+        roomId={roomId} channelId={activeChannel.id}
+        currentUserId={currentUserId} currentUserName={currentUserName} currentUserAvatar={currentUserAvatar}
       />
     )
   }
 
-  // General / Annonce — read-only for members
   const isReadOnly = myRole === "MEMBER"
 
   return (
     <ChannelChat
-      roomId={roomId}
-      channelId={activeChannel.id}
-      channelName={activeChannel.name}
-      currentUserId={currentUserId}
-      currentUserName={currentUserName}
-      currentUserAvatar={currentUserAvatar}
-      myRole={myRole}
-      ownerId={room.ownerId}
-      readOnly={isReadOnly}
+      roomId={roomId} channelId={activeChannel.id} channelName={activeChannel.name}
+      currentUserId={currentUserId} currentUserName={currentUserName} currentUserAvatar={currentUserAvatar}
+      myRole={myRole} ownerId={room.ownerId} readOnly={isReadOnly}
     />
   )
 }

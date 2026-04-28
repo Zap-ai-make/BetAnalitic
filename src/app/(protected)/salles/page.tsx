@@ -116,6 +116,11 @@ export default function SallesPage() {
   const [showCreate, setShowCreate] = React.useState(false)
 
   const { data: rooms, isLoading, refetch } = api.room.getMyRooms.useQuery()
+  const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, { refetchInterval: 5000 })
+  const unreadMap = React.useMemo(
+    () => new Map((unreadCounts ?? []).map((c) => [c.roomId, c.unread])),
+    [unreadCounts]
+  )
 
   const handleCreated = (id: string) => {
     setShowCreate(false)
@@ -225,14 +230,16 @@ export default function SallesPage() {
               </button>
             </div>
           ) : (
-            (rooms ?? []).map((room) => (
+            (rooms ?? []).map((room) => {
+              const unread = unreadMap.get(room.id) ?? 0
+              return (
           <div
             key={room.id}
             onClick={() => router.push(`/salles/${room.id}`)}
             className={cn(
               "bg-bg-secondary rounded-xl p-4 space-y-3",
-              "border border-bg-tertiary",
-              "hover:border-accent-cyan transition-colors cursor-pointer"
+              "border transition-colors cursor-pointer",
+              unread > 0 ? "border-accent-cyan/40 hover:border-accent-cyan" : "border-bg-tertiary hover:border-accent-cyan"
             )}
           >
             {/* Header */}
@@ -255,9 +262,16 @@ export default function SallesPage() {
                   </p>
                 )}
               </div>
-              {room.myRole === "OWNER" && (
-                <Crown className="w-5 h-5 text-accent-gold flex-shrink-0" />
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                {unread > 0 && (
+                  <span className="min-w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center px-1.5 animate-pulse">
+                    {unread > 99 ? "99+" : unread}
+                  </span>
+                )}
+                {room.myRole === "OWNER" && (
+                  <Crown className="w-5 h-5 text-accent-gold" />
+                )}
+              </div>
             </div>
 
             {/* Stats */}
@@ -292,7 +306,8 @@ export default function SallesPage() {
               </div>
             )}
           </div>
-            ))
+              )
+            })
           )
         ) : (
           /* Explorer View */

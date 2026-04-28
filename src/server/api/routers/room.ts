@@ -1402,10 +1402,28 @@ export const roomRouter = createTRPCRouter({
 
       await createDefaultChannels(ctx.db, input.roomId)
 
-      return ctx.db.roomChannel.findMany({
+      const channels = await ctx.db.roomChannel.findMany({
         where: { roomId: input.roomId },
         orderBy: { createdAt: "asc" },
+        include: {
+          messages: {
+            where: { isDeleted: false },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+            select: { createdAt: true },
+          },
+          tickets: {
+            where: { status: "OPEN" },
+            select: { id: true },
+          },
+        },
       })
+
+      return channels.map(({ messages, tickets, ...ch }) => ({
+        ...ch,
+        latestMessageAt: messages[0]?.createdAt ?? null,
+        openTicketCount: tickets.length,
+      }))
     }),
 
   /**
