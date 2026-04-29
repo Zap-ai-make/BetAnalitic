@@ -391,7 +391,7 @@ export const roomRouter = createTRPCRouter({
         description: z.string().max(200).optional().nullable(),
         color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
         badge: z.string().max(4).optional().nullable(),
-        coverImage: z.string().url().optional().nullable(),
+        coverImage: z.string().max(500000).optional().nullable(),
         visibility: z.enum(["PUBLIC", "PRIVATE", "INVITE_ONLY"]).optional(),
       })
     )

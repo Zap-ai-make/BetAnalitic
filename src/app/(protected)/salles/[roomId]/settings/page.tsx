@@ -31,6 +31,28 @@ function Section({ title, icon: Icon, children }: {
   )
 }
 
+// Compress image client-side → base64 JPEG (no server needed)
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const objectUrl = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl)
+      const MAX_W = 900, MAX_H = 300
+      const scale = Math.min(MAX_W / img.width, MAX_H / img.height, 1)
+      const canvas = document.createElement("canvas")
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return reject(new Error("Canvas indisponible"))
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
+      resolve(canvas.toDataURL("image/jpeg", 0.75))
+    }
+    img.onerror = () => reject(new Error("Impossible de charger l'image"))
+    img.src = objectUrl
+  })
+}
+
 // ── Cover image upload ─────────────────────────────────────────
 function CoverUpload({ value, color, badge, onChange }: {
   value: string; color: string; badge: string; onChange: (url: string) => void
@@ -42,21 +64,17 @@ function CoverUpload({ value, color, badge, onChange }: {
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
+    if (!file.type.startsWith("image/")) { setError("Format invalide (image uniquement)"); return }
+    if (file.size > 10 * 1024 * 1024) { setError("Image trop grande (max 10 Mo)"); return }
     setError(null)
     setUploading(true)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const res = await fetch("/api/upload/room-cover", { method: "POST", body: fd })
-      const text = await res.text()
-      const data = text ? (JSON.parse(text) as { url?: string; error?: string }) : {}
-      if (!res.ok || !data.url) throw new Error(data.error ?? `Erreur ${res.status}`)
-      onChange(data.url)
+      const dataUrl = await compressImage(file)
+      onChange(dataUrl)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur upload")
+      setError(err instanceof Error ? err.message : "Erreur")
     } finally {
       setUploading(false)
-      // Reset input so same file can be re-selected
       if (inputRef.current) inputRef.current.value = ""
     }
   }
