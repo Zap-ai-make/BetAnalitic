@@ -415,6 +415,45 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
     setTypingGreeting(null)
   }
 
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState("")
+
+  const startRename = (e: React.MouseEvent, conv: Conversation) => {
+    e.stopPropagation()
+    setEditingId(conv.id)
+    setEditingTitle(conv.title)
+  }
+
+  const commitRename = (id: string) => {
+    const title = editingTitle.trim()
+    if (!title) { setEditingId(null); return }
+    setConversations((prev) => {
+      const next = prev.map((c) => c.id === id ? { ...c, title } : c)
+      saveConvs(next)
+      return next
+    })
+    setEditingId(null)
+  }
+
+  const deleteConversation = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation()
+    setConversations((prev) => {
+      const next = prev.filter((c) => c.id !== id)
+      saveConvs(next)
+      return next
+    })
+    // If we deleted the active conversation, reset the chat
+    if (convIdRef.current === id) {
+      convIdRef.current = null
+      setExtra([])
+      setAgent("Oracle")
+      setMatchCtx(null)
+      matchCtxRef.current = null
+      setTypingGreeting({ text: agentGreeting("Oracle", username, lang), typed: "", agentId: "Oracle" })
+      setShowHistory(false)
+    }
+  }
+
   const clearChat = () => {
     convIdRef.current = null
     setExtra([])
@@ -508,12 +547,50 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
               conversations.map((conv) => (
                 <div
                   key={conv.id}
-                  onClick={() => loadConversation(conv)}
-                  style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: conv.id === convIdRef.current ? "rgba(0,240,255,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${conv.id === convIdRef.current ? "rgba(0,240,255,0.2)" : "rgba(255,255,255,0.06)"}`, marginBottom: 6 }}
+                  onClick={() => editingId !== conv.id && loadConversation(conv)}
+                  style={{ padding: "10px 12px", borderRadius: 8, cursor: editingId === conv.id ? "default" : "pointer", background: conv.id === convIdRef.current ? "rgba(0,240,255,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${conv.id === convIdRef.current ? "rgba(0,240,255,0.2)" : "rgba(255,255,255,0.06)"}`, marginBottom: 6 }}
                 >
-                  <div style={{ fontSize: 13, color: "#d4dae5", fontFamily: "var(--font-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {conv.title}
-                  </div>
+                  {/* Title row */}
+                  {editingId === conv.id ? (
+                    <input
+                      autoFocus
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename(conv.id)
+                        if (e.key === "Escape") setEditingId(null)
+                      }}
+                      onBlur={() => commitRename(conv.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{ width: "100%", fontSize: 13, color: "#d4dae5", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(0,212,255,0.3)", borderRadius: 4, padding: "2px 6px", outline: "none", fontFamily: "var(--font-body)" }}
+                    />
+                  ) : (
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <span style={{ flex: 1, fontSize: 13, color: "#d4dae5", fontFamily: "var(--font-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {conv.title}
+                      </span>
+                      {/* Action buttons — always visible on mobile */}
+                      <button
+                        onClick={(e) => startRename(e, conv)}
+                        style={{ color: "#545e71", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 1, flexShrink: 0 }}
+                        title="Renommer"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4z"/>
+                        </svg>
+                      </button>
+                      <button
+                        onClick={(e) => deleteConversation(e, conv.id)}
+                        style={{ color: "#545e71", background: "none", border: "none", cursor: "pointer", padding: "2px 4px", lineHeight: 1, flexShrink: 0 }}
+                        title="Supprimer"
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    </div>
+                  )}
+                  {/* Meta row */}
                   <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
                     {conv.matchCtx && (
                       <span style={{ fontSize: 10, color: "#00D4FF", background: "rgba(0,212,255,0.1)", padding: "1px 6px", borderRadius: 4 }}>
