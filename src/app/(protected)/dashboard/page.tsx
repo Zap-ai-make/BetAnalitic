@@ -217,7 +217,7 @@ interface PendingMatch {
 
 // ── Chat persistence helpers ──────────────────────────────────
 interface ExtraMsg { role: "user" | "oracle" | "system"; body: string; agentId?: "Oracle" | AgentId }
-interface Conversation { id: string; title: string; agentId: "Oracle" | AgentId; messages: ExtraMsg[]; ts: number }
+interface Conversation { id: string; title: string; agentId: "Oracle" | AgentId; messages: ExtraMsg[]; ts: number; matchCtx?: PendingMatch | null }
 type TypingGreeting = { text: string; typed: string; agentId: "Oracle" | AgentId }
 
 const CONV_KEY = "betanalytic_conversations"
@@ -252,7 +252,11 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
   const taRef = useRef<HTMLTextAreaElement>(null)
 
   const [matchCtx, setMatchCtx] = useState<PendingMatch | null>(null)
+  const matchCtxRef = useRef<PendingMatch | null>(null)
   const matchInjectedRef = useRef(false)
+
+  // Keep ref in sync so the save effect never captures a stale value
+  useEffect(() => { matchCtxRef.current = matchCtx }, [matchCtx])
 
   const restoredRef = useRef(false)
 
@@ -291,6 +295,7 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
       convIdRef.current = last.id
       setExtra(last.messages)
       setAgent(last.agentId)
+      if (last.matchCtx) { setMatchCtx(last.matchCtx); matchCtxRef.current = last.matchCtx }
       restoredRef.current = true
     }
 
@@ -333,8 +338,11 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
     if (extra.length === 0) return
     const id = convIdRef.current ?? genId()
     convIdRef.current = id
-    const title = extra.find((m) => m.role === "user")?.body.slice(0, 45) ?? (lang === "EN" ? "Conversation" : "Conversation")
-    const conv: Conversation = { id, title, agentId: agent, messages: extra, ts: Date.now() }
+    const mc = matchCtxRef.current
+    const title = mc
+      ? `⚽ ${mc.homeTeam} vs ${mc.awayTeam}`
+      : (extra.find((m) => m.role === "user")?.body.slice(0, 45) ?? "Conversation")
+    const conv: Conversation = { id, title, agentId: agent, messages: extra, ts: Date.now(), matchCtx: mc }
     setConversations((prev) => {
       const next = [conv, ...prev.filter((c) => c.id !== id)]
       saveConvs(next)
@@ -400,6 +408,9 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
     convIdRef.current = conv.id
     setExtra(conv.messages)
     setAgent(conv.agentId)
+    const mc = conv.matchCtx ?? null
+    setMatchCtx(mc)
+    matchCtxRef.current = mc
     setShowHistory(false)
     setTypingGreeting(null)
   }
@@ -408,6 +419,8 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
     convIdRef.current = null
     setExtra([])
     setAgent("Oracle")
+    setMatchCtx(null)
+    matchCtxRef.current = null
     setShowHistory(false)
     setTypingGreeting({ text: agentGreeting("Oracle", username, lang), typed: "", agentId: "Oracle" })
   }
@@ -498,9 +511,18 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
                   onClick={() => loadConversation(conv)}
                   style={{ padding: "10px 12px", borderRadius: 8, cursor: "pointer", background: conv.id === convIdRef.current ? "rgba(0,240,255,0.06)" : "rgba(255,255,255,0.03)", border: `1px solid ${conv.id === convIdRef.current ? "rgba(0,240,255,0.2)" : "rgba(255,255,255,0.06)"}`, marginBottom: 6 }}
                 >
-                  <div style={{ fontSize: 13, color: "#d4dae5", fontFamily: "var(--font-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{conv.title}</div>
-                  <div style={{ fontSize: 10, color: "#545e71", fontFamily: "var(--font-jetbrains-mono, monospace)", letterSpacing: "0.05em", marginTop: 3 }}>
-                    {new Date(conv.ts).toLocaleDateString(lang === "EN" ? "en-US" : "fr-FR", { day: "2-digit", month: "short" })} · {new Date(conv.ts).toLocaleTimeString(lang === "EN" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                  <div style={{ fontSize: 13, color: "#d4dae5", fontFamily: "var(--font-body)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {conv.title}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 3 }}>
+                    {conv.matchCtx && (
+                      <span style={{ fontSize: 10, color: "#00D4FF", background: "rgba(0,212,255,0.1)", padding: "1px 6px", borderRadius: 4 }}>
+                        {conv.matchCtx.competition}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 10, color: "#545e71", fontFamily: "var(--font-jetbrains-mono, monospace)", letterSpacing: "0.05em" }}>
+                      {new Date(conv.ts).toLocaleDateString(lang === "EN" ? "en-US" : "fr-FR", { day: "2-digit", month: "short" })} · {new Date(conv.ts).toLocaleTimeString(lang === "EN" ? "en-US" : "fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                    </span>
                   </div>
                 </div>
               ))
