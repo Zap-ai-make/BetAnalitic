@@ -152,6 +152,9 @@ function MatchRow({ match }: { match: VpsMatch }) {
         league: match.competition,
         time: fmtTime(match.date_iso),
         addedAt: new Date(),
+        odds: (match.odds["1"] != null && match.odds.X != null && match.odds["2"] != null)
+          ? { "1": match.odds["1"]!, X: match.odds.X!, "2": match.odds["2"]! }
+          : undefined,
       })
       router.push("/paris")
     }

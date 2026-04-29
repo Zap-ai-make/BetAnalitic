@@ -10,6 +10,7 @@ interface CouponMatch {
   time: string
   addedAt: Date
   status?: MatchStatus
+  odds?: { "1": number; X: number; "2": number }
 }
 
 export type AnalysisMode = "analytique" | "supporter"
