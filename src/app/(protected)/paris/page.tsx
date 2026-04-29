@@ -33,9 +33,20 @@ interface BetRecord {
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const BALANCE_KEY = "betanalytic-virtual-balance"
+const LOCAL_BETS_KEY = "betanalytic-local-bets"
 const CURRENCY_SYMBOLS: Record<Currency, string> = { FCFA: "FCFA", USD: "$", EUR: "€" }
 
 const DEFAULT_BALANCE = { amount: 50000, currency: "FCFA" as Currency }
+
+function loadLocalBets(): BetRecord[] {
+  try {
+    return JSON.parse(localStorage.getItem(LOCAL_BETS_KEY) ?? "[]") as BetRecord[]
+  } catch { return [] }
+}
+
+function saveLocalBets(bets: BetRecord[]) {
+  localStorage.setItem(LOCAL_BETS_KEY, JSON.stringify(bets))
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -268,10 +279,13 @@ export default function ParisPage() {
   // Tabs
   const [tab, setTab] = useState<Tab>("coupon")
 
+  // Local bets (fallback when API rejects mock match IDs)
+  const [localBets, setLocalBets] = useState<BetRecord[]>([])
+
   // API
   const betsFetch = useFetch<{ bets: BetRecord[] }>("/api/beta/betting/bet")
 
-  // Load balance from localStorage
+  // Load balance + local bets from localStorage
   useEffect(() => {
     const raw = localStorage.getItem(BALANCE_KEY)
     if (raw) {
@@ -281,6 +295,7 @@ export default function ParisPage() {
         setCurrency(d.currency)
       } catch { /* ignore */ }
     }
+    setLocalBets(loadLocalBets())
   }, [])
 
   // Load bets when switching tabs
@@ -331,27 +346,55 @@ export default function ParisPage() {
     setPlacing(true)
     try {
       const n = matchesWithSelection.length
+      const newLocalBets: BetRecord[] = []
+
       for (const m of matchesWithSelection) {
         const key = oddsSelection[m.id]!
         const odds = m.odds?.[key] ?? 1
+        const legStake = stake / n
         const labelMap: Record<OddKey, string> = {
           "1": m.homeTeam, X: "Nul", "2": m.awayTeam,
         }
-        const res = await fetch("/api/beta/betting/bet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        let savedToApi = false
+        try {
+          const res = await fetch("/api/beta/betting/bet", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              match_id: m.id,
+              home_team: m.homeTeam,
+              away_team: m.awayTeam,
+              prediction: key === "1" ? "home" : key === "2" ? "away" : "draw",
+              prediction_label: labelMap[key],
+              odds,
+              stake: legStake,
+            }),
+          })
+          savedToApi = res.ok
+        } catch { /* network error — fall through to local */ }
+
+        if (!savedToApi) {
+          newLocalBets.push({
+            id: `local-${Date.now()}-${m.id}`,
             match_id: m.id,
             home_team: m.homeTeam,
             away_team: m.awayTeam,
-            prediction: key === "1" ? "home" : key === "2" ? "away" : "draw",
             prediction_label: labelMap[key],
             odds,
-            stake: stake / n,
-          }),
-        })
-        if (!res.ok) throw new Error("Erreur API")
+            stake: legStake,
+            potential_win: legStake * odds,
+            status: "pending",
+            created_at: new Date().toISOString(),
+          })
+        }
       }
+
+      if (newLocalBets.length > 0) {
+        const updated = [...loadLocalBets(), ...newLocalBets]
+        saveLocalBets(updated)
+        setLocalBets(updated)
+      }
+
       saveBalance(balance - stake, currency)
       clearCoupon()
       setOddsSelection({})
@@ -359,14 +402,20 @@ export default function ParisPage() {
       setTab("encours")
       void betsFetch.reload()
     } catch {
-      showToast("Erreur lors du placement — vérifiez votre connexion")
+      showToast("Erreur inattendue — réessaie")
     } finally {
       setPlacing(false)
     }
   }
 
-  const pendingBets = betsFetch.data?.bets.filter((b) => b.status === "pending") ?? []
-  const historyBets = betsFetch.data?.bets.filter((b) => b.status !== "pending") ?? []
+  // Merge API bets + local bets (dedup by id)
+  const apiBets = betsFetch.data?.bets ?? []
+  const apiIds = new Set(apiBets.map((b) => b.id))
+  const allBets = [...apiBets, ...localBets.filter((b) => !apiIds.has(b.id))]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+  const pendingBets = allBets.filter((b) => b.status === "pending")
+  const historyBets = allBets.filter((b) => b.status !== "pending")
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
     { id: "coupon",     label: "Coupon",      icon: <TicketPlus className="w-4 h-4" />, badge: couponMatches.length || undefined },
