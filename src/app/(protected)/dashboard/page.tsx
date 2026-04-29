@@ -208,6 +208,13 @@ function agentGreeting(id: "Oracle" | AgentId, username: string, lang: "FR" | "E
   return `Salut ${username} ! Je suis @${id}, spécialiste en ${a.cat}. Je vais t'aider dans ton analyse en ${fr[id as AgentId] ?? `couvrant ${a.cat}`}. Quelle est ta question ?`
 }
 
+// ── Pending match (from Matchs page) ─────────────────────────
+interface PendingMatch {
+  id: string; homeTeam: string; awayTeam: string
+  competition: string; country: string; time: string
+  status: "live" | "upcoming" | "finished"
+}
+
 // ── Chat persistence helpers ──────────────────────────────────
 interface ExtraMsg { role: "user" | "oracle" | "system"; body: string; agentId?: "Oracle" | AgentId }
 interface Conversation { id: string; title: string; agentId: "Oracle" | AgentId; messages: ExtraMsg[]; ts: number }
@@ -226,7 +233,12 @@ function saveConvs(convs: Conversation[]) {
 }
 
 // ── Oracle console (ChatGPT-style) ───────────────────────────
-function OracleConsole({ username, ready }: { username: string; ready: boolean }) {
+function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
+  username: string
+  ready: boolean
+  pendingMatch: PendingMatch | null
+  onMatchConsumed: () => void
+}) {
   const [draft, setDraft] = useState("")
   const [extra, setExtra] = useState<ExtraMsg[]>([])
   const [agent, setAgent] = useState<"Oracle" | AgentId>("Oracle")
@@ -239,7 +251,31 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
   const bodyRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
+  const [matchCtx, setMatchCtx] = useState<PendingMatch | null>(null)
+  const matchInjectedRef = useRef(false)
+
   const restoredRef = useRef(false)
+
+  // Inject pending match when ready
+  useEffect(() => {
+    if (!ready || !pendingMatch || matchInjectedRef.current) return
+    matchInjectedRef.current = true
+    setMatchCtx(pendingMatch)
+    onMatchConsumed()
+    // Clear existing chat and start fresh for this match
+    convIdRef.current = null
+    setAgent("Oracle")
+    setShowHistory(false)
+    const flag = pendingMatch.status === "live" ? "🔴 LIVE" : pendingMatch.time
+    const sys = `─── Match chargé : ${pendingMatch.homeTeam} vs ${pendingMatch.awayTeam} · ${pendingMatch.competition} ───`
+    const greeting = `Match **${pendingMatch.homeTeam} vs ${pendingMatch.awayTeam}** (${pendingMatch.competition}) chargé et prêt pour l'analyse ! Je coordonne les 14 agents spécialisés. Quel aspect veux-tu creuser ? (buts, corners, cartons, tactique…) Ou @mentionne directement un agent.`
+    setExtra([
+      { role: "system", body: sys },
+      { role: "oracle", body: greeting, agentId: "Oracle" },
+    ])
+    setTypingGreeting(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, pendingMatch])
 
   // Load lang + conversations from localStorage on mount
   useEffect(() => {
@@ -326,15 +362,19 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
     setOpen(false)
 
     if (alreadySeen) {
-      // Agent was already introduced — just mark as active, no re-greeting
       setExtra((e) => [...e, { role: "system", body: `— ${label} ${lang === "EN" ? "active" : "actif"} —` }])
       setTypingGreeting(null)
     } else {
-      // First time this agent appears — add separator if mid-conversation then full greeting
       if (extra.length > 0 || typingGreeting) {
         setExtra((e) => [...e, { role: "system", body: `─── ${label} ${lang === "EN" ? "activated" : "activé"} ───` }])
       }
-      setTypingGreeting({ text: agentGreeting(id, username, lang), typed: "", agentId: id })
+      const base = agentGreeting(id, username, lang)
+      const withMatch = matchCtx && id !== "Oracle"
+        ? base + (lang === "EN"
+            ? ` I'm analyzing **${matchCtx.homeTeam} vs ${matchCtx.awayTeam}** (${matchCtx.competition}).`
+            : ` J'analyse **${matchCtx.homeTeam} vs ${matchCtx.awayTeam}** (${matchCtx.competition}).`)
+        : base
+      setTypingGreeting({ text: withMatch, typed: "", agentId: id })
     }
   }
 
@@ -344,12 +384,13 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
     setExtra((e) => [...e, { role: "user", body }])
     setDraft("")
     if (taRef.current) taRef.current.style.height = "auto"
+    const matchSuffix = matchCtx ? ` [${matchCtx.homeTeam} vs ${matchCtx.awayTeam} · ${matchCtx.competition}]` : ""
     setTimeout(() => {
       setExtra((e) => [...e, {
         role: "oracle",
         body: isOracle
-          ? (lang === "EN" ? "Analyzing via @GoalMaster + @TacticMaster…" : "Analyse en cours via @GoalMaster + @TacticMaster…")
-          : (lang === "EN" ? `@${agent} processing your query — conf 78%` : `@${agent} traite ta requête — conf 78%`),
+          ? (lang === "EN" ? `Analyzing via @GoalMaster + @TacticMaster…${matchSuffix}` : `Analyse en cours via @GoalMaster + @TacticMaster…${matchSuffix}`)
+          : (lang === "EN" ? `@${agent} processing your query — conf 78%${matchSuffix}` : `@${agent} traite ta requête — conf 78%${matchSuffix}`),
         agentId: agent,
       }])
     }, 600)
@@ -491,6 +532,32 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 
       {/* ── Input ── */}
       <div className="gpt-input-area" style={{ paddingBottom: "calc(72px + env(safe-area-inset-bottom, 0px))" }}>
+        {/* Match context banner */}
+        {matchCtx && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "5px 10px 5px 12px",
+            background: "rgba(0,212,255,0.07)",
+            border: "1px solid rgba(0,212,255,0.18)",
+            borderRadius: 10, marginBottom: 8,
+          }}>
+            <span style={{ fontSize: 13 }}>⚽</span>
+            <span style={{ flex: 1, fontSize: 11, fontWeight: 600, color: "#a8c8d8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+              {matchCtx.homeTeam} vs {matchCtx.awayTeam}
+            </span>
+            <span style={{ fontSize: 10, color: "#00D4FF", flexShrink: 0 }}>
+              {matchCtx.status === "live" ? "🔴 LIVE" : matchCtx.time}
+            </span>
+            <span style={{ fontSize: 10, color: "#546070", flexShrink: 0, marginLeft: 4 }}>
+              {matchCtx.competition}
+            </span>
+            <button
+              onClick={() => setMatchCtx(null)}
+              style={{ color: "#546070", fontSize: 16, lineHeight: 1, marginLeft: 4, background: "none", border: "none", cursor: "pointer", padding: "0 2px" }}
+              aria-label="Retirer le match"
+            >×</button>
+          </div>
+        )}
         <div className="gpt-input-box">
           <textarea ref={taRef} rows={1} value={draft} onChange={handleInput}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submit() } }}
@@ -510,11 +577,18 @@ function OracleConsole({ username, ready }: { username: string; ready: boolean }
 // ── Main page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession()
-  // Intro plays only once per browser session
   const [intro, setIntro] = useState(true)
+  const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
+
   useEffect(() => {
     if (typeof window !== "undefined" && sessionStorage.getItem("betanalytic_intro_done")) {
       setIntro(false)
+    }
+    // Read match pushed by Matchs page
+    const raw = sessionStorage.getItem("pending_match")
+    if (raw) {
+      try { setPendingMatch(JSON.parse(raw) as PendingMatch) } catch { /* ignore */ }
+      sessionStorage.removeItem("pending_match")
     }
   }, [])
 
@@ -536,7 +610,12 @@ export default function DashboardPage() {
       >
         {intro && <IntroSplash onDone={handleIntroDone} />}
         <Header />
-        <OracleConsole username={username} ready={!intro} />
+        <OracleConsole
+          username={username}
+          ready={!intro}
+          pendingMatch={pendingMatch}
+          onMatchConsumed={() => setPendingMatch(null)}
+        />
       </div>
       <DashboardNav />
     </>

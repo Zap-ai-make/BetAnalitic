@@ -12,7 +12,6 @@ import {
 } from "lucide-react"
 
 // ── Types ───────────────────────────────────────────────────────────────────
-type StatusFilter = "all" | "upcoming" | "live" | "finished"
 
 interface VpsMatch {
   match_id: string
@@ -154,12 +153,22 @@ function MatchRow({ match }: { match: VpsMatch }) {
         time: fmtTime(match.date_iso),
         addedAt: new Date(),
       })
+      router.push("/paris")
     }
   }
 
   const handleAnalyse = (e: React.MouseEvent) => {
     e.stopPropagation()
-    router.push(`/live/${match.match_id}`)
+    sessionStorage.setItem("pending_match", JSON.stringify({
+      id: match.match_id,
+      homeTeam: match.home_team,
+      awayTeam: match.away_team,
+      competition: match.competition,
+      country: match.country ?? "",
+      time: fmtTime(match.date_iso),
+      status,
+    }))
+    router.push("/dashboard")
   }
 
   return (
@@ -261,10 +270,10 @@ export default function MatchesPage() {
   const [usingMock, setUsingMock] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
+  const [countryFilter, setCountryFilter] = useState<string | null>(null)
   const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
   const [selectedDate, setSelectedDate] = useState<string>(fmtDate(new Date()))
-  const [showStatus, setShowStatus] = useState(false)
+  const [showCountries, setShowCountries] = useState(false)
   const [showCompetitions, setShowCompetitions] = useState(false)
 
   const load = useCallback(async () => {
@@ -289,16 +298,25 @@ export default function MatchesPage() {
 
   useEffect(() => { void load() }, [load])
 
+  // Derive unique countries sorted
+  const countries = useMemo(() => {
+    const seen = new Set<string>()
+    matches.forEach((m) => { if (m.country) seen.add(m.country) })
+    return [...seen].sort((a, b) => a.localeCompare(b, "fr"))
+  }, [matches])
+
   // Derive unique competitions sorted by priority
   const competitions = useMemo(() => {
     const map = new Map<string, string>() // competition → country
-    matches.forEach((m) => map.set(m.competition, m.country ?? ""))
+    matches
+      .filter((m) => !countryFilter || m.country === countryFilter)
+      .forEach((m) => map.set(m.competition, m.country ?? ""))
     return [...map.entries()].sort((a, b) => {
       const pa = COMP_PRIORITY[a[0]] ?? 99
       const pb = COMP_PRIORITY[b[0]] ?? 99
       return pa - pb || a[0].localeCompare(b[0])
     })
-  }, [matches])
+  }, [matches, countryFilter])
 
   // Filtered + grouped
   const grouped = useMemo(() => {
@@ -315,11 +333,8 @@ export default function MatchesPage() {
         ) return false
       }
 
+      if (countryFilter && m.country !== countryFilter) return false
       if (competitionFilter && m.competition !== competitionFilter) return false
-
-      if (statusFilter !== "all") {
-        if (vpsStatus(m.status) !== statusFilter) return false
-      }
 
       return true
     })
@@ -330,27 +345,20 @@ export default function MatchesPage() {
       groups[m.competition]!.matches.push(m)
     })
     return groups
-  }, [matches, selectedDate, searchQuery, competitionFilter, statusFilter])
+  }, [matches, selectedDate, searchQuery, countryFilter, competitionFilter])
 
   const totalFiltered = useMemo(
     () => Object.values(grouped).reduce((s, g) => s + g.matches.length, 0),
     [grouped]
   )
 
-  const activeFilters = (competitionFilter ? 1 : 0) + (statusFilter !== "all" ? 1 : 0)
+  const activeFilters = (countryFilter ? 1 : 0) + (competitionFilter ? 1 : 0)
 
   const clearFilters = () => {
+    setCountryFilter(null)
     setCompetitionFilter(null)
-    setStatusFilter("all")
     setSearchQuery("")
     setSelectedDate(fmtDate(new Date()))
-  }
-
-  const STATUS_LABELS: Record<StatusFilter, string> = {
-    all: "État",
-    live: "Live",
-    upcoming: "À venir",
-    finished: "Terminés",
   }
 
   return (
@@ -411,38 +419,48 @@ export default function MatchesPage() {
             />
           </label>
 
-          {/* Status filter */}
+          {/* Country filter */}
           <div className="relative shrink-0">
             <button
-              onClick={() => { setShowStatus(!showStatus); setShowCompetitions(false) }}
+              onClick={() => { setShowCountries(!showCountries); setShowCompetitions(false) }}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium",
-                statusFilter !== "all"
+                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium max-w-35",
+                countryFilter
                   ? "bg-accent-cyan text-bg-primary"
                   : "bg-bg-tertiary text-text-secondary"
               )}
             >
-              {statusFilter === "live" && (
-                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
-              )}
-              {STATUS_LABELS[statusFilter]}
-              <ChevronDown className="w-3.5 h-3.5" />
+              {countryFilter
+                ? <><span>{COUNTRY_FLAG[countryFilter] ?? "⚽"}</span><span className="truncate">{countryFilter}</span></>
+                : "Pays"
+              }
+              <ChevronDown className="w-3.5 h-3.5 shrink-0" />
             </button>
-            {showStatus && (
+            {showCountries && (
               <>
-                <div className="fixed inset-0 z-10" onClick={() => setShowStatus(false)} />
-                <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-xl z-20 min-w-[160px] overflow-hidden">
-                  {(["all", "live", "upcoming", "finished"] as StatusFilter[]).map((s) => (
+                <div className="fixed inset-0 z-10" onClick={() => setShowCountries(false)} />
+                <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-xl z-20 min-w-45 max-h-70 overflow-y-auto">
+                  <button
+                    onClick={() => { setCountryFilter(null); setCompetitionFilter(null); setShowCountries(false) }}
+                    className={cn(
+                      "w-full px-4 py-2.5 text-left text-sm hover:bg-bg-tertiary transition-colors",
+                      !countryFilter ? "text-accent-cyan" : "text-text-primary"
+                    )}
+                  >
+                    Tous les pays
+                  </button>
+                  <div className="border-t border-bg-tertiary" />
+                  {countries.map((c) => (
                     <button
-                      key={s}
-                      onClick={() => { setStatusFilter(s); setShowStatus(false) }}
+                      key={c}
+                      onClick={() => { setCountryFilter(c); setCompetitionFilter(null); setShowCountries(false) }}
                       className={cn(
                         "w-full px-4 py-2.5 text-left text-sm hover:bg-bg-tertiary transition-colors flex items-center gap-2",
-                        statusFilter === s ? "text-accent-cyan" : "text-text-primary"
+                        countryFilter === c ? "text-accent-cyan" : "text-text-primary"
                       )}
                     >
-                      {s === "live" && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
-                      {STATUS_LABELS[s]}
+                      <span>{COUNTRY_FLAG[c] ?? "⚽"}</span>
+                      {c}
                     </button>
                   ))}
                 </div>
@@ -453,9 +471,9 @@ export default function MatchesPage() {
           {/* Competition filter */}
           <div className="relative shrink-0">
             <button
-              onClick={() => { setShowCompetitions(!showCompetitions); setShowStatus(false) }}
+              onClick={() => { setShowCompetitions(!showCompetitions); setShowCountries(false) }}
               className={cn(
-                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium max-w-[160px]",
+                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium max-w-40",
                 competitionFilter
                   ? "bg-accent-cyan text-bg-primary"
                   : "bg-bg-tertiary text-text-secondary"
@@ -467,7 +485,7 @@ export default function MatchesPage() {
             {showCompetitions && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowCompetitions(false)} />
-                <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-xl z-20 min-w-[220px] max-h-[300px] overflow-y-auto">
+                <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-xl z-20 min-w-55 max-h-75 overflow-y-auto">
                   <button
                     onClick={() => { setCompetitionFilter(null); setShowCompetitions(false) }}
                     className={cn(
