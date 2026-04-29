@@ -1,88 +1,311 @@
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
-import { MatchCard } from "~/components/features/match/MatchCard"
-import { BetSlip } from "~/components/features/betting/BetSlip"
-import { MatchBettingCard } from "~/components/features/betting/MatchBettingCard"
 import { cn } from "~/lib/utils"
-import { ChevronDown, Calendar, Search, X, Brain, TrendingUp } from "lucide-react"
+import { useCouponStore } from "~/lib/stores/couponStore"
+import {
+  ChevronDown, Search, X, Brain, TicketPlus, Calendar,
+  Check, Loader2, ChevronRight,
+} from "lucide-react"
 
+// ── Types ───────────────────────────────────────────────────────────────────
 type StatusFilter = "all" | "upcoming" | "live" | "finished"
-type PageMode = "analyse" | "paris"
 
 interface VpsMatch {
   match_id: string
   home_team: string
   away_team: string
   competition: string
+  country: string
   date_iso: string
   status: string
   odds: { "1": number | null; X: number | null; "2": number | null }
+  home_score?: number
+  away_score?: number
 }
 
-function vpsStatusToCard(status: string): "live" | "upcoming" | "finished" {
-  if (status === "inprogress" || status === "halftime") return "live"
-  if (status === "final" || status === "finished" || status === "ft") return "finished"
+// ── Mock data (fallback / dev) ───────────────────────────────────────────────
+const TODAY = new Date().toISOString().split("T")[0]!
+const MOCK_MATCHES: VpsMatch[] = [
+  {
+    match_id: "mock-1",
+    home_team: "PSG",
+    away_team: "Olympique de Marseille",
+    competition: "Ligue 1",
+    country: "France",
+    date_iso: `${TODAY}T20:00:00Z`,
+    status: "upcoming",
+    odds: { "1": 1.85, X: 3.40, "2": 4.20 },
+  },
+  {
+    match_id: "mock-2",
+    home_team: "Manchester City",
+    away_team: "Arsenal",
+    competition: "Premier League",
+    country: "Angleterre",
+    date_iso: `${TODAY}T16:30:00Z`,
+    status: "inprogress",
+    odds: { "1": 1.70, X: 3.60, "2": 4.80 },
+    home_score: 1,
+    away_score: 0,
+  },
+  {
+    match_id: "mock-3",
+    home_team: "Real Madrid",
+    away_team: "FC Barcelona",
+    competition: "La Liga",
+    country: "Espagne",
+    date_iso: `${TODAY}T19:00:00Z`,
+    status: "upcoming",
+    odds: { "1": 2.10, X: 3.30, "2": 3.50 },
+  },
+  {
+    match_id: "mock-4",
+    home_team: "Bayern Munich",
+    away_team: "Borussia Dortmund",
+    competition: "Bundesliga",
+    country: "Allemagne",
+    date_iso: `${TODAY}T17:30:00Z`,
+    status: "final",
+    odds: { "1": 1.60, X: 3.80, "2": 5.50 },
+    home_score: 2,
+    away_score: 1,
+  },
+  {
+    match_id: "mock-5",
+    home_team: "Inter Milan",
+    away_team: "Juventus",
+    competition: "Serie A",
+    country: "Italie",
+    date_iso: `${TODAY}T20:45:00Z`,
+    status: "upcoming",
+    odds: { "1": 2.20, X: 3.20, "2": 3.40 },
+  },
+]
+
+// Competition priority: special comps first, then by country
+const COMP_PRIORITY: Record<string, number> = {
+  "Ligue des Champions": 0,
+  "Ligue Europa": 1,
+  "Coupe du Monde": 2,
+  "Euro": 3,
+  "Coupe d'Afrique": 4,
+  "Premier League": 10,
+  "La Liga": 11,
+  "Bundesliga": 12,
+  "Serie A": 13,
+  "Ligue 1": 14,
+}
+
+const COUNTRY_FLAG: Record<string, string> = {
+  "International": "🌍",
+  "Angleterre": "🏴󠁧󠁢󠁥󠁮󠁧󠁿",
+  "Espagne": "🇪🇸",
+  "Allemagne": "🇩🇪",
+  "Italie": "🇮🇹",
+  "France": "🇫🇷",
+  "Portugal": "🇵🇹",
+  "Pays-Bas": "🇳🇱",
+  "Belgique": "🇧🇪",
+  "Turquie": "🇹🇷",
+  "Russie": "🇷🇺",
+  "Brésil": "🇧🇷",
+  "Argentine": "🇦🇷",
+  "Maroc": "🇲🇦",
+  "Sénégal": "🇸🇳",
+  "Côte d'Ivoire": "🇨🇮",
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function vpsStatus(s: string): "live" | "upcoming" | "finished" {
+  if (s === "inprogress" || s === "halftime") return "live"
+  if (s === "final" || s === "finished" || s === "ft") return "finished"
   return "upcoming"
 }
 
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+}
+
+function fmtDate(d: Date) {
+  return d.toISOString().split("T")[0]!
+}
+
+// ── Match Card ───────────────────────────────────────────────────────────────
+function MatchRow({ match }: { match: VpsMatch }) {
+  const router = useRouter()
+  const { addMatch, removeMatch, isSelected } = useCouponStore()
+  const selected = isSelected(match.match_id)
+  const status = vpsStatus(match.status)
+
+  const handleCoupon = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (selected) {
+      removeMatch(match.match_id)
+    } else {
+      addMatch({
+        id: match.match_id,
+        homeTeam: match.home_team,
+        awayTeam: match.away_team,
+        league: match.competition,
+        time: fmtTime(match.date_iso),
+        addedAt: new Date(),
+      })
+    }
+  }
+
+  const handleAnalyse = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    router.push(`/live/${match.match_id}`)
+  }
+
+  return (
+    <div
+      className={cn(
+        "bg-bg-secondary rounded-xl border transition-all duration-200",
+        selected ? "border-accent-cyan/50 shadow-[0_0_16px_rgba(0,212,255,0.12)]" : "border-bg-tertiary"
+      )}
+    >
+      {/* Match body */}
+      <div className="px-4 pt-3 pb-2">
+        {/* Time + status */}
+        <div className="flex items-center justify-between mb-2.5">
+          <span className="text-text-tertiary text-xs font-mono">{fmtTime(match.date_iso)}</span>
+          {status === "live" ? (
+            <span className="flex items-center gap-1 text-xs font-semibold text-red-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+              LIVE
+            </span>
+          ) : status === "finished" ? (
+            <span className="text-xs text-text-tertiary font-medium">Terminé</span>
+          ) : (
+            <span className="text-xs text-text-tertiary font-medium">À venir</span>
+          )}
+        </div>
+
+        {/* Teams */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-text-primary text-sm leading-tight">{match.home_team}</span>
+            {match.home_score !== undefined ? (
+              <span className={cn("font-bold text-base font-mono", status === "live" && "text-accent-cyan")}>
+                {match.home_score}
+              </span>
+            ) : (
+              match.odds["1"] && <span className="text-xs text-text-tertiary">{match.odds["1"].toFixed(2)}</span>
+            )}
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-text-primary text-sm leading-tight">{match.away_team}</span>
+            {match.away_score !== undefined ? (
+              <span className={cn("font-bold text-base font-mono", status === "live" && "text-accent-cyan")}>
+                {match.away_score}
+              </span>
+            ) : (
+              match.odds["2"] && <span className="text-xs text-text-tertiary">{match.odds["2"].toFixed(2)}</span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex border-t border-bg-tertiary">
+        <button
+          onClick={handleAnalyse}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-text-secondary hover:text-accent-cyan hover:bg-accent-cyan/5 transition-colors rounded-bl-xl"
+        >
+          <Brain className="w-3.5 h-3.5" />
+          Analyser
+        </button>
+        <div className="w-px bg-bg-tertiary" />
+        <button
+          onClick={handleCoupon}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium transition-colors rounded-br-xl",
+            selected
+              ? "text-accent-cyan bg-accent-cyan/5"
+              : "text-text-secondary hover:text-accent-cyan hover:bg-accent-cyan/5"
+          )}
+        >
+          {selected ? <Check className="w-3.5 h-3.5" /> : <TicketPlus className="w-3.5 h-3.5" />}
+          {selected ? "Ajouté" : "Coupon"}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Competition group header ─────────────────────────────────────────────────
+function CompHeader({ country, competition }: { country: string; competition: string }) {
+  const flag = COUNTRY_FLAG[country] ?? "⚽"
+  return (
+    <div className="flex items-center gap-2 mb-2 mt-5 first:mt-0">
+      <span className="text-base leading-none">{flag}</span>
+      <div className="min-w-0">
+        <span className="text-[10px] text-text-tertiary uppercase tracking-wider">{country} · </span>
+        <span className="text-sm font-semibold text-text-primary">{competition}</span>
+      </div>
+      <ChevronRight className="w-3.5 h-3.5 text-text-tertiary ml-auto shrink-0" />
+    </div>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export default function MatchesPage() {
-  const [mode, setMode] = useState<PageMode>("analyse")
-  const [vpsMatches, setVpsMatches] = useState<VpsMatch[]>([])
+  const [matches, setMatches] = useState<VpsMatch[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [usingMock, setUsingMock] = useState(false)
 
   const [searchQuery, setSearchQuery] = useState("")
-  const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date())
+  const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
+  const [selectedDate, setSelectedDate] = useState<string>(fmtDate(new Date()))
+  const [showStatus, setShowStatus] = useState(false)
   const [showCompetitions, setShowCompetitions] = useState(false)
-  const [showStatusFilter, setShowStatusFilter] = useState(false)
 
-  const loadVpsMatches = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const days = 7
-      const res = await fetch(`/api/beta/matches?days=${days}`)
-      if (res.status === 403) {
-        setError("Compte BetAnalytic non lié. Reconnectez-vous.")
-        return
-      }
+      const res = await fetch(`/api/beta/matches?days=7`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json() as { matches_by_competition?: Record<string, VpsMatch[]> }
-      setVpsMatches(Object.values(data.matches_by_competition ?? {}).flat())
+      const flat = Object.values(data.matches_by_competition ?? {}).flat()
+      if (flat.length === 0) throw new Error("no_data")
+      setMatches(flat)
+      setUsingMock(false)
     } catch {
-      setError("Impossible de charger les matchs. Vérifiez votre connexion.")
+      setMatches(MOCK_MATCHES)
+      setUsingMock(true)
+      setError(null)
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => {
-    void loadVpsMatches()
-  }, [loadVpsMatches])
+  useEffect(() => { void load() }, [load])
 
-  // Derive competitions from VPS data
+  // Derive unique competitions sorted by priority
   const competitions = useMemo(() => {
-    const seen = new Set<string>()
-    return vpsMatches
-      .map((m) => m.competition)
-      .filter((c) => { if (seen.has(c)) return false; seen.add(c); return true })
-      .sort()
-  }, [vpsMatches])
+    const map = new Map<string, string>() // competition → country
+    matches.forEach((m) => map.set(m.competition, m.country ?? ""))
+    return [...map.entries()].sort((a, b) => {
+      const pa = COMP_PRIORITY[a[0]] ?? 99
+      const pb = COMP_PRIORITY[b[0]] ?? 99
+      return pa - pb || a[0].localeCompare(b[0])
+    })
+  }, [matches])
 
-  // Filter matches
-  const filteredMatches = useMemo(() => {
-    const selDateStr = selectedDate.toDateString()
-    return vpsMatches.filter((m) => {
-      // Date filter
-      const matchDate = new Date(m.date_iso)
-      if (matchDate.toDateString() !== selDateStr) return false
+  // Filtered + grouped
+  const grouped = useMemo(() => {
+    const filtered = matches.filter((m) => {
+      const mDate = m.date_iso.split("T")[0]
+      if (mDate !== selectedDate) return false
 
-      // Search
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         if (
@@ -92,335 +315,234 @@ export default function MatchesPage() {
         ) return false
       }
 
-      // Competition filter
       if (competitionFilter && m.competition !== competitionFilter) return false
 
-      // Status filter
       if (statusFilter !== "all") {
-        const cardStatus = vpsStatusToCard(m.status)
-        if (cardStatus !== statusFilter) return false
+        if (vpsStatus(m.status) !== statusFilter) return false
       }
 
       return true
     })
-  }, [vpsMatches, selectedDate, searchQuery, competitionFilter, statusFilter])
 
-  // Group by competition
-  const grouped = useMemo(() => {
-    return filteredMatches.reduce<Record<string, VpsMatch[]>>((acc, m) => {
-      if (!acc[m.competition]) acc[m.competition] = []
-      acc[m.competition]!.push(m)
-      return acc
-    }, {})
-  }, [filteredMatches])
+    const groups: Record<string, { country: string; matches: VpsMatch[] }> = {}
+    filtered.forEach((m) => {
+      if (!groups[m.competition]) groups[m.competition] = { country: m.country ?? "", matches: [] }
+      groups[m.competition]!.matches.push(m)
+    })
+    return groups
+  }, [matches, selectedDate, searchQuery, competitionFilter, statusFilter])
 
-  const activeFiltersCount = useMemo(() => {
-    let count = 0
-    if (competitionFilter) count++
-    if (statusFilter !== "all") count++
-    if (searchQuery.trim()) count++
-    if (selectedDate.toDateString() !== new Date().toDateString()) count++
-    return count
-  }, [competitionFilter, statusFilter, searchQuery, selectedDate])
+  const totalFiltered = useMemo(
+    () => Object.values(grouped).reduce((s, g) => s + g.matches.length, 0),
+    [grouped]
+  )
+
+  const activeFilters = (competitionFilter ? 1 : 0) + (statusFilter !== "all" ? 1 : 0)
 
   const clearFilters = () => {
     setCompetitionFilter(null)
     setStatusFilter("all")
     setSearchQuery("")
-    setSelectedDate(new Date())
+    setSelectedDate(fmtDate(new Date()))
+  }
+
+  const STATUS_LABELS: Record<StatusFilter, string> = {
+    all: "État",
+    live: "Live",
+    upcoming: "À venir",
+    finished: "Terminés",
   }
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
 
-      {/* Mode Toggle */}
-      <div className="flex border-b border-bg-tertiary">
-        <button
-          onClick={() => setMode("analyse")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors",
-            mode === "analyse" ? "border-accent-cyan text-accent-cyan" : "border-transparent text-text-tertiary"
-          )}
-        >
-          <Brain className="w-4 h-4" />
-          Analyse
-        </button>
-        <button
-          onClick={() => setMode("paris")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors",
-            mode === "paris" ? "border-accent-cyan text-accent-cyan" : "border-transparent text-text-tertiary"
-          )}
-        >
-          <TrendingUp className="w-4 h-4" />
-          Paris
-        </button>
-      </div>
-
-      {/* Filter Bar */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary p-4">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h1 className="font-display text-xl font-bold text-text-primary">Matchs</h1>
-            {activeFiltersCount > 0 && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-2 text-sm text-accent-cyan hover:text-accent-cyan/80"
-              >
-                <X className="h-4 w-4" />
-                Effacer filtres ({activeFiltersCount})
-              </button>
-            )}
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-text-tertiary" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Rechercher une équipe, compétition..."
-              className={cn(
-                "w-full pl-10 pr-10 py-3 rounded-xl bg-bg-secondary",
-                "text-text-primary placeholder:text-text-tertiary",
-                "border border-bg-tertiary focus:border-accent-cyan",
-                "focus:outline-none transition-colors"
-              )}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex gap-2 overflow-x-auto pb-2">
-            {/* Status Filter */}
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setShowStatusFilter(!showStatusFilter)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-2",
-                  statusFilter !== "all"
-                    ? "bg-accent-cyan text-bg-primary"
-                    : "bg-bg-tertiary text-text-secondary"
-                )}
-              >
-                {statusFilter === "live" && (
-                  <span className="inline-block w-2 h-2 bg-white rounded-full animate-pulse" />
-                )}
-                {statusFilter === "all" ? "Statut" :
-                 statusFilter === "live" ? "Live" :
-                 statusFilter === "upcoming" ? "À venir" : "Terminés"}
-                <ChevronDown className="h-4 w-4" />
-              </button>
-
-              {showStatusFilter && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowStatusFilter(false)} />
-                  <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-xl z-20 min-w-[150px]">
-                    {([
-                      { value: "all", label: "Tous" },
-                      { value: "live", label: "Live" },
-                      { value: "upcoming", label: "À venir" },
-                      { value: "finished", label: "Terminés" },
-                    ] as const).map((s) => (
-                      <button
-                        key={s.value}
-                        onClick={() => { setStatusFilter(s.value); setShowStatusFilter(false) }}
-                        className={cn(
-                          "w-full px-4 py-2 text-left text-sm hover:bg-bg-tertiary transition-colors",
-                          statusFilter === s.value ? "bg-accent-cyan/10 text-accent-cyan" : "text-text-primary"
-                        )}
-                      >
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Competition Filter */}
-            <div className="relative shrink-0">
-              <button
-                onClick={() => setShowCompetitions(!showCompetitions)}
-                className={cn(
-                  "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap flex items-center gap-2",
-                  competitionFilter
-                    ? "bg-accent-cyan text-bg-primary"
-                    : "bg-bg-tertiary text-text-secondary"
-                )}
-              >
-                {competitionFilter ?? "Compétition"}
-                <ChevronDown className="h-4 w-4" />
-              </button>
-
-              {showCompetitions && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowCompetitions(false)} />
-                  <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-lg shadow-xl z-20 min-w-[200px] max-h-[300px] overflow-y-auto">
-                    <button
-                      onClick={() => { setCompetitionFilter(null); setShowCompetitions(false) }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-bg-tertiary transition-colors text-text-primary"
-                    >
-                      Toutes les compétitions
-                    </button>
-                    {competitions.map((comp) => (
-                      <button
-                        key={comp}
-                        onClick={() => { setCompetitionFilter(comp); setShowCompetitions(false) }}
-                        className={cn(
-                          "w-full px-4 py-2 text-left text-sm hover:bg-bg-tertiary transition-colors",
-                          competitionFilter === comp
-                            ? "bg-accent-cyan/10 text-accent-cyan"
-                            : "text-text-primary"
-                        )}
-                      >
-                        {comp}
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {/* Date Quick Filters */}
+      {/* Sticky filter bar */}
+      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-xl font-bold text-text-primary">Matchs</h1>
+          {activeFilters > 0 && (
             <button
-              onClick={() => setSelectedDate(new Date())}
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 text-xs text-accent-cyan"
+            >
+              <X className="w-3.5 h-3.5" />
+              Effacer ({activeFilters})
+            </button>
+          )}
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-tertiary" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Équipe, compétition..."
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-cyan focus:outline-none transition-colors"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-text-tertiary"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Filter chips */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+
+          {/* Date picker */}
+          <label className="flex items-center gap-1.5 px-3 py-2 rounded-full bg-bg-tertiary text-text-secondary text-sm font-medium shrink-0 cursor-pointer">
+            <Calendar className="w-3.5 h-3.5" />
+            <span>
+              {selectedDate === fmtDate(new Date())
+                ? "Aujourd'hui"
+                : new Date(selectedDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+            </span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => e.target.value && setSelectedDate(e.target.value)}
+              className="sr-only"
+            />
+          </label>
+
+          {/* Status filter */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => { setShowStatus(!showStatus); setShowCompetitions(false) }}
               className={cn(
-                "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap shrink-0",
-                selectedDate.toDateString() === new Date().toDateString()
+                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium",
+                statusFilter !== "all"
                   ? "bg-accent-cyan text-bg-primary"
                   : "bg-bg-tertiary text-text-secondary"
               )}
             >
-              Aujourd&apos;hui
+              {statusFilter === "live" && (
+                <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
+              )}
+              {STATUS_LABELS[statusFilter]}
+              <ChevronDown className="w-3.5 h-3.5" />
             </button>
+            {showStatus && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowStatus(false)} />
+                <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-xl z-20 min-w-[160px] overflow-hidden">
+                  {(["all", "live", "upcoming", "finished"] as StatusFilter[]).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => { setStatusFilter(s); setShowStatus(false) }}
+                      className={cn(
+                        "w-full px-4 py-2.5 text-left text-sm hover:bg-bg-tertiary transition-colors flex items-center gap-2",
+                        statusFilter === s ? "text-accent-cyan" : "text-text-primary"
+                      )}
+                    >
+                      {s === "live" && <span className="w-1.5 h-1.5 rounded-full bg-red-400" />}
+                      {STATUS_LABELS[s]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
 
+          {/* Competition filter */}
+          <div className="relative shrink-0">
             <button
-              onClick={() => {
-                const tomorrow = new Date()
-                tomorrow.setDate(tomorrow.getDate() + 1)
-                setSelectedDate(tomorrow)
-              }}
-              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary shrink-0"
+              onClick={() => { setShowCompetitions(!showCompetitions); setShowStatus(false) }}
+              className={cn(
+                "flex items-center gap-1.5 px-3 py-2 rounded-full text-sm font-medium max-w-[160px]",
+                competitionFilter
+                  ? "bg-accent-cyan text-bg-primary"
+                  : "bg-bg-tertiary text-text-secondary"
+              )}
             >
-              Demain
+              <span className="truncate">{competitionFilter ?? "Compétition"}</span>
+              <ChevronDown className="w-3.5 h-3.5 shrink-0" />
             </button>
-
-            <button
-              onClick={() => {
-                const weekend = new Date()
-                weekend.setDate(weekend.getDate() + (6 - weekend.getDay()))
-                setSelectedDate(weekend)
-              }}
-              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary shrink-0"
-            >
-              Week-end
-            </button>
-
-            <button
-              onClick={() => {
-                const dateInput = document.createElement("input")
-                dateInput.type = "date"
-                dateInput.value = selectedDate.toISOString().split("T")[0]!
-                dateInput.onchange = (e) => {
-                  const target = e.target as HTMLInputElement
-                  if (target.value) setSelectedDate(new Date(target.value + "T12:00:00"))
-                }
-                dateInput.click()
-              }}
-              className="px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-bg-tertiary text-text-secondary shrink-0 flex items-center gap-2"
-            >
-              <Calendar className="h-4 w-4" />
-              Date
-            </button>
+            {showCompetitions && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowCompetitions(false)} />
+                <div className="absolute top-full left-0 mt-2 bg-bg-secondary border border-bg-tertiary rounded-xl shadow-xl z-20 min-w-[220px] max-h-[300px] overflow-y-auto">
+                  <button
+                    onClick={() => { setCompetitionFilter(null); setShowCompetitions(false) }}
+                    className={cn(
+                      "w-full px-4 py-2.5 text-left text-sm hover:bg-bg-tertiary transition-colors",
+                      !competitionFilter ? "text-accent-cyan" : "text-text-primary"
+                    )}
+                  >
+                    Toutes les compétitions
+                  </button>
+                  <div className="border-t border-bg-tertiary" />
+                  {competitions.map(([comp, country]) => {
+                    const flag = COUNTRY_FLAG[country] ?? "⚽"
+                    return (
+                      <button
+                        key={comp}
+                        onClick={() => { setCompetitionFilter(comp); setShowCompetitions(false) }}
+                        className={cn(
+                          "w-full px-4 py-2.5 text-left text-sm hover:bg-bg-tertiary transition-colors flex items-center gap-2",
+                          competitionFilter === comp ? "text-accent-cyan" : "text-text-primary"
+                        )}
+                      >
+                        <span>{flag}</span>
+                        <div className="min-w-0">
+                          <p className="truncate">{comp}</p>
+                          <p className="text-xs text-text-tertiary">{country}</p>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      <main className="flex-1 p-4 pb-20 overflow-y-auto">
-        {/* Error */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm text-center">
-            {error}
-            <button onClick={() => void loadVpsMatches()} className="ml-2 underline">
-              Réessayer
-            </button>
-          </div>
-        )}
-
-        {/* Loading */}
+      {/* Content */}
+      <main className="flex-1 px-4 pb-24">
         {loading && (
-          <div className="space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="bg-bg-secondary rounded-xl h-32 animate-pulse" />
-            ))}
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <Loader2 className="w-6 h-6 text-accent-cyan animate-spin" />
+            <p className="text-sm text-text-tertiary">Chargement des matchs…</p>
           </div>
         )}
 
-        {/* Empty State */}
-        {!loading && !error && filteredMatches.length === 0 && (
+        {!loading && usingMock && (
+          <div className="mt-3 mb-1 px-3 py-2 bg-bg-tertiary rounded-lg text-xs text-text-tertiary text-center">
+            Données de démonstration · <button onClick={() => void load()} className="text-accent-cyan underline">Réessayer</button>
+          </div>
+        )}
+
+        {!loading && totalFiltered === 0 && (
           <div className="text-center py-16">
-            <span className="text-6xl">⚽</span>
-            <p className="text-text-secondary mt-4">
-              {searchQuery
-                ? `Aucun résultat pour "${searchQuery}"`
-                : statusFilter === "live"
-                ? "Aucun match en direct"
-                : "Aucun match pour cette période"}
+            <span className="text-5xl">⚽</span>
+            <p className="text-text-secondary mt-4 text-sm">
+              {searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucun match pour cette période"}
             </p>
-            {activeFiltersCount > 0 && (
-              <button
-                onClick={clearFilters}
-                className="mt-4 px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium"
-              >
+            {activeFilters > 0 && (
+              <button onClick={clearFilters} className="mt-4 px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium">
                 Effacer les filtres
               </button>
             )}
           </div>
         )}
 
-        {/* Matches grouped by competition */}
-        {!loading && !error && Object.entries(grouped).map(([competition, compMatches]) => (
-          <div key={competition} className="mb-6 space-y-3">
-            <h2 className="font-display font-semibold text-text-primary text-sm uppercase tracking-wide">
-              {competition}
-            </h2>
-
-            {mode === "analyse" && compMatches.map((m) => {
-              const cardStatus = vpsStatusToCard(m.status)
-              const matchDate = new Date(m.date_iso)
-              return (
-                <MatchCard
-                  key={m.match_id}
-                  match={{
-                    id: m.match_id,
-                    homeTeam: m.home_team,
-                    awayTeam: m.away_team,
-                    league: m.competition,
-                    time: matchDate.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-                    status: cardStatus,
-                    analysisCount: 0,
-                  }}
-                />
-              )
-            })}
-
-            {mode === "paris" && compMatches.map((m) => (
-              <MatchBettingCard key={m.match_id} match={m} />
-            ))}
+        {!loading && Object.entries(grouped).map(([competition, group]) => (
+          <div key={competition}>
+            <CompHeader country={group.country} competition={competition} />
+            <div className="space-y-2 mb-2">
+              {group.matches.map((m) => <MatchRow key={m.match_id} match={m} />)}
+            </div>
           </div>
         ))}
       </main>
 
-      <BetSlip />
       <DashboardNav />
     </div>
   )
