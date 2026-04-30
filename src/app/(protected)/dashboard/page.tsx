@@ -233,10 +233,11 @@ function saveConvs(convs: Conversation[]) {
 }
 
 // ── Oracle console (ChatGPT-style) ───────────────────────────
-function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
+function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchConsumed }: {
   username: string
   ready: boolean
   pendingMatch: PendingMatch | null
+  pendingAgent: string | null
   onMatchConsumed: () => void
 }) {
   const [draft, setDraft] = useState("")
@@ -280,6 +281,16 @@ function OracleConsole({ username, ready, pendingMatch, onMatchConsumed }: {
     setTypingGreeting(null)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, pendingMatch])
+
+  // Pre-select agent when coming from Rapport page
+  useEffect(() => {
+    if (!ready || !pendingAgent) return
+    const id = pendingAgent as "Oracle" | AgentId
+    if (id in BY_ID || id === "Oracle") {
+      pickAgent(id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, pendingAgent])
 
   // Load lang + conversations from localStorage on mount
   useEffect(() => {
@@ -678,16 +689,23 @@ export default function DashboardPage() {
   const { data: session } = useSession()
   const [intro, setIntro] = useState(true)
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
+  const [pendingAgent, setPendingAgent] = useState<string | null>(null)
 
   useEffect(() => {
     if (typeof window !== "undefined" && sessionStorage.getItem("betanalytic_intro_done")) {
       setIntro(false)
     }
-    // Read match pushed by Matchs page
+    // Read match pushed by Matchs page or Rapport page
     const raw = sessionStorage.getItem("pending_match")
     if (raw) {
       try { setPendingMatch(JSON.parse(raw) as PendingMatch) } catch { /* ignore */ }
       sessionStorage.removeItem("pending_match")
+    }
+    // Read agent pre-selection pushed by Rapport page
+    const agent = sessionStorage.getItem("pending_agent")
+    if (agent) {
+      setPendingAgent(agent)
+      sessionStorage.removeItem("pending_agent")
     }
   }, [])
 
@@ -713,7 +731,8 @@ export default function DashboardPage() {
           username={username}
           ready={!intro}
           pendingMatch={pendingMatch}
-          onMatchConsumed={() => setPendingMatch(null)}
+          pendingAgent={pendingAgent}
+          onMatchConsumed={() => { setPendingMatch(null); setPendingAgent(null) }}
         />
       </div>
       <DashboardNav />

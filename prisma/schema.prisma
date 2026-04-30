@@ -373,20 +373,35 @@ model PrecomputedMatchData {
 model AIPick {
   id         String   @id @default(cuid())
   matchId    String
-  agentType  String   // "SCOUT" | "PREDICTION" | "VALUE" | "ODDS" | "RISK"
-  prediction String   // "home" | "draw" | "away"
+  signalType String   // "RESULT" | "BTTS" | "CORNERS" | "CARDS"
+  agentType  String   // primary agent label for signal card display
+  prediction String   // "home" | "draw" | "away" | "yes" | "no" | "over" | "under"
   confidence Float    // 0.0 → 1.0
-  reasoning  String   // courte justification
+  reasoning  String   // courte justification (signal card summary)
   odds       Float    // cote correspondante
   isCorrect  Boolean? // null = match non joué
   createdAt  DateTime @default(now())
   expiresAt  DateTime // = kickoffTime du match
 
-  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  match        Match         @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  agentReports AgentReport[]
 
-  @@unique([matchId])
+  @@index([matchId])
   @@index([createdAt])
   @@index([expiresAt])
+}
+
+model AgentReport {
+  id         String   @id @default(cuid())
+  pickId     String
+  pick       AIPick   @relation(fields: [pickId], references: [id], onDelete: Cascade)
+  agentType  String   // "SCOUT"|"FORM"|"H2H"|"MOMENTUM"|"REFEREE"|"GOALS"|"CORNERS"|"ODDS"|"VALUE"|"RISK"
+  analysis   String
+  confidence Float
+  supports   Boolean  // true = appuie le signal
+  createdAt  DateTime @default(now())
+
+  @@index([pickId])
 }
 
 // ============================================

@@ -294,6 +294,30 @@ export const matchRouter = createTRPCRouter({
           expiresAt: { gt: new Date() },
         },
         include: {
+          agentReports: { orderBy: { confidence: "desc" } },
+          match: {
+            include: {
+              homeTeam: true,
+              awayTeam: true,
+              competition: true,
+            },
+          },
+        },
+        orderBy: { confidence: "desc" },
+      })
+    }),
+
+  /** GET /api/trpc/match.getMatchSignals — all signals for a given match */
+  getMatchSignals: protectedProcedure
+    .input(z.object({ matchId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      return ctx.db.aIPick.findMany({
+        where: {
+          matchId: input.matchId,
+          expiresAt: { gt: new Date() },
+        },
+        include: {
+          agentReports: { orderBy: { confidence: "desc" } },
           match: {
             include: {
               homeTeam: true,
