@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import { auth } from "~/server/auth";
+import { db } from "~/server/db";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -11,10 +13,6 @@ const MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
 export async function POST(request: NextRequest) {
   try {
-    // Dynamic imports to avoid build-time DB connection
-    const { auth } = await import("~/server/auth");
-    const { db } = await import("~/server/db");
-
     const session = await auth();
 
     if (!session?.user?.id) {
@@ -43,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate unique filename
-    const ext = file.name.split(".").pop() ?? "jpg";
+    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase();
     const filename = `${randomBytes(16).toString("hex")}.${ext}`;
 
     // Ensure uploads directory exists
@@ -65,14 +63,12 @@ export async function POST(request: NextRequest) {
       data: { avatarUrl },
     });
 
-    return NextResponse.json({
-      success: true,
-      avatarUrl,
-    });
+    return NextResponse.json({ success: true, avatarUrl });
   } catch (error) {
     console.error("Avatar upload error:", error);
+    const message = error instanceof Error ? error.message : "Erreur inconnue";
     return NextResponse.json(
-      { error: "Erreur lors du téléchargement" },
+      { error: `Erreur lors du téléchargement: ${message}` },
       { status: 500 }
     );
   }

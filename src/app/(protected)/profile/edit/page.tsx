@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
+import { Lock } from "lucide-react"
 import { z } from "zod"
 
 import { Button } from "~/components/ui/button"
@@ -20,38 +21,35 @@ const profileFormSchema = z.object({
     .string()
     .min(3, "Le nom d'utilisateur doit contenir au moins 3 caractères")
     .max(20, "Le nom d'utilisateur ne doit pas dépasser 20 caractères")
-    .regex(
-      /^[a-zA-Z0-9_]+$/,
-      "Lettres, chiffres et underscores uniquement"
-    ),
+    .regex(/^[a-zA-Z0-9_]+$/, "Lettres, chiffres et underscores uniquement"),
   bio: z.string().max(500, "La bio ne doit pas dépasser 500 caractères").optional(),
 })
 
 type ProfileFormData = z.infer<typeof profileFormSchema>
 
+const SPORTS = [
+  { id: "football",   label: "Football" },
+  { id: "basketball", label: "Basketball" },
+  { id: "tennis",     label: "Tennis" },
+  { id: "rugby",      label: "Rugby" },
+  { id: "hockey",     label: "Hockey" },
+  { id: "baseball",   label: "Baseball" },
+  { id: "mma",        label: "MMA" },
+  { id: "boxing",     label: "Boxe" },
+  { id: "esports",    label: "Esports" },
+]
+
 const EXPERTISE_LEVELS = [
-  { value: "BEGINNER", label: "Débutant", description: "Nouveau dans les paris sportifs" },
-  { value: "INTERMEDIATE", label: "Intermédiaire", description: "Quelques mois d'expérience" },
-  { value: "EXPERT", label: "Expert", description: "Parieur expérimenté" },
+  { value: "BEGINNER",     label: "Débutant",       description: "Nouveau dans les paris sportifs" },
+  { value: "INTERMEDIATE", label: "Intermédiaire",   description: "Quelques mois d'expérience" },
+  { value: "EXPERT",       label: "Expert",          description: "Parieur expérimenté" },
 ] as const
 
 const ANALYSIS_DEPTHS = [
-  { value: "QUICK", label: "Rapide", description: "Analyses concises" },
-  { value: "STANDARD", label: "Standard", description: "Analyses équilibrées" },
+  { value: "QUICK",    label: "Rapide",    description: "Analyses concises" },
+  { value: "STANDARD", label: "Standard",  description: "Analyses équilibrées" },
   { value: "DETAILED", label: "Détaillée", description: "Analyses approfondies" },
 ] as const
-
-const SPORTS = [
-  { id: "football", label: "Football" },
-  { id: "basketball", label: "Basketball" },
-  { id: "tennis", label: "Tennis" },
-  { id: "rugby", label: "Rugby" },
-  { id: "hockey", label: "Hockey" },
-  { id: "baseball", label: "Baseball" },
-  { id: "mma", label: "MMA" },
-  { id: "boxing", label: "Boxe" },
-  { id: "esports", label: "Esports" },
-]
 
 export default function EditProfilePage() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
@@ -71,41 +69,31 @@ export default function EditProfilePage() {
     resolver: zodResolver(profileFormSchema),
     values: profile
       ? {
-          displayName: profile.displayName ?? "",
+          displayName: profile.displayName ?? profile.username ?? "",
           username: profile.username,
           bio: profile.bio ?? "",
         }
       : undefined,
   })
 
-  // Preferences state
-  const [expertiseLevel, setExpertiseLevel] = useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">(
+  // Preferences state — display only, section is locked
+  const [expertiseLevel] = useState<"BEGINNER" | "INTERMEDIATE" | "EXPERT">(
     profile?.expertiseLevel ?? "BEGINNER"
   )
-  const [analysisDepth, setAnalysisDepth] = useState<"QUICK" | "STANDARD" | "DETAILED">(
+  const [analysisDepth] = useState<"QUICK" | "STANDARD" | "DETAILED">(
     profile?.analysisDepth ?? "STANDARD"
   )
-  const [selectedSports, setSelectedSports] = useState<string[]>(profile?.favoriteSports ?? [])
+  const [selectedSports] = useState<string[]>(["football"])
 
   useEffect(() => {
-    if (!profile) return
-    if (profile.expertiseLevel) setExpertiseLevel(profile.expertiseLevel)
-    if (profile.analysisDepth) setAnalysisDepth(profile.analysisDepth)
-    setSelectedSports(profile.favoriteSports)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // no-op: preferences are display-only
   }, [profile?.id])
 
   const updateProfileMutation = api.profile.updateProfile.useMutation({
-    onSuccess: () => {
+    onSuccess: async () => {
       setSuccessMessage("Profil mis à jour avec succès!")
       setTimeout(() => setSuccessMessage(null), 3000)
-    },
-  })
-
-  const updatePreferencesMutation = api.profile.updatePreferences.useMutation({
-    onSuccess: () => {
-      setSuccessMessage("Préférences mises à jour avec succès!")
-      setTimeout(() => setSuccessMessage(null), 3000)
+      await utils.profile.getProfile.invalidate()
     },
   })
 
@@ -117,24 +105,6 @@ export default function EditProfilePage() {
     })
   }
 
-  const onSavePreferences = async () => {
-    await updatePreferencesMutation.mutateAsync({
-      expertiseLevel,
-      analysisDepth,
-      favoriteSports: selectedSports,
-    })
-  }
-
-  const toggleSport = (sportId: string) => {
-    setSelectedSports((prev) =>
-      prev.includes(sportId)
-        ? prev.filter((id) => id !== sportId)
-        : prev.length < 5
-          ? [...prev, sportId]
-          : prev
-    )
-  }
-
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -142,14 +112,11 @@ export default function EditProfilePage() {
     setUploadError(null)
     setIsUploading(true)
 
-    // Preview
+    // Show preview immediately
     const reader = new FileReader()
-    reader.onloadend = () => {
-      setAvatarPreview(reader.result as string)
-    }
+    reader.onloadend = () => setAvatarPreview(reader.result as string)
     reader.readAsDataURL(file)
 
-    // Upload
     try {
       const formData = new FormData()
       formData.append("file", file)
@@ -162,6 +129,7 @@ export default function EditProfilePage() {
       const data = (await response.json()) as { error?: string; avatarUrl?: string }
 
       if (!response.ok) {
+        setAvatarPreview(null)
         throw new Error(data.error ?? "Erreur lors du téléchargement")
       }
 
@@ -173,6 +141,8 @@ export default function EditProfilePage() {
       setAvatarPreview(null)
     } finally {
       setIsUploading(false)
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }
 
@@ -184,12 +154,23 @@ export default function EditProfilePage() {
     )
   }
 
+  const contactLabel = profile?.email
+    ? profile.email
+    : profile?.phone ?? ""
+
+  const initials = (profile?.displayName ?? profile?.username ?? "U")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2)
+
   return (
     <div className="min-h-screen bg-bg-primary">
       {/* Header */}
       <header className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
         <div className="flex items-center justify-between p-4">
-          <Link href="/profile" className="text-text-secondary hover:text-text-primary">
+          <Link href="/profile" className="text-text-secondary hover:text-text-primary text-sm">
             Annuler
           </Link>
           <h1 className="font-display font-bold text-text-primary">Modifier le profil</h1>
@@ -199,37 +180,39 @@ export default function EditProfilePage() {
 
       {/* Success Message */}
       {successMessage && (
-        <div className="mx-4 mt-4 p-3 bg-accent-green/10 border border-accent-green/20 rounded-lg">
-          <p className="text-sm text-accent-green text-center">{successMessage}</p>
+        <div className="mx-4 mt-4 p-3 bg-green-400/10 border border-green-400/20 rounded-xl">
+          <p className="text-sm text-green-400 text-center">{successMessage}</p>
         </div>
       )}
 
-      <main className="p-4 space-y-6 pb-8">
-        {/* Profile Photo */}
+      <main className="p-4 space-y-6 pb-12">
+
+        {/* ── Photo ──────────────────────────────────────────────────────────── */}
         <div className="flex flex-col items-center space-y-3">
           <div className="relative">
-            <div className="w-24 h-24 rounded-full bg-bg-secondary flex items-center justify-center overflow-hidden">
+            <div className="w-24 h-24 rounded-full bg-bg-secondary flex items-center justify-center overflow-hidden border-2 border-bg-tertiary">
               {isUploading ? (
-                <div className="animate-pulse text-text-secondary">...</div>
+                <div className="animate-pulse text-text-tertiary text-xs">...</div>
               ) : avatarPreview ?? profile?.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={avatarPreview ?? profile?.avatarUrl ?? ""}
-                  alt={profile?.displayName ?? "Avatar"}
+                  alt=""
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="font-display text-3xl font-bold text-text-primary">
-                  {(profile?.displayName ?? profile?.username ?? "U").charAt(0).toUpperCase()}
-                </span>
+                <div className="w-full h-full bg-linear-to-br from-accent-cyan to-accent-purple flex items-center justify-center">
+                  <span className="font-display font-bold text-lg text-bg-primary">{initials}</span>
+                </div>
               )}
             </div>
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               disabled={isUploading}
-              className="absolute bottom-0 right-0 w-8 h-8 bg-accent-cyan rounded-full flex items-center justify-center text-white shadow-lg disabled:opacity-50"
+              className="absolute bottom-0 right-0 w-8 h-8 bg-accent-cyan rounded-full flex items-center justify-center text-bg-primary shadow-lg disabled:opacity-50 hover:bg-accent-cyan/80 transition-colors"
             >
-              <span className="text-sm">+</span>
+              <span className="text-sm font-bold">+</span>
             </button>
             <input
               ref={fileInputRef}
@@ -248,13 +231,13 @@ export default function EditProfilePage() {
             {isUploading ? "Téléchargement..." : "Changer la photo"}
           </button>
           {uploadError && (
-            <p className="text-sm text-accent-red">{uploadError}</p>
+            <p className="text-sm text-red-400 text-center px-4">{uploadError}</p>
           )}
         </div>
 
-        {/* Profile Form */}
+        {/* ── Informations ───────────────────────────────────────────────────── */}
         <form onSubmit={handleSubmit(onSubmitProfile)} className="space-y-4">
-          <div className="bg-bg-secondary rounded-xl p-4 space-y-4">
+          <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-4 space-y-4">
             <h2 className="font-display font-semibold text-text-primary">Informations</h2>
 
             <Input
@@ -277,145 +260,125 @@ export default function EditProfilePage() {
               <textarea
                 placeholder="Parlez-nous de vous..."
                 className={cn(
-                  "w-full h-24 rounded-lg border-2 bg-bg-primary px-4 py-3",
-                  "text-base text-text-primary placeholder:text-text-tertiary",
-                  "transition-colors duration-200 resize-none",
+                  "w-full h-24 rounded-xl border bg-bg-primary px-4 py-3",
+                  "text-sm text-text-primary placeholder:text-text-tertiary",
+                  "transition-colors resize-none",
                   "focus:outline-none focus:border-accent-cyan",
-                  errors.bio
-                    ? "border-accent-red"
-                    : "border-transparent hover:border-bg-tertiary"
+                  errors.bio ? "border-red-400" : "border-bg-tertiary hover:border-bg-tertiary/80"
                 )}
                 {...register("bio")}
               />
               {errors.bio && (
-                <p className="text-sm text-accent-red">{errors.bio.message}</p>
+                <p className="text-sm text-red-400">{errors.bio.message}</p>
               )}
             </div>
 
+            {/* Email / phone — readonly, from registration */}
             <Input
-              label="Email"
-              type="email"
-              value={profile?.email ?? ""}
+              label={profile?.email ? "Email" : "Téléphone"}
+              value={contactLabel}
               disabled
-              hint="L'email ne peut pas être modifié"
+              hint="Non modifiable"
             />
           </div>
+
+          {updateProfileMutation.error && (
+            <div className="p-3 bg-red-400/10 border border-red-400/20 rounded-xl">
+              <p className="text-sm text-red-400 text-center">{updateProfileMutation.error.message}</p>
+            </div>
+          )}
 
           <Button
             type="submit"
             className="w-full"
             disabled={!isDirty || updateProfileMutation.isPending}
           >
-            {updateProfileMutation.isPending ? "Enregistrement..." : "Enregistrer le profil"}
+            {updateProfileMutation.isPending ? "Enregistrement..." : "Enregistrer"}
           </Button>
         </form>
 
-        {/* Error Display */}
-        {updateProfileMutation.error && (
-          <div className="p-3 bg-accent-red/10 border border-accent-red/20 rounded-lg">
-            <p className="text-sm text-accent-red text-center">
-              {updateProfileMutation.error.message}
-            </p>
+        {/* ── Préférences (verrouillées) ──────────────────────────────────────── */}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h2 className="font-display font-semibold text-text-primary">Préférences</h2>
+            <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-text-tertiary bg-bg-tertiary px-2 py-0.5 rounded-full border border-bg-tertiary">
+              <Lock className="h-2.5 w-2.5" />
+              Bientôt disponible
+            </span>
           </div>
-        )}
 
-        {/* Preferences Section */}
-        <div className="bg-bg-secondary rounded-xl p-4 space-y-4">
-          <h2 className="font-display font-semibold text-text-primary">Préférences</h2>
+          {/* Greyed-out preferences — not interactive */}
+          <div className="pointer-events-none opacity-40 select-none space-y-4">
 
-          {/* Expertise Level */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-secondary">
-              Niveau d&apos;expertise
-            </label>
-            <div className="space-y-2">
-              {EXPERTISE_LEVELS.map((level) => (
-                <button
-                  key={level.value}
-                  type="button"
-                  onClick={() => setExpertiseLevel(level.value)}
-                  className={cn(
-                    "w-full p-3 rounded-lg border-2 text-left transition-colors",
-                    expertiseLevel === level.value
-                      ? "border-accent-cyan bg-accent-cyan/10"
-                      : "border-transparent bg-bg-primary hover:border-bg-tertiary"
-                  )}
-                >
-                  <div className="font-medium text-text-primary">{level.label}</div>
-                  <div className="text-sm text-text-secondary">{level.description}</div>
-                </button>
-              ))}
+            {/* Expertise */}
+            <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-4 space-y-2">
+              <label className="block text-sm font-medium text-text-secondary">
+                Niveau d&apos;expertise
+              </label>
+              <div className="space-y-2">
+                {EXPERTISE_LEVELS.map((level) => (
+                  <div
+                    key={level.value}
+                    className={cn(
+                      "w-full p-3 rounded-xl border-2 text-left",
+                      expertiseLevel === level.value
+                        ? "border-accent-cyan bg-accent-cyan/10"
+                        : "border-transparent bg-bg-primary"
+                    )}
+                  >
+                    <div className="font-medium text-sm text-text-primary">{level.label}</div>
+                    <div className="text-xs text-text-secondary">{level.description}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Analysis Depth */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-secondary">
-              Profondeur d&apos;analyse
-            </label>
-            <div className="space-y-2">
-              {ANALYSIS_DEPTHS.map((depth) => (
-                <button
-                  key={depth.value}
-                  type="button"
-                  onClick={() => setAnalysisDepth(depth.value)}
-                  className={cn(
-                    "w-full p-3 rounded-lg border-2 text-left transition-colors",
-                    analysisDepth === depth.value
-                      ? "border-accent-cyan bg-accent-cyan/10"
-                      : "border-transparent bg-bg-primary hover:border-bg-tertiary"
-                  )}
-                >
-                  <div className="font-medium text-text-primary">{depth.label}</div>
-                  <div className="text-sm text-text-secondary">{depth.description}</div>
-                </button>
-              ))}
+            {/* Analysis depth */}
+            <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-4 space-y-2">
+              <label className="block text-sm font-medium text-text-secondary">
+                Profondeur d&apos;analyse
+              </label>
+              <div className="space-y-2">
+                {ANALYSIS_DEPTHS.map((depth) => (
+                  <div
+                    key={depth.value}
+                    className={cn(
+                      "w-full p-3 rounded-xl border-2 text-left",
+                      analysisDepth === depth.value
+                        ? "border-accent-cyan bg-accent-cyan/10"
+                        : "border-transparent bg-bg-primary"
+                    )}
+                  >
+                    <div className="font-medium text-sm text-text-primary">{depth.label}</div>
+                    <div className="text-xs text-text-secondary">{depth.description}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
 
-          {/* Favorite Sports */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-text-secondary">
-              Sports favoris (max 5)
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {SPORTS.map((sport) => (
-                <button
-                  key={sport.id}
-                  type="button"
-                  onClick={() => toggleSport(sport.id)}
-                  className={cn(
-                    "px-3 py-2 rounded-lg border-2 text-sm font-medium transition-colors",
-                    selectedSports.includes(sport.id)
-                      ? "border-accent-cyan bg-accent-cyan/10 text-accent-cyan"
-                      : "border-transparent bg-bg-primary text-text-secondary hover:border-bg-tertiary"
-                  )}
-                >
-                  {sport.label}
-                </button>
-              ))}
+            {/* Sports favoris */}
+            <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-4 space-y-2">
+              <label className="block text-sm font-medium text-text-secondary">
+                Sports favoris
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {SPORTS.map((sport) => (
+                  <div
+                    key={sport.id}
+                    className={cn(
+                      "px-3 py-2 rounded-xl border-2 text-sm font-medium",
+                      selectedSports.includes(sport.id)
+                        ? "border-accent-cyan bg-accent-cyan/10 text-accent-cyan"
+                        : "border-transparent bg-bg-primary text-text-secondary"
+                    )}
+                  >
+                    {sport.label}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
-
-        <Button
-          type="button"
-          onClick={onSavePreferences}
-          className="w-full"
-          disabled={updatePreferencesMutation.isPending}
-        >
-          {updatePreferencesMutation.isPending
-            ? "Enregistrement..."
-            : "Enregistrer les préférences"}
-        </Button>
-
-        {updatePreferencesMutation.error && (
-          <div className="p-3 bg-accent-red/10 border border-accent-red/20 rounded-lg">
-            <p className="text-sm text-accent-red text-center">
-              {updatePreferencesMutation.error.message}
-            </p>
-          </div>
-        )}
       </main>
     </div>
   )
