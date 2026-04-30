@@ -423,10 +423,9 @@ model AgentConversation {
   user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages AgentMessage[]
 
-  @@index([userId])
+  @@index([userId, createdAt])
   @@index([agentType])
   @@index([matchId])
-  @@index([createdAt])
 }
 
 model AgentMessage {

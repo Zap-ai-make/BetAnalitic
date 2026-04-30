@@ -7,6 +7,9 @@ import { cn } from "~/lib/utils"
 import { ChevronLeft, Plus, X } from "lucide-react"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
+import { type Balance, readBalance, fmtAmount } from "~/lib/balance"
+import { predictionLabel } from "~/lib/labels"
+import { CouponPanel } from "~/components/features/betting/CouponPanel"
 
 // ─── Agent metadata ───────────────────────────────────────────────────────────
 
@@ -32,7 +35,7 @@ const SIGNAL_LABELS: Record<string, { label: string; short: string; emoji: strin
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-function ConsensusBar({ reports }: { reports: { supports: boolean }[] }) {
+const ConsensusBar = React.memo(function ConsensusBar({ reports }: { reports: { supports: boolean }[] }) {
   const total = reports.length
   if (total === 0) return null
   const supporting = reports.filter((r) => r.supports).length
@@ -62,9 +65,9 @@ function ConsensusBar({ reports }: { reports: { supports: boolean }[] }) {
       </p>
     </div>
   )
-}
+})
 
-function ValueBadge({ confidence, odds }: { confidence: number; odds: number }) {
+const ValueBadge = React.memo(function ValueBadge({ confidence, odds }: { confidence: number; odds: number }) {
   const ev = confidence * odds - 1
   if (ev <= 0.05) return null
   return (
@@ -73,9 +76,9 @@ function ValueBadge({ confidence, odds }: { confidence: number; odds: number }) 
       <span className="text-xs font-bold text-amber-400">Value Bet +{Math.round(ev * 100)}%</span>
     </div>
   )
-}
+})
 
-function AgentCard({
+const AgentCard = React.memo(function AgentCard({
   report,
   onAskQuestion,
 }: {
@@ -127,31 +130,7 @@ function AgentCard({
       </button>
     </div>
   )
-}
-
-// ─── Coupon helpers (same as signaux page) ────────────────────────────────────
-
-interface Balance { amount: number; currency: "FCFA" | "USD" | "EUR" }
-const BALANCE_KEY = "betanalytic-virtual-balance"
-const COUPONS_KEY = "betanalytic-local-coupons"
-
-function readBalance(): Balance {
-  if (typeof window === "undefined") return { amount: 50000, currency: "FCFA" }
-  try {
-    const raw = localStorage.getItem(BALANCE_KEY)
-    return raw ? (JSON.parse(raw) as Balance) : { amount: 50000, currency: "FCFA" }
-  } catch { return { amount: 50000, currency: "FCFA" } }
-}
-
-function writeBalance(b: Balance) { localStorage.setItem(BALANCE_KEY, JSON.stringify(b)) }
-function fmtAmount(n: number, currency: string) {
-  return `${new Intl.NumberFormat("fr-FR").format(Math.round(n))} ${currency}`
-}
-
-const predictionLabel = (p: string) =>
-  p === "home" ? "V1" : p === "draw" ? "X" : p === "away" ? "V2"
-    : p === "yes" ? "Oui" : p === "no" ? "Non"
-    : p === "over" ? "Over" : p === "under" ? "Under" : p
+})
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -160,7 +139,10 @@ export default function RapportPage() {
   const params = useParams<{ matchId: string }>()
   const matchId = params.matchId
 
-  const { data: signals = [], isLoading } = api.match.getMatchSignals.useQuery({ matchId })
+  const { data: signals = [], isLoading } = api.match.getMatchSignals.useQuery(
+    { matchId },
+    { enabled: !!matchId }
+  )
 
   const [activeTab, setActiveTab] = React.useState<string | null>(null)
 
@@ -171,10 +153,9 @@ export default function RapportPage() {
     }
   }, [signals, activeTab])
 
-  // Coupon state (shared with signaux page via localStorage)
+  // Coupon state
   const [balance, setBalance] = React.useState<Balance>(() => readBalance())
   const [selectedSignals, setSelectedSignals] = React.useState<string[]>([])
-  const [stake, setStake] = React.useState("")
 
   const match = signals[0]?.match
   const activePick = signals.find((s) => s.signalType === activeTab)
@@ -183,55 +164,12 @@ export default function RapportPage() {
     () => signals.filter((s) => selectedSignals.includes(s.id)),
     [signals, selectedSignals]
   )
-  const totalOdds = selectedPicksData.reduce((acc, p) => acc * p.odds, 1)
-  const stakeNum = parseFloat(stake) || 0
-  const potentialWin = stakeNum * totalOdds
+  const totalOdds = React.useMemo(() => selectedPicksData.reduce((acc, p) => acc * p.odds, 1), [selectedPicksData])
 
   const toggleSignal = (pickId: string) => {
     setSelectedSignals((prev) =>
       prev.includes(pickId) ? prev.filter((id) => id !== pickId) : [...prev, pickId]
     )
-  }
-
-  const handlePlaceBet = () => {
-    if (selectedPicksData.length === 0 || stakeNum <= 0 || stakeNum > balance.amount) return
-    const legs = selectedPicksData.map((pick) => ({
-      matchId: pick.matchId,
-      homeTeam: pick.match.homeTeam.name,
-      awayTeam: pick.match.awayTeam.name,
-      predictionLabel: `${predictionLabel(pick.prediction)} — ${pick.signalType}`,
-      outcomeCode: predictionLabel(pick.prediction),
-      apiPrediction: pick.prediction,
-      odds: pick.odds,
-    }))
-    const coupon = {
-      id: `coupon-${Date.now()}`,
-      legs,
-      totalOdds,
-      stake: stakeNum,
-      potentialWin,
-      status: "pending" as const,
-      createdAt: new Date().toISOString(),
-    }
-    try {
-      const existing = JSON.parse(localStorage.getItem(COUPONS_KEY) ?? "[]") as unknown[]
-      localStorage.setItem(COUPONS_KEY, JSON.stringify([coupon, ...existing]))
-    } catch { /* noop */ }
-    const newBalance = { ...balance, amount: balance.amount - stakeNum }
-    setBalance(newBalance)
-    writeBalance(newBalance)
-    void Promise.allSettled(
-      legs.map((leg) =>
-        fetch("/api/beta/betting/bet", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ match_id: leg.matchId, prediction: leg.apiPrediction, stake: stakeNum / legs.length, odds: leg.odds }),
-        })
-      )
-    )
-    setSelectedSignals([])
-    setStake("")
-    router.push("/paris")
   }
 
   const handleAskQuestion = (agentType: string) => {
@@ -326,7 +264,7 @@ export default function RapportPage() {
                 key={sig.id}
                 onClick={() => setActiveTab(sig.signalType)}
                 className={cn(
-                  "flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
+                  "shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all",
                   isActive
                     ? "bg-accent-cyan text-bg-primary"
                     : "bg-bg-secondary border border-bg-tertiary text-text-secondary hover:border-accent-cyan/40 hover:text-text-primary"
@@ -411,51 +349,13 @@ export default function RapportPage() {
         )}
       </main>
 
-      {/* ── Coupon sticky panel ──────────────────────────────────────────────── */}
-      {selectedPicksData.length > 0 && (
-        <div className="fixed bottom-16 left-0 right-0 z-30 border-t-2 border-accent-cyan/30 bg-bg-secondary px-4 py-3 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-text-primary">Mon Coupon ({selectedPicksData.length})</span>
-            <span className="text-sm font-mono text-accent-cyan font-bold">×{totalOdds.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="number"
-              min="0"
-              value={stake}
-              onChange={(e) => setStake(e.target.value)}
-              placeholder={`Mise en ${balance.currency}`}
-              className="flex-1 px-3 py-2 rounded-lg text-sm bg-bg-primary border border-bg-tertiary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan"
-            />
-            <span className="text-xs text-text-tertiary">{balance.currency}</span>
-          </div>
-          {stakeNum > 0 && (
-            <p className="text-xs text-text-tertiary">
-              Gain potentiel : <span className="text-green-400 font-bold">{fmtAmount(potentialWin, balance.currency)}</span>
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button
-              onClick={() => setSelectedSignals([])}
-              className="px-3 py-2 rounded-lg text-xs text-text-secondary hover:text-red-400 border border-bg-tertiary transition-colors"
-            >
-              Vider
-            </button>
-            <button
-              onClick={handlePlaceBet}
-              disabled={stakeNum <= 0 || stakeNum > balance.amount}
-              className={cn(
-                "flex-1 py-2 rounded-lg text-sm font-bold transition-all",
-                stakeNum > 0 && stakeNum <= balance.amount
-                  ? "bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90"
-                  : "bg-bg-tertiary text-text-tertiary cursor-not-allowed"
-              )}
-            >
-              Valider le coupon →
-            </button>
-          </div>
-        </div>
-      )}
+      <CouponPanel
+        selectedPicksData={selectedPicksData}
+        totalOdds={totalOdds}
+        balance={balance}
+        onBalanceChange={setBalance}
+        onClear={() => setSelectedSignals([])}
+      />
 
       <DashboardNav />
     </div>

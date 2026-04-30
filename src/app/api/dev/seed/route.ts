@@ -204,6 +204,8 @@ export async function POST() {
 }
 
 export async function DELETE() {
+  if (process.env.NODE_ENV === "production")
+    return NextResponse.json({ error: "Forbidden in production" }, { status: 403 })
   await db.agentReport.deleteMany()
   await db.aIPick.deleteMany()
   await db.match.deleteMany()

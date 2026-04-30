@@ -1,6 +1,17 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+import type { PrismaClient, Prisma } from "@prisma/client";
 
 import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+
+const AI_PICKS_INCLUDE = {
+  agentReports: { orderBy: { confidence: "desc" as const } },
+  match: { include: { homeTeam: true, awayTeam: true, competition: true } },
+} as const
+
+async function _fetchAIPicks(db: PrismaClient, where: Prisma.AIPickWhereInput) {
+  return db.aIPick.findMany({ where, include: AI_PICKS_INCLUDE, orderBy: { confidence: "desc" } })
+}
 
 export const matchRouter = createTRPCRouter({
   /**
@@ -21,7 +32,7 @@ export const matchRouter = createTRPCRouter({
       })
 
       if (!match) {
-        throw new Error("Match not found")
+        throw new TRPCError({ code: "NOT_FOUND", message: "Match not found" })
       }
 
       return {
@@ -65,10 +76,7 @@ export const matchRouter = createTRPCRouter({
     });
 
     // Transform and add social proof counter (placeholder)
-    return matches.map((match) => ({
-      ...match,
-      analysisCount: Math.floor(Math.random() * 50) + 1, // TODO: Real counter
-    }));
+    return matches;
   }),
 
   /**
@@ -106,10 +114,7 @@ export const matchRouter = createTRPCRouter({
         take: input.limit,
       });
 
-      return matches.map((match) => ({
-        ...match,
-        analysisCount: Math.floor(Math.random() * 50) + 1,
-      }));
+      return matches;
     }),
 
   /**
@@ -133,10 +138,7 @@ export const matchRouter = createTRPCRouter({
       },
     });
 
-    return matches.map((match) => ({
-      ...match,
-      analysisCount: Math.floor(Math.random() * 100) + 10,
-    }));
+    return matches;
   }),
 
   /**
@@ -156,13 +158,10 @@ export const matchRouter = createTRPCRouter({
       });
 
       if (!match) {
-        throw new Error("Match not found");
+        throw new TRPCError({ code: "NOT_FOUND", message: "Match not found" });
       }
 
-      return {
-        ...match,
-        analysisCount: Math.floor(Math.random() * 50) + 1,
-      };
+      return match;
     }),
 
   /**
@@ -198,10 +197,7 @@ export const matchRouter = createTRPCRouter({
         },
       });
 
-      return matches.map((match) => ({
-        ...match,
-        analysisCount: Math.floor(Math.random() * 50) + 1,
-      }));
+      return matches;
     }),
 
   /**
@@ -269,13 +265,7 @@ export const matchRouter = createTRPCRouter({
         nextCursor = nextItem?.id;
       }
 
-      return {
-        matches: matches.map((match) => ({
-          ...match,
-          analysisCount: Math.floor(Math.random() * 50) + 1,
-        })),
-        nextCursor,
-      };
+      return { matches, nextCursor };
     }),
 
   /** GET /api/trpc/match.getAIPicks — signaux IA du jour */
@@ -288,22 +278,9 @@ export const matchRouter = createTRPCRouter({
       const dayEnd = new Date(base)
       dayEnd.setHours(23, 59, 59, 999)
 
-      return ctx.db.aIPick.findMany({
-        where: {
-          createdAt: { gte: dayStart, lte: dayEnd },
-          expiresAt: { gt: new Date() },
-        },
-        include: {
-          agentReports: { orderBy: { confidence: "desc" } },
-          match: {
-            include: {
-              homeTeam: true,
-              awayTeam: true,
-              competition: true,
-            },
-          },
-        },
-        orderBy: { confidence: "desc" },
+      return _fetchAIPicks(ctx.db, {
+        createdAt: { gte: dayStart, lte: dayEnd },
+        expiresAt: { gt: new Date() },
       })
     }),
 
@@ -311,22 +288,9 @@ export const matchRouter = createTRPCRouter({
   getMatchSignals: protectedProcedure
     .input(z.object({ matchId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.aIPick.findMany({
-        where: {
-          matchId: input.matchId,
-          expiresAt: { gt: new Date() },
-        },
-        include: {
-          agentReports: { orderBy: { confidence: "desc" } },
-          match: {
-            include: {
-              homeTeam: true,
-              awayTeam: true,
-              competition: true,
-            },
-          },
-        },
-        orderBy: { confidence: "desc" },
+      return _fetchAIPicks(ctx.db, {
+        matchId: input.matchId,
+        expiresAt: { gt: new Date() },
       })
     }),
 
