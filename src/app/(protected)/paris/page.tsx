@@ -518,6 +518,7 @@ export default function ParisPage() {
         </div>
       )}
 
+      <div className="sticky top-14 z-10 bg-bg-primary">
       <BalanceBar balance={balance} currency={currency} onSave={saveBalance} />
 
       {/* Tabs */}
@@ -543,6 +544,7 @@ export default function ParisPage() {
             )}
           </button>
         ))}
+      </div>
       </div>
 
       <main className="flex-1 overflow-y-auto pb-24">

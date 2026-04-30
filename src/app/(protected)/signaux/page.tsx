@@ -39,33 +39,6 @@ function fmtAmount(n: number, currency: string) {
   return `${new Intl.NumberFormat("fr-FR").format(Math.round(n))} ${currency}`
 }
 
-function readStreak(): number {
-  if (typeof window === "undefined") return 0
-  try {
-    const raw = localStorage.getItem("betanalytic-briefing-streak")
-    if (!raw) return 0
-    const data = JSON.parse(raw) as { count: number; lastDate: string }
-    const today = new Date().toDateString()
-    return data.lastDate === today || data.lastDate === new Date(Date.now() - 86400000).toDateString()
-      ? data.count
-      : 0
-  } catch {
-    return 0
-  }
-}
-
-function touchStreak() {
-  if (typeof window === "undefined") return
-  const today = new Date().toDateString()
-  try {
-    const raw = localStorage.getItem("betanalytic-briefing-streak")
-    const data = raw ? (JSON.parse(raw) as { count: number; lastDate: string }) : null
-    const yesterday = new Date(Date.now() - 86400000).toDateString()
-    const newCount =
-      data?.lastDate === yesterday ? (data.count + 1) : data?.lastDate === today ? (data?.count ?? 1) : 1
-    localStorage.setItem("betanalytic-briefing-streak", JSON.stringify({ count: newCount, lastDate: today }))
-  } catch { /* noop */ }
-}
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -79,12 +52,9 @@ export default function SignauxPage() {
   const [selectedSignals, setSelectedSignals] = React.useState<string[]>([])
   const [stake, setStake] = React.useState("")
   const [balance, setBalance] = React.useState<Balance>(() => readBalance())
-  const [streak, setStreak] = React.useState(0)
 
   React.useEffect(() => {
     setBalance(readBalance())
-    touchStreak()
-    setStreak(readStreak())
   }, [])
 
   // ── Coupon logic ──────────────────────────────────────────────────────────
@@ -198,26 +168,12 @@ export default function SignauxPage() {
       <main className="flex-1 overflow-y-auto pb-32">
 
         {/* ── Page Header ─────────────────────────────────────────────────── */}
-        <div className="px-4 py-3 border-b border-bg-tertiary flex items-center justify-between gap-3">
-          <div>
-            <h1 className="font-display text-lg font-bold text-text-primary flex items-center gap-2">
-              <Zap className="h-5 w-5 text-accent-cyan" />
-              Intelligence Briefing
-            </h1>
-            <p className="text-xs text-text-tertiary capitalize">{todayLabel}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            {streak > 0 && (
-              <div className="flex items-center gap-1 bg-accent-orange/10 border border-accent-orange/30 px-2 py-1 rounded-full">
-                <span className="text-sm">🔥</span>
-                <span className="text-xs font-bold text-accent-orange">{streak}</span>
-              </div>
-            )}
-            <div className="text-right">
-              <div className="text-xs text-text-tertiary">Solde</div>
-              <div className="text-sm font-bold text-accent-cyan font-mono">{fmtAmount(balance.amount, balance.currency)}</div>
-            </div>
-          </div>
+        <div className="sticky top-14 z-10 bg-bg-primary/95 backdrop-blur-sm px-4 py-3 border-b border-bg-tertiary">
+          <h1 className="font-display text-lg font-bold text-text-primary flex items-center gap-2">
+            <Zap className="h-5 w-5 text-accent-cyan" />
+            Intelligence Briefing
+          </h1>
+          <p className="text-xs text-text-tertiary capitalize">{todayLabel}</p>
         </div>
 
         {/* ── Content ─────────────────────────────────────────────────────── */}
