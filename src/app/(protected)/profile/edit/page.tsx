@@ -27,6 +27,35 @@ const profileFormSchema = z.object({
 
 type ProfileFormData = z.infer<typeof profileFormSchema>
 
+function resizeImage(file: File, maxPx: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+    if (!ALLOWED.includes(file.type)) {
+      reject(new Error("Type non autorisé. Utilisez JPG, PNG, WebP ou GIF."))
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      reject(new Error("Fichier trop volumineux. Maximum 5 MB."))
+      return
+    }
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(1, maxPx / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext("2d")!.drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL("image/jpeg", 0.85))
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("Impossible de lire l'image")) }
+    img.src = url
+  })
+}
+
 const SPORTS = [
   { id: "football",   label: "Football" },
   { id: "basketball", label: "Basketball" },
@@ -105,6 +134,18 @@ export default function EditProfilePage() {
     })
   }
 
+  const updateAvatarMutation = api.profile.updateAvatar.useMutation({
+    onSuccess: async () => {
+      setSuccessMessage("Photo mise à jour!")
+      setTimeout(() => setSuccessMessage(null), 3000)
+      await utils.profile.getProfile.invalidate()
+    },
+    onError: (err) => {
+      setUploadError(err.message)
+      setAvatarPreview(null)
+    },
+  })
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -112,36 +153,16 @@ export default function EditProfilePage() {
     setUploadError(null)
     setIsUploading(true)
 
-    // Show preview immediately
-    const reader = new FileReader()
-    reader.onloadend = () => setAvatarPreview(reader.result as string)
-    reader.readAsDataURL(file)
-
     try {
-      const formData = new FormData()
-      formData.append("file", file)
-
-      const response = await fetch("/api/upload/avatar", {
-        method: "POST",
-        body: formData,
-      })
-
-      const data = (await response.json()) as { error?: string; avatarUrl?: string }
-
-      if (!response.ok) {
-        setAvatarPreview(null)
-        throw new Error(data.error ?? "Erreur lors du téléchargement")
-      }
-
-      setSuccessMessage("Photo mise à jour!")
-      setTimeout(() => setSuccessMessage(null), 3000)
-      await utils.profile.getProfile.invalidate()
+      // Resize to max 256×256 via canvas → keeps base64 payload small
+      const dataUrl = await resizeImage(file, 256)
+      setAvatarPreview(dataUrl)
+      await updateAvatarMutation.mutateAsync({ dataUrl })
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : "Erreur lors du téléchargement")
       setAvatarPreview(null)
     } finally {
       setIsUploading(false)
-      // Reset input so same file can be re-selected
       if (fileInputRef.current) fileInputRef.current.value = ""
     }
   }

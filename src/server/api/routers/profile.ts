@@ -84,6 +84,23 @@ export const profileRouter = createTRPCRouter({
   }),
 
   /**
+   * Update avatar — accepts base64 data URL, stored directly in DB
+   */
+  updateAvatar: protectedProcedure
+    .input(z.object({
+      dataUrl: z.string()
+        .startsWith("data:image/", "Format invalide")
+        .max(400_000, "Image trop grande (max ~300 KB)"),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.db.user.update({
+        where: { id: ctx.session.user.id },
+        data: { avatarUrl: input.dataUrl },
+      });
+      return { success: true };
+    }),
+
+  /**
    * Update user profile info
    */
   updateProfile: protectedProcedure
