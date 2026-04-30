@@ -4,7 +4,8 @@ import { useState, useRef, useEffect } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
-import { Lock } from "lucide-react"
+import { Lock, LogOut } from "lucide-react"
+import { signOut } from "next-auth/react"
 import { z } from "zod"
 
 import { Button } from "~/components/ui/button"
@@ -88,7 +89,7 @@ export default function EditProfilePage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const utils = api.useUtils()
-  const { data: profile, isLoading: profileLoading } = api.profile.getProfile.useQuery()
+  const { data: profile, isLoading: profileLoading, error: profileError } = api.profile.getProfile.useQuery()
 
   const {
     register,
@@ -171,6 +172,35 @@ export default function EditProfilePage() {
     return (
       <div className="min-h-screen bg-bg-primary flex items-center justify-center">
         <div className="animate-pulse text-text-secondary">Chargement...</div>
+      </div>
+    )
+  }
+
+  // Session JWT valid but no matching DB record — prompt re-login
+  if (profileError ?? (!profileLoading && !profile)) {
+    return (
+      <div className="min-h-screen bg-bg-primary flex flex-col">
+        <header className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
+          <div className="flex items-center justify-between p-4">
+            <Link href="/profile" className="text-text-secondary hover:text-text-primary text-sm">Annuler</Link>
+            <h1 className="font-display font-bold text-text-primary">Modifier le profil</h1>
+            <div className="w-16" />
+          </div>
+        </header>
+        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center gap-4">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-text-primary font-semibold">Session expirée</p>
+          <p className="text-sm text-text-tertiary">
+            Votre session ne correspond plus à un compte actif. Déconnectez-vous et reconnectez-vous.
+          </p>
+          <button
+            onClick={() => void signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-400/10 border border-red-400/20 text-red-400 text-sm font-medium hover:bg-red-400/20 transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            Se déconnecter
+          </button>
+        </div>
       </div>
     )
   }

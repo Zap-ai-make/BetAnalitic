@@ -93,10 +93,16 @@ export const profileRouter = createTRPCRouter({
         .max(400_000, "Image trop grande (max ~300 KB)"),
     }))
     .mutation(async ({ ctx, input }) => {
-      await ctx.db.user.update({
+      const result = await ctx.db.user.updateMany({
         where: { id: ctx.session.user.id },
         data: { avatarUrl: input.dataUrl },
       });
+      if (result.count === 0) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Session expirée. Déconnectez-vous et reconnectez-vous.",
+        });
+      }
       return { success: true };
     }),
 
