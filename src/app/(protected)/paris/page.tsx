@@ -22,7 +22,9 @@ interface CouponLeg {
   matchId: string
   homeTeam: string
   awayTeam: string
-  predictionLabel: string
+  predictionLabel: string   // e.g. "V1 — PSG"
+  outcomeCode?: string      // "V1" | "X" | "V2"
+  apiPrediction?: string    // "home" | "draw" | "away"
   odds: number
 }
 
@@ -213,7 +215,12 @@ function MatchBuilderCard({ match, selected, onSelect, onRemove }: {
   onSelect: (key: OddKey) => void
   onRemove: () => void
 }) {
-  const btns: { key: OddKey; label: string }[] = [{ key: "1", label: "1" }, { key: "X", label: "N" }, { key: "2", label: "2" }]
+  // V1 = domicile gagne, X = nul, V2 = extérieur gagne (style 1xbet FR)
+  const btns: { key: OddKey; label: string; sub: string }[] = [
+    { key: "1", label: "V1", sub: match.homeTeam },
+    { key: "X", label: "X",  sub: "Nul" },
+    { key: "2", label: "V2", sub: match.awayTeam },
+  ]
   return (
     <div className="bg-bg-secondary rounded-xl p-4 space-y-3">
       <div className="flex items-start justify-between gap-2">
@@ -226,20 +233,21 @@ function MatchBuilderCard({ match, selected, onSelect, onRemove }: {
         </button>
       </div>
       {match.odds ? (
-        <div className="grid grid-cols-3 gap-2">
-          {btns.map(({ key, label }) => (
+        <div className="grid grid-cols-3 gap-1.5">
+          {btns.map(({ key, label, sub }) => (
             <button
               key={key}
               onClick={() => onSelect(key)}
               className={cn(
-                "flex flex-col items-center py-2.5 rounded-lg transition-all min-h-11",
+                "flex flex-col items-center py-2.5 px-1 rounded-lg transition-all min-h-11 gap-0.5",
                 selected === key
                   ? "bg-accent-cyan text-bg-primary shadow-sm shadow-accent-cyan/30"
                   : "bg-bg-tertiary text-text-primary hover:bg-bg-tertiary/60"
               )}
             >
-              <span className="text-[10px] font-medium opacity-70 mb-0.5">{label}</span>
-              <span className="font-bold font-mono text-sm">{match.odds![key].toFixed(2)}</span>
+              <span className={cn("text-[10px] font-bold", selected === key ? "opacity-90" : "text-accent-cyan")}>{label}</span>
+              <span className="font-bold font-mono text-sm leading-none">{match.odds![key].toFixed(2)}</span>
+              <span className={cn("text-[9px] truncate max-w-full px-1 leading-none", selected === key ? "opacity-75" : "text-text-tertiary")}>{sub}</span>
             </button>
           ))}
         </div>
@@ -266,15 +274,22 @@ function LocalCouponCard({ coupon, currency }: { coupon: LocalCoupon; currency: 
       </div>
 
       <div className="space-y-1.5">
-        {coupon.legs.map((leg, i) => (
-          <div key={i} className="flex items-center gap-2 bg-bg-tertiary/60 rounded-lg px-3 py-2">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-text-primary truncate">{leg.homeTeam} vs {leg.awayTeam}</p>
-              <p className="text-[10px] text-text-tertiary mt-0.5">{leg.predictionLabel}</p>
+        {coupon.legs.map((leg, i) => {
+          const code = leg.outcomeCode ?? leg.predictionLabel.split(" — ")[0] ?? "?"
+          const teamName = leg.predictionLabel.split(" — ")[1] ?? ""
+          return (
+            <div key={i} className="flex items-center gap-2 bg-bg-tertiary/60 rounded-lg px-3 py-2.5">
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-text-primary truncate">{leg.homeTeam} vs {leg.awayTeam}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <span className="text-[10px] font-bold bg-accent-cyan/20 text-accent-cyan px-1.5 py-0.5 rounded shrink-0">{code}</span>
+                  {teamName && <span className="text-[10px] text-text-tertiary truncate">{teamName}</span>}
+                </div>
+              </div>
+              <span className="font-mono text-sm font-bold text-text-primary shrink-0">×{leg.odds.toFixed(2)}</span>
             </div>
-            <span className="font-mono text-xs font-bold text-accent-cyan shrink-0">×{leg.odds.toFixed(2)}</span>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
       <div className="border-t border-bg-tertiary pt-2.5 grid grid-cols-3 gap-2 text-center">
@@ -414,11 +429,19 @@ export default function ParisPage() {
     try {
       const legs: CouponLeg[] = matchesWithOdd.map((m) => {
         const key = oddsSelection[m.id]!
-        const labelMap: Record<OddKey, string> = { "1": m.homeTeam, X: "Nul", "2": m.awayTeam }
-        return { matchId: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam, predictionLabel: labelMap[key], odds: m.odds?.[key] ?? 1 }
+        // Store V1/X/V2 as outcome code + team name for display
+        const outcomeCode: Record<OddKey, string> = { "1": "V1", X: "X", "2": "V2" }
+        const apiPrediction: Record<OddKey, string> = { "1": "home", X: "draw", "2": "away" }
+        const teamLabel: Record<OddKey, string> = { "1": m.homeTeam, X: "Nul", "2": m.awayTeam }
+        return {
+          matchId: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam,
+          predictionLabel: `${outcomeCode[key]} — ${teamLabel[key]}`,
+          outcomeCode: outcomeCode[key],
+          apiPrediction: apiPrediction[key],
+          odds: m.odds?.[key] ?? 1,
+        }
       })
 
-      // Fire API calls silently (mock IDs will fail, real IDs will succeed)
       await Promise.allSettled(
         legs.map((leg) =>
           fetch("/api/beta/betting/bet", {
@@ -428,7 +451,7 @@ export default function ParisPage() {
               match_id: leg.matchId,
               home_team: leg.homeTeam,
               away_team: leg.awayTeam,
-              prediction: leg.predictionLabel === leg.homeTeam ? "home" : leg.predictionLabel === leg.awayTeam ? "away" : "draw",
+              prediction: leg.apiPrediction,
               prediction_label: leg.predictionLabel,
               odds: leg.odds,
               stake: stake / legs.length,
