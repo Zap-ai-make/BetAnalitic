@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { cn } from "~/lib/utils"
-import { Zap, TrendingUp, X, Plus, FileText } from "lucide-react"
+import { Zap, TrendingUp, X, Plus, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import { api } from "~/trpc/react"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,6 +39,15 @@ function fmtAmount(n: number, currency: string) {
   return `${new Intl.NumberFormat("fr-FR").format(Math.round(n))} ${currency}`
 }
 
+function toDateStr(d: Date): string {
+  return d.toISOString().split("T")[0]!
+}
+
+function addDays(dateStr: string, days: number): string {
+  const d = new Date(dateStr)
+  d.setDate(d.getDate() + days)
+  return toDateStr(d)
+}
 
 // ─── Page ────────────────────────────────────────────────────────────────────
 
@@ -46,29 +55,43 @@ export default function SignauxPage() {
   const router = useRouter()
   useSession()
 
-  const { data: aiPicks = [], isLoading: picksLoading } = api.match.getAIPicks.useQuery({})
+  // ── Date picker ───────────────────────────────────────────────────────────
+  const todayStr = React.useMemo(() => toDateStr(new Date()), [])
+  const minDateStr = React.useMemo(() => {
+    const d = new Date()
+    d.setDate(d.getDate() - 30)
+    return toDateStr(d)
+  }, [])
+  const [selectedDate, setSelectedDate] = React.useState(todayStr)
+  const isToday = selectedDate === todayStr
+  const isMinDate = selectedDate === minDateStr
+
+  const prevDay = () => { if (!isMinDate) setSelectedDate(addDays(selectedDate, -1)) }
+  const nextDay = () => { if (!isToday) setSelectedDate(addDays(selectedDate, 1)) }
+
+  const displayDate = new Date(selectedDate + "T12:00:00").toLocaleDateString("fr-FR", {
+    weekday: "short", day: "numeric", month: "short",
+  })
+
+  // ── Data ──────────────────────────────────────────────────────────────────
+  const { data: aiPicks = [], isLoading: picksLoading } = api.match.getAIPicks.useQuery({ date: selectedDate })
   const { data: picksStats } = api.match.getAIPicksStats.useQuery()
 
+  // ── Coupon ────────────────────────────────────────────────────────────────
   const [selectedSignals, setSelectedSignals] = React.useState<string[]>([])
   const [stake, setStake] = React.useState("")
   const [balance, setBalance] = React.useState<Balance>(() => readBalance())
 
-  React.useEffect(() => {
-    setBalance(readBalance())
-  }, [])
-
-  // ── Coupon logic ──────────────────────────────────────────────────────────
+  React.useEffect(() => { setBalance(readBalance()) }, [])
 
   const selectedPicksData = React.useMemo(
     () => aiPicks.filter((p) => selectedSignals.includes(p.id)),
     [aiPicks, selectedSignals]
   )
-
   const totalOdds = React.useMemo(
     () => selectedPicksData.reduce((acc, p) => acc * p.odds, 1),
     [selectedPicksData]
   )
-
   const stakeNum = parseFloat(stake) || 0
   const potentialWin = stakeNum * totalOdds
 
@@ -80,7 +103,6 @@ export default function SignauxPage() {
 
   const handlePlaceBet = () => {
     if (selectedPicksData.length === 0 || stakeNum <= 0 || stakeNum > balance.amount) return
-
     const legs = selectedPicksData.map((pick) => {
       const outcomeMap: Record<string, string> = {
         home: "V1", draw: "X", away: "V2",
@@ -96,68 +118,50 @@ export default function SignauxPage() {
         odds: pick.odds,
       }
     })
-
     const coupon = {
       id: `coupon-${Date.now()}`,
-      legs,
-      totalOdds,
-      stake: stakeNum,
-      potentialWin,
-      status: "pending" as const,
-      createdAt: new Date().toISOString(),
+      legs, totalOdds, stake: stakeNum, potentialWin,
+      status: "pending" as const, createdAt: new Date().toISOString(),
     }
-
     try {
       const existing = JSON.parse(localStorage.getItem(COUPONS_KEY) ?? "[]") as unknown[]
       localStorage.setItem(COUPONS_KEY, JSON.stringify([coupon, ...existing]))
     } catch { /* noop */ }
-
     const newBalance = { ...balance, amount: balance.amount - stakeNum }
     setBalance(newBalance)
     writeBalance(newBalance)
-
     void Promise.allSettled(
       legs.map((leg) =>
         fetch("/api/beta/betting/bet", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            match_id: leg.matchId,
-            prediction: leg.apiPrediction,
-            stake: stakeNum / legs.length,
-            odds: leg.odds,
+            match_id: leg.matchId, prediction: leg.apiPrediction,
+            stake: stakeNum / legs.length, odds: leg.odds,
           }),
         })
       )
     )
-
     setSelectedSignals([])
     setStake("")
     router.push("/paris")
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────
+  // ── Signal helpers ────────────────────────────────────────────────────────
 
   const signalLevel = (confidence: number) =>
     confidence >= 0.75
-      ? { label: "SIGNAL FORT", color: "text-red-400", border: "border-accent-cyan/60", dot: "bg-red-400" }
+      ? { label: "SIGNAL FORT",  color: "text-red-400",        border: "border-accent-cyan/60", dot: "bg-red-400" }
       : confidence >= 0.60
-      ? { label: "SIGNAL MOYEN", color: "text-amber-400", border: "border-amber-400/40", dot: "bg-amber-400" }
-      : { label: "SIGNAL FAIBLE", color: "text-text-tertiary", border: "border-bg-tertiary", dot: "bg-text-tertiary" }
+      ? { label: "SIGNAL MOYEN", color: "text-amber-400",       border: "border-amber-400/40",   dot: "bg-amber-400" }
+      : { label: "SIGNAL FAIBLE",color: "text-text-tertiary",   border: "border-bg-tertiary",    dot: "bg-text-tertiary" }
 
-  const predictionLabel = (prediction: string) => {
-    const map: Record<string, string> = {
-      home: "V1", draw: "X", away: "V2",
-      yes: "Oui", no: "Non", over: "Over", under: "Under",
-    }
-    return map[prediction] ?? prediction
-  }
+  const predictionLabel = (p: string) =>
+    ({ home: "V1", draw: "X", away: "V2", yes: "Oui", no: "Non", over: "Over", under: "Under" }[p] ?? p)
 
   const SIGNAL_TYPE_LABELS: Record<string, string> = {
     RESULT: "Résultat", BTTS: "BTTS", CORNERS: "Corners", CARDS: "Cartons",
   }
-
-  const todayLabel = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
 
@@ -165,50 +169,94 @@ export default function SignauxPage() {
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <Header />
 
-      <main className="flex-1 overflow-y-auto pb-32">
+      {/* ── Sticky sub-header — OUTSIDE main, direct child of flex ────────── */}
+      <div className="sticky top-14 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
 
-        {/* ── Page Header ─────────────────────────────────────────────────── */}
-        <div className="sticky top-14 z-10 bg-bg-primary/95 backdrop-blur-sm px-4 py-3 border-b border-bg-tertiary">
-          <h1 className="font-display text-lg font-bold text-text-primary flex items-center gap-2">
+        {/* Title row */}
+        <div className="flex items-center justify-between">
+          <h1 className="font-display text-xl font-bold text-text-primary flex items-center gap-2">
             <Zap className="h-5 w-5 text-accent-cyan" />
             Intelligence Briefing
           </h1>
-          <p className="text-xs text-text-tertiary capitalize">{todayLabel}</p>
+          {isToday ? (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-accent-cyan bg-accent-cyan/10 border border-accent-cyan/30 px-2 py-0.5 rounded-full">
+              Aujourd&apos;hui
+            </span>
+          ) : (
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary bg-bg-tertiary border border-bg-tertiary/60 px-2 py-0.5 rounded-full">
+              Historique
+            </span>
+          )}
         </div>
 
-        {/* ── Content ─────────────────────────────────────────────────────── */}
+        {/* Date navigation */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={prevDay}
+            disabled={isMinDate}
+            className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-lg border transition-colors",
+              isMinDate
+                ? "border-bg-tertiary text-text-tertiary opacity-30 cursor-not-allowed"
+                : "border-bg-tertiary text-text-secondary hover:text-text-primary hover:border-accent-cyan/40"
+            )}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div className="flex-1 flex items-center justify-center">
+            <span className="text-sm font-semibold text-text-primary capitalize">{displayDate}</span>
+          </div>
+
+          <button
+            onClick={nextDay}
+            disabled={isToday}
+            className={cn(
+              "flex items-center justify-center w-8 h-8 rounded-lg border transition-colors",
+              isToday
+                ? "border-bg-tertiary text-text-tertiary opacity-30 cursor-not-allowed"
+                : "border-bg-tertiary text-text-secondary hover:text-text-primary hover:border-accent-cyan/40"
+            )}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Scrollable content ───────────────────────────────────────────────── */}
+      <div className="flex-1 pb-28">
         <div className="p-4 space-y-4">
 
           {/* AI Performance card */}
           {picksStats && (picksStats.yesterday.total > 0 || picksStats.last30Days.total > 0) && (
-            <div className="bg-bg-secondary rounded-xl p-3 border border-bg-tertiary flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-4 w-4 text-accent-cyan shrink-0" />
-                <div>
-                  {picksStats.yesterday.total > 0 && (
-                    <p className="text-xs text-text-primary font-medium">
-                      IA hier : ✅ {picksStats.yesterday.correct}/{picksStats.yesterday.total} corrects
-                    </p>
-                  )}
-                  {picksStats.last30Days.accuracy !== null && (
-                    <p className="text-xs text-text-tertiary">
-                      Précision 30j : {picksStats.last30Days.accuracy}%
-                    </p>
-                  )}
-                </div>
+            <div className="bg-bg-secondary rounded-xl p-3 border border-bg-tertiary flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-accent-cyan shrink-0" />
+              <div>
+                {picksStats.yesterday.total > 0 && (
+                  <p className="text-xs text-text-primary font-medium">
+                    IA hier : ✅ {picksStats.yesterday.correct}/{picksStats.yesterday.total} corrects
+                  </p>
+                )}
+                {picksStats.last30Days.accuracy !== null && (
+                  <p className="text-xs text-text-tertiary">
+                    Précision 30j : {picksStats.last30Days.accuracy}%
+                  </p>
+                )}
               </div>
             </div>
           )}
 
-          {/* Signals header */}
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-              Signaux du Jour
-            </h2>
-            {aiPicks.length > 0 && (
-              <span className="text-xs text-text-tertiary">{aiPicks.length} signal{aiPicks.length > 1 ? "s" : ""}</span>
-            )}
-          </div>
+          {/* Signals count */}
+          {aiPicks.length > 0 && (
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
+                Signaux
+              </h2>
+              <span className="text-xs text-text-tertiary">
+                {aiPicks.length} signal{aiPicks.length > 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
 
           {/* Loading skeletons */}
           {picksLoading && (
@@ -221,10 +269,18 @@ export default function SignauxPage() {
 
           {/* Empty state */}
           {!picksLoading && aiPicks.length === 0 && (
-            <div className="text-center py-10">
+            <div className="text-center py-12">
               <div className="text-4xl mb-3">🤖</div>
-              <p className="text-sm text-text-secondary font-medium">Aucun signal pour aujourd&apos;hui</p>
-              <p className="text-xs text-text-tertiary mt-1">Les agents analysent les matchs à 08:00</p>
+              {isToday ? (
+                <>
+                  <p className="text-sm text-text-secondary font-medium">Aucun signal pour aujourd&apos;hui</p>
+                  <p className="text-xs text-text-tertiary mt-1">Les agents analysent les matchs à 08:00</p>
+                </>
+              ) : (
+                <p className="text-sm text-text-secondary font-medium">
+                  Aucun signal pour le {displayDate}
+                </p>
+              )}
             </div>
           )}
 
@@ -280,7 +336,7 @@ export default function SignauxPage() {
                   </span>
                 </div>
 
-                {/* Consensus + Value bet badges */}
+                {/* Consensus + Value bet */}
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
                   {pick.agentReports.length > 0 && (
                     <span className="text-[10px] text-text-tertiary">
@@ -325,9 +381,9 @@ export default function SignauxPage() {
             )
           })}
         </div>
-      </main>
+      </div>
 
-      {/* ── Coupon sticky panel ──────────────────────────────────────────── */}
+      {/* ── Coupon panel (fixed, au-dessus du bottom nav) ────────────────────── */}
       {selectedPicksData.length > 0 && (
         <div className="fixed bottom-16 left-0 right-0 z-30 border-t-2 border-accent-cyan/30 bg-bg-secondary px-4 py-3 space-y-2">
           <div className="flex items-center justify-between">
@@ -336,7 +392,6 @@ export default function SignauxPage() {
             </span>
             <span className="text-sm font-mono text-accent-cyan font-bold">×{totalOdds.toFixed(2)}</span>
           </div>
-
           <div className="space-y-1">
             {selectedPicksData.map((p) => (
               <div key={p.id} className="flex items-center justify-between text-xs">
@@ -349,7 +404,6 @@ export default function SignauxPage() {
               </div>
             ))}
           </div>
-
           <div className="flex items-center gap-2">
             <input
               type="number"
@@ -357,22 +411,15 @@ export default function SignauxPage() {
               value={stake}
               onChange={(e) => setStake(e.target.value)}
               placeholder={`Mise en ${balance.currency}`}
-              className={cn(
-                "flex-1 px-3 py-2 rounded-lg text-sm",
-                "bg-bg-primary border border-bg-tertiary",
-                "text-text-primary placeholder:text-text-tertiary",
-                "focus:outline-none focus:border-accent-cyan"
-              )}
+              className="flex-1 px-3 py-2 rounded-lg text-sm bg-bg-primary border border-bg-tertiary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:border-accent-cyan"
             />
             <span className="text-xs text-text-tertiary">{balance.currency}</span>
           </div>
-
           {stakeNum > 0 && (
             <p className="text-xs text-text-tertiary">
               Gain potentiel : <span className="text-green-400 font-bold">{fmtAmount(potentialWin, balance.currency)}</span>
             </p>
           )}
-
           <div className="flex gap-2">
             <button
               onClick={() => setSelectedSignals([])}
