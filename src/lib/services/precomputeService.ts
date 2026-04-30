@@ -177,6 +177,9 @@ export class PrecomputeService {
         },
       })
 
+      // Generate AI pick from computed stats
+      await this.generateAIPick(matchId, precomputedData, match.kickoffTime, match.odds)
+
       console.log(`✅ Pre-computed data for match ${matchId}`)
     } catch (error) {
       console.error(`❌ Failed to pre-compute match ${matchId}:`, error)
@@ -278,6 +281,67 @@ export class PrecomputeService {
   ): Promise<WeatherData | null> {
     // TODO: Implement weather API integration
     return null
+  }
+
+  /**
+   * Generate AI pick from precomputed stats using confidence formula
+   */
+  async generateAIPick(
+    matchId: string,
+    data: PrecomputedData,
+    kickoffTime: Date,
+    matchOdds: unknown
+  ): Promise<void> {
+    const { teamStats, h2hHistory } = data
+    const total = Math.max(teamStats.home.wins + teamStats.home.draws + teamStats.home.losses, 1)
+    const awayTotal = Math.max(teamStats.away.wins + teamStats.away.draws + teamStats.away.losses, 1)
+    const h2hTotal = Math.max(h2hHistory.totalMatches, 1)
+
+    const homeFormRate = teamStats.home.wins / total
+    const awayFormRate = teamStats.away.wins / awayTotal
+    const h2hHomeRate = h2hHistory.homeWins / h2hTotal
+    const h2hAwayRate = h2hHistory.awayWins / h2hTotal
+    const drawRate = h2hHistory.draws / h2hTotal
+
+    const homeScore = homeFormRate * 0.6 + h2hHomeRate * 0.4
+    const awayScore = awayFormRate * 0.6 + h2hAwayRate * 0.4
+
+    let prediction: string
+    let confidence: number
+    let reasoning: string
+
+    if (homeScore >= awayScore && homeScore > 0.45) {
+      prediction = "home"
+      confidence = Math.min(homeScore + 0.1, 0.95)
+      const wins5 = teamStats.home.form.slice(0, 5).filter((r) => r === "W").length
+      reasoning = `Domination à domicile (${wins5}/5 victoires récentes) et ${h2hHistory.homeWins} victoires sur ${h2hHistory.totalMatches} confrontations directes.`
+    } else if (awayScore > homeScore && awayScore > 0.45) {
+      prediction = "away"
+      confidence = Math.min(awayScore + 0.08, 0.92)
+      const wins5 = teamStats.away.form.slice(0, 5).filter((r) => r === "W").length
+      reasoning = `Visiteurs en excellente forme (${wins5}/5 victoires récentes), tendance à s'imposer à l'extérieur.`
+    } else {
+      prediction = "draw"
+      confidence = Math.max(Math.min(drawRate + 0.35, 0.72), 0.48)
+      reasoning = `Équilibre H2H (${h2hHistory.homeWins}V/${h2hHistory.draws}N/${h2hHistory.awayWins}D) et niveaux similaires — nul probable.`
+    }
+
+    const agentType = confidence > 0.75 ? "SCOUT" : confidence > 0.60 ? "PREDICTION" : "ODDS"
+
+    // Extract odds from match JSON
+    const oddsJson = matchOdds as Record<string, number> | null | undefined
+    const oddsMap: Record<string, number> = {
+      home: oddsJson?.["1"] ?? 1.85,
+      draw: oddsJson?.X ?? 3.30,
+      away: oddsJson?.["2"] ?? 3.80,
+    }
+    const odds = oddsMap[prediction] ?? 2.0
+
+    await db.aIPick.upsert({
+      where: { matchId },
+      create: { matchId, agentType, prediction, confidence, reasoning, odds, expiresAt: kickoffTime },
+      update: { agentType, prediction, confidence, reasoning, odds, expiresAt: kickoffTime, isCorrect: null },
+    })
   }
 
   /**

@@ -277,4 +277,67 @@ export const matchRouter = createTRPCRouter({
         nextCursor,
       };
     }),
+
+  /** GET /api/trpc/match.getAIPicks — signaux IA du jour */
+  getAIPicks: protectedProcedure
+    .input(z.object({ date: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const base = input.date ? new Date(input.date) : new Date()
+      const dayStart = new Date(base)
+      dayStart.setHours(0, 0, 0, 0)
+      const dayEnd = new Date(base)
+      dayEnd.setHours(23, 59, 59, 999)
+
+      return ctx.db.aIPick.findMany({
+        where: {
+          createdAt: { gte: dayStart, lte: dayEnd },
+          expiresAt: { gt: new Date() },
+        },
+        include: {
+          match: {
+            include: {
+              homeTeam: true,
+              awayTeam: true,
+              competition: true,
+            },
+          },
+        },
+        orderBy: { confidence: "desc" },
+      })
+    }),
+
+  /** GET /api/trpc/match.getAIPicksStats — perf historique IA */
+  getAIPicksStats: protectedProcedure.query(async ({ ctx }) => {
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    yesterday.setHours(0, 0, 0, 0)
+    const yesterdayEnd = new Date(yesterday)
+    yesterdayEnd.setHours(23, 59, 59, 999)
+
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const [yesterdayPicks, last30Picks] = await Promise.all([
+      ctx.db.aIPick.findMany({
+        where: { createdAt: { gte: yesterday, lte: yesterdayEnd }, isCorrect: { not: null } },
+        select: { isCorrect: true },
+      }),
+      ctx.db.aIPick.findMany({
+        where: { createdAt: { gte: thirtyDaysAgo }, isCorrect: { not: null } },
+        select: { isCorrect: true },
+      }),
+    ])
+
+    const yesterdayCorrect = yesterdayPicks.filter((p) => p.isCorrect).length
+    const last30Correct = last30Picks.filter((p) => p.isCorrect).length
+
+    return {
+      yesterday: { correct: yesterdayCorrect, total: yesterdayPicks.length },
+      last30Days: {
+        correct: last30Correct,
+        total: last30Picks.length,
+        accuracy: last30Picks.length > 0 ? Math.round((last30Correct / last30Picks.length) * 100) : null,
+      },
+    }
+  }),
 });
