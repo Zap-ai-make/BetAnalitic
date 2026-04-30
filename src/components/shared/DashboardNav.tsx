@@ -6,6 +6,7 @@ import { BottomNav, type NavItem } from "./BottomNav"
 const PATH_TO_NAV_ITEM: Record<string, NavItem> = {
   "/dashboard": "home",
   "/matches": "matches",
+  "/signaux": "analysis",
   "/analyse": "analysis",
   "/analysis": "analysis",
   "/paris": "paris",
@@ -17,7 +18,7 @@ const PATH_TO_NAV_ITEM: Record<string, NavItem> = {
 const NAV_ITEM_TO_PATH: Record<NavItem, string> = {
   home: "/dashboard",
   matches: "/matches",
-  analysis: "/analysis",
+  analysis: "/signaux",
   paris: "/paris",
   salles: "/salles",
 }

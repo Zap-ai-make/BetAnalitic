@@ -7,7 +7,7 @@ export default function AnalysePage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace("/analysis")
+    router.replace("/signaux")
   }, [router])
 
   return (
