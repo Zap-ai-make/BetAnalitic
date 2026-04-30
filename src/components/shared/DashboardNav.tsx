@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { BottomNav, type NavItem } from "./BottomNav"
 
@@ -26,6 +27,11 @@ const NAV_ITEM_TO_PATH: Record<NavItem, string> = {
 export function DashboardNav() {
   const router = useRouter()
   const pathname = usePathname()
+
+  // Prefetch all tab routes so bundle JS is already cached when the user taps
+  useEffect(() => {
+    Object.values(NAV_ITEM_TO_PATH).forEach(p => router.prefetch(p))
+  }, [router])
 
   const activeItem: NavItem = PATH_TO_NAV_ITEM[pathname] ?? "home"
 

@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useMemo, useEffect, useCallback } from "react"
+import { useState, useMemo } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
@@ -267,11 +268,6 @@ function CompHeader({ country, competition }: { country: string; competition: st
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function MatchesPage() {
-  const [matches, setMatches] = useState<VpsMatch[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [usingMock, setUsingMock] = useState(false)
-
   const [searchQuery, setSearchQuery] = useState("")
   const [countryFilter, setCountryFilter] = useState<string | null>(null)
   const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
@@ -279,27 +275,25 @@ export default function MatchesPage() {
   const [showCountries, setShowCountries] = useState(false)
   const [showCompetitions, setShowCompetitions] = useState(false)
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/beta/matches?days=7`)
+  const {
+    data: matches = MOCK_MATCHES,
+    isFetching,
+    isPlaceholderData,
+    refetch,
+  } = useQuery({
+    queryKey: ["beta-matches"],
+    queryFn: async (): Promise<VpsMatch[]> => {
+      const res = await fetch("/api/beta/matches?days=7")
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json() as { matches_by_competition?: Record<string, VpsMatch[]> }
       const flat = Object.values(data.matches_by_competition ?? {}).flat()
       if (flat.length === 0) throw new Error("no_data")
-      setMatches(flat)
-      setUsingMock(false)
-    } catch {
-      setMatches(MOCK_MATCHES)
-      setUsingMock(true)
-      setError(null)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => { void load() }, [load])
+      return flat
+    },
+    staleTime: 5 * 60 * 1000,
+    placeholderData: MOCK_MATCHES,
+    retry: false,
+  })
 
   // Derive unique countries sorted
   const countries = useMemo(() => {
@@ -527,20 +521,21 @@ export default function MatchesPage() {
 
       {/* Content */}
       <main className="flex-1 px-4 pb-24">
-        {loading && (
-          <div className="flex flex-col items-center justify-center py-16 gap-3">
-            <Loader2 className="w-6 h-6 text-accent-cyan animate-spin" />
-            <p className="text-sm text-text-tertiary">Chargement des matchs…</p>
+        {/* Subtle refresh indicator — content already visible via placeholderData */}
+        {isFetching && (
+          <div className="flex items-center justify-center gap-2 py-2">
+            <Loader2 className="w-3.5 h-3.5 text-accent-cyan animate-spin" />
+            <p className="text-xs text-text-tertiary">Actualisation…</p>
           </div>
         )}
 
-        {!loading && usingMock && (
+        {isPlaceholderData && !isFetching && (
           <div className="mt-3 mb-1 px-3 py-2 bg-bg-tertiary rounded-lg text-xs text-text-tertiary text-center">
-            Données de démonstration · <button onClick={() => void load()} className="text-accent-cyan underline">Réessayer</button>
+            Données de démonstration · <button onClick={() => void refetch()} className="text-accent-cyan underline">Réessayer</button>
           </div>
         )}
 
-        {!loading && totalFiltered === 0 && (
+        {totalFiltered === 0 && (
           <div className="text-center py-16">
             <span className="text-5xl">⚽</span>
             <p className="text-text-secondary mt-4 text-sm">
@@ -554,7 +549,7 @@ export default function MatchesPage() {
           </div>
         )}
 
-        {!loading && Object.entries(grouped).map(([competition, group]) => (
+        {Object.entries(grouped).map(([competition, group]) => (
           <div key={competition}>
             <CompHeader country={group.country} competition={competition} />
             <div className="space-y-2 mb-2">

@@ -116,7 +116,7 @@ export default function SallesPage() {
   const [showCreate, setShowCreate] = React.useState(false)
 
   const { data: rooms, isLoading, refetch } = api.room.getMyRooms.useQuery()
-  const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, { refetchInterval: 5000 })
+  const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, { refetchInterval: 30_000 })
   const ticketMap = React.useMemo(
     () => new Map((unreadCounts ?? []).map((c) => [c.roomId, c.openTickets])),
     [unreadCounts]

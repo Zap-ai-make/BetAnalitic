@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
@@ -113,32 +114,6 @@ function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })
 }
 
-// Stable fetch hook — reload ref avoids stale closure, betsFetched guards double-call
-function useApiBets() {
-  const [bets, setBets]       = useState<ApiBet[]>([])
-  const [loading, setLoading] = useState(false)
-  const loadedRef             = useRef(false)
-
-  const load = useCallback(async () => {
-    if (loadedRef.current) return
-    loadedRef.current = true
-    setLoading(true)
-    try {
-      const res = await fetch("/api/beta/betting/bet")
-      if (!res.ok) throw new Error()
-      const data = await res.json() as { bets: ApiBet[] }
-      setBets(data.bets ?? [])
-    } catch { /* API optional — local coupons are source of truth */ }
-    finally { setLoading(false) }
-  }, [])
-
-  const reload = useCallback(() => {
-    loadedRef.current = false
-    void load()
-  }, [load])
-
-  return { bets, loading, load, reload }
-}
 
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
@@ -388,13 +363,19 @@ export default function ParisPage() {
   const [toast,   setToast]   = useState<string | null>(null)
   const [tab,     setTab]     = useState<Tab>("coupon")
 
-  // API bets (optional — enriches En cours / Historique with real results)
-  const { bets: apiBets, loading: apiLoading, load: loadApi } = useApiBets()
-
-  // Load API once when switching to En cours or Historique
-  useEffect(() => {
-    if (tab === "encours" || tab === "historique") void loadApi()
-  }, [tab, loadApi])
+  // API bets — only fetches when on relevant tab; cached 2 min between switches
+  const { data: apiBets = [], isFetching: apiLoading } = useQuery({
+    queryKey: ["beta-bets"],
+    queryFn: async (): Promise<ApiBet[]> => {
+      const res = await fetch("/api/beta/betting/bet")
+      if (!res.ok) throw new Error()
+      const data = await res.json() as { bets: ApiBet[] }
+      return data.bets ?? []
+    },
+    staleTime: 2 * 60 * 1000,
+    retry: false,
+    enabled: tab === "encours" || tab === "historique",
+  })
 
   const saveBalance = (amount: number, cur: Currency) => {
     setBalance(amount); setCurrency(cur)
