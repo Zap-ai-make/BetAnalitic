@@ -70,6 +70,12 @@
   --header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
 }
 
+/* PWA app-shell: block body scroll so fixed header never scrolls away */
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+
 /* Safe area insets for PWA */
 @layer base {
   .safe-area-insets {

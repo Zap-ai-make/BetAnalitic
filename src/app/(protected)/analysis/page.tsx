@@ -467,10 +467,10 @@ export default function AnalysisPage() {
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
   return (
-    <div className="bg-bg-primary flex flex-col" style={{ minHeight: "calc(100dvh - var(--header-h))" }}>
+    <div className="bg-bg-primary flex flex-col" style={{ height: "calc(100dvh - var(--header-h))" }}>
       <Header />
 
-      <main className="flex-1 overflow-hidden pb-16">
+      <main className="flex-1 flex flex-col overflow-hidden pb-16">
 
         {/* ── Page Header ───────────────────────────────────────────────── */}
         <div className="px-4 py-3 border-b border-bg-tertiary flex items-center justify-between gap-3">
@@ -496,7 +496,7 @@ export default function AnalysisPage() {
         </div>
 
         {/* ── 2-column layout ───────────────────────────────────────────── */}
-        <div className="flex h-[calc(100vh-10rem)] overflow-hidden">
+        <div className="flex flex-1 overflow-hidden">
 
           {/* ══ LEFT COLUMN — Signals + Coupon ════════════════════════════ */}
           <div className={cn(
