@@ -46,7 +46,7 @@ function useChannelUnread(channels: Channel[] | undefined, activeSlug: string | 
 
   const { data: unreadData } = api.room.getChannelUnreadCounts.useQuery(
     { channels: channelsSince },
-    { enabled: loaded && channelsSince.length > 0, refetchInterval: 5000, staleTime: 0 }
+    { enabled: loaded && channelsSince.length > 0, refetchInterval: 60_000, staleTime: 30_000 }
   )
   const unreadMap = React.useMemo(
     () => new Map((unreadData ?? []).map((c) => [c.channelId, c.count])),
@@ -67,7 +67,7 @@ function Sidebar({
   const router = useRouter()
   const { data: session } = useSession()
   const { data: room } = api.room.getById.useQuery({ roomId })
-  const { data: channels } = api.room.getChannels.useQuery({ roomId }, { refetchInterval: 5000 })
+  const { data: channels } = api.room.getChannels.useQuery({ roomId }, { refetchInterval: 60_000, staleTime: 30_000 })
 
   const activeSlug = pathname.split("/").filter(Boolean).pop()
   const { unreadMap } = useChannelUnread(channels, activeSlug)
@@ -89,7 +89,7 @@ function Sidebar({
           />
         )}
         {/* Overlay gradient for text readability */}
-        <div className="absolute inset-0 bg-gradient-to-t from-bg-secondary/95 via-bg-secondary/40 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-bg-secondary/95 via-bg-secondary/40 to-transparent" />
         {/* Room badge */}
         {room?.badge && (
           <span className="absolute top-3 left-3 text-2xl drop-shadow">{room.badge}</span>
@@ -131,12 +131,12 @@ function Sidebar({
                 <Hash className="w-4 h-4 shrink-0 opacity-70" />
                 <span className="flex-1 truncate">{ch.name}</span>
                 {unread > 0 && (
-                  <span className="min-w-[18px] h-[18px] text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center px-1 shrink-0">
+                  <span className="min-w-4.5 h-4.5 text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center px-1 shrink-0">
                     {unread > 99 ? "99+" : unread}
                   </span>
                 )}
                 {ticketBadge && (
-                  <span className="min-w-[18px] h-[18px] text-[10px] font-bold bg-accent-cyan/80 text-bg-primary rounded-full flex items-center justify-center px-1 shrink-0">
+                  <span className="min-w-4.5 h-4.5 text-[10px] font-bold bg-accent-cyan/80 text-bg-primary rounded-full flex items-center justify-center px-1 shrink-0">
                     {ch.openTicketCount}
                   </span>
                 )}

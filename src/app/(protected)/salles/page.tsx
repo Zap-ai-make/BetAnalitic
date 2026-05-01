@@ -111,12 +111,18 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
 export default function SallesPage() {
   const router = useRouter()
+  const utils = api.useUtils()
   const [viewMode, setViewMode] = React.useState<ViewMode>("my-rooms")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [showCreate, setShowCreate] = React.useState(false)
 
-  const { data: rooms, isLoading, refetch } = api.room.getMyRooms.useQuery()
-  const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, { refetchInterval: 30_000 })
+  const { data: rooms, isLoading } = api.room.getMyRooms.useQuery(undefined, {
+    staleTime: 2 * 60_000,
+  })
+  const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, {
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  })
   const ticketMap = React.useMemo(
     () => new Map((unreadCounts ?? []).map((c) => [c.roomId, c.openTickets])),
     [unreadCounts]
@@ -124,16 +130,8 @@ export default function SallesPage() {
 
   const handleCreated = (id: string) => {
     setShowCreate(false)
-    void refetch()
+    void utils.room.getMyRooms.invalidate()
     router.push(`/salles/${id}`)
-  }
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-bg-primary">
-        <div className="text-text-tertiary">Chargement...</div>
-      </div>
-    )
   }
 
   return (
@@ -215,7 +213,13 @@ export default function SallesPage() {
       <main className="flex-1 p-4 pb-24 space-y-3 overflow-y-auto">
         {viewMode === "my-rooms" ? (
           /* My Rooms List */
-          (rooms ?? []).length === 0 ? (
+          isLoading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-bg-secondary rounded-xl p-4 animate-pulse h-24 border border-bg-tertiary" />
+              ))}
+            </div>
+          ) : (rooms ?? []).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <div className="text-6xl">💬</div>
               <h2 className="font-display text-xl text-text-primary">Aucune salle</h2>
@@ -324,11 +328,12 @@ export default function SallesPage() {
  */
 function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
   const router = useRouter()
-  const { data: allRooms, isLoading, refetch } = api.room.getPublicRooms.useQuery()
+  const utils = api.useUtils()
+  const { data: allRooms, isLoading } = api.room.getPublicRooms.useQuery()
 
   const joinRoom = api.room.joinViaInvite.useMutation({
     onSuccess: (room) => {
-      void refetch()
+      void utils.room.getMyRooms.invalidate()
       router.push(`/salles/${room.id}`)
     },
   })

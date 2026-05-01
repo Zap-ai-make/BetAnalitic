@@ -426,7 +426,7 @@ function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUse
 
   const { data, refetch } = api.room.getMessages.useQuery(
     { roomId, channelId, limit: 50 },
-    { refetchInterval: 1000, refetchIntervalInBackground: false, staleTime: 0 }
+    { refetchInterval: 3_000, refetchIntervalInBackground: false, staleTime: 1_000 }
   )
   const sendMutation = api.room.sendMessage.useMutation()
   const editMutation = api.room.editMessage.useMutation()
@@ -564,7 +564,7 @@ function TicketList({ channelId, roomId, onSelect }: {
   const [showCreate, setShowCreate] = React.useState(false)
   const [newTitle, setNewTitle] = React.useState("")
 
-  const { data: tickets } = api.room.getTickets.useQuery({ channelId }, { refetchInterval: 3000, staleTime: 0 })
+  const { data: tickets } = api.room.getTickets.useQuery({ channelId }, { staleTime: 10_000 })
   const createMutation = api.room.createTicket.useMutation({
     onSuccess: (ticket) => {
       setNewTitle(""); setShowCreate(false)
@@ -650,7 +650,7 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
 
   const { data, refetch } = api.room.getMessages.useQuery(
     { roomId, channelId, ticketId: ticket.id, limit: 100 },
-    { refetchInterval: 1000, refetchIntervalInBackground: false, staleTime: 0 }
+    { refetchInterval: 3_000, refetchIntervalInBackground: false, staleTime: 1_000 }
   )
   const sendMutation = api.room.sendMessage.useMutation()
   const invokeAgentMutation = api.room.invokeAgentInRoom.useMutation()
