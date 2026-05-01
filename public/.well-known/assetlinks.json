@@ -3,6 +3,6 @@
   "target": {
     "namespace": "android_app",
     "package_name": "com.betanalytic.app",
-    "sha256_cert_fingerprints": ["PLACEHOLDER_REPLACE_WITH_KEYSTORE_SHA256"]
+    "sha256_cert_fingerprints": ["40:5C:44:BE:A3:E8:5A:F5:7E:9C:54:ED:36:A6:52:4E:60:3B:CF:A0:23:1F:BB:DE:AD:FB:1E:97:CF:F9:90:6A"]
   }
 }]
