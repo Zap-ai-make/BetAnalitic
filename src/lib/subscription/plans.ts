@@ -1,9 +1,4 @@
-/**
- * Epic 9 Story 9.1: Subscription Plans Configuration
- * Plan definitions, pricing, and feature lists
- */
-
-export type PlanId = "FREE" | "PREMIUM" | "EXPERT"
+export type PlanId = "FREE" | "PREMIUM"
 export type BillingCycle = "month" | "year"
 
 export interface PlanFeature {
@@ -13,9 +8,11 @@ export interface PlanFeature {
 }
 
 export interface PlanPrice {
-  monthly: number
-  yearly: number
-  yearlyMonthly: number // Monthly equivalent when billed yearly
+  monthly: number      // USD
+  monthlyFcfa: number  // FCFA
+  yearly: number       // USD
+  yearlyFcfa: number   // FCFA
+  yearlyMonthly: number
 }
 
 export interface SubscriptionPlan {
@@ -36,7 +33,9 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, SubscriptionPlan> = {
     tagline: "Pour découvrir l'analyse sportive",
     price: {
       monthly: 0,
+      monthlyFcfa: 0,
       yearly: 0,
+      yearlyFcfa: 0,
       yearlyMonthly: 0,
     },
     features: [
@@ -59,9 +58,11 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, SubscriptionPlan> = {
     name: "Premium",
     tagline: "Pour les parieurs sérieux",
     price: {
-      monthly: 9.99,
-      yearly: 99.99,
-      yearlyMonthly: 8.33,
+      monthly: 4.5,
+      monthlyFcfa: 2500,
+      yearly: 45,
+      yearlyFcfa: 25000,
+      yearlyMonthly: 3.75,
     },
     popular: true,
     features: [
@@ -73,74 +74,30 @@ export const SUBSCRIPTION_PLANS: Record<PlanId, SubscriptionPlan> = {
       { text: "Historique complet", included: true },
       { text: "Notifications push avancées", included: true },
       { text: "Support prioritaire", included: true },
-      { text: "Badge vérification Expert", included: false },
-      { text: "Monétisation contenu", included: false },
     ],
     cta: "S'abonner",
     color: "#00D9FF",
   },
-  EXPERT: {
-    id: "EXPERT",
-    name: "Expert",
-    tagline: "Pour devenir une référence",
-    price: {
-      monthly: 29.99,
-      yearly: 299.99,
-      yearlyMonthly: 25.00,
-    },
-    features: [
-      { text: "Tout Premium +", included: true },
-      { text: "Badge vérifié Expert", included: true, highlight: true },
-      { text: "Monétisation de contenu", included: true, highlight: true },
-      { text: "Salle Expert avec abonnés", included: true },
-      { text: "Analytics audience détaillés", included: true },
-      { text: "Débats personnalisés DebateArena", included: true },
-      { text: "Priorité affichage contenus", included: true },
-      { text: "Revenue share (70/30)", included: true },
-      { text: "Support dédié", included: true },
-      { text: "Early access nouvelles features", included: true },
-    ],
-    cta: "Devenir Expert",
-    color: "#FFD60A",
-  },
 }
 
-export const PLAN_ORDER: PlanId[] = ["FREE", "PREMIUM", "EXPERT"]
+export const PLAN_ORDER: PlanId[] = ["FREE", "PREMIUM"]
 
-/**
- * Calculate savings when choosing yearly billing
- */
 export function calculateYearlySavings(planId: PlanId): number {
   const plan = SUBSCRIPTION_PLANS[planId]
   if (!plan) return 0
-
-  const monthlyTotal = plan.price.monthly * 12
-  const yearlyCost = plan.price.yearly
-
-  return monthlyTotal - yearlyCost
+  return plan.price.monthly * 12 - plan.price.yearly
 }
 
-/**
- * Get discount percentage for yearly billing
- */
 export function getYearlyDiscount(planId: PlanId): number {
   const plan = SUBSCRIPTION_PLANS[planId]
   if (!plan || plan.price.monthly === 0) return 0
-
   const monthlyTotal = plan.price.monthly * 12
-  const yearlyCost = plan.price.yearly
-
-  return Math.round(((monthlyTotal - yearlyCost) / monthlyTotal) * 100)
+  return Math.round(((monthlyTotal - plan.price.yearly) / monthlyTotal) * 100)
 }
 
-/**
- * Format price for display
- */
 export function formatPrice(amount: number, cycle: BillingCycle = "month"): string {
   if (amount === 0) return "Gratuit"
-
   const formatted = amount.toFixed(2)
   const cycleText = cycle === "month" ? "/mois" : "/an"
-
-  return `${formatted}€${cycleText}`
+  return `${formatted}$${cycleText}`
 }

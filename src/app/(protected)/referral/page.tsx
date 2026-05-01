@@ -2,38 +2,45 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, Copy, Check } from "lucide-react"
+import { ChevronLeft, Copy, Check, Share2, Users, TrendingUp, Gift, Loader2 } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { DashboardNav } from "~/components/shared/DashboardNav"
-
-// Mock data
-const MOCK_DATA = {
-  commission: 47.97,
-  renewals: 24,
-  totalReferrals: 45,
-  activeReferrals: 24,
-  commissionRate: 10,
-  referralLink: "betanalytic.io/ref/swabo123",
-  notifications: [
-    { id: "1", username: "john_doe", action: "s'est réabonné!", amount: 1.99, time: "Il y a 2h" },
-    { id: "2", username: "marie92", action: "s'est réabonnée!", amount: 1.99, time: "Hier" },
-  ],
-  paymentHistory: [
-    { id: "1", month: "Avril 2026", renewals: 24, amount: 47.97 },
-    { id: "2", month: "Mars 2026", renewals: 20, amount: 39.98 },
-    { id: "3", month: "Février 2026", renewals: 18, amount: 35.82 },
-  ],
-}
+import { api } from "~/trpc/react"
 
 export default function ReferralPage() {
   const router = useRouter()
   const [copied, setCopied] = React.useState(false)
 
+  const { data: referralCode, isLoading: codeLoading } = api.referral.getMyReferralCode.useQuery()
+  const { data: stats, isLoading: statsLoading } = api.referral.getReferralStats.useQuery()
+
+  const incrementShare = api.referral.incrementShareCount.useMutation()
+
+  const shareLink = referralCode?.shareableLink ?? ""
+
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(MOCK_DATA.referralLink)
+    if (!shareLink) return
+    await navigator.clipboard.writeText(shareLink)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+    incrementShare.mutate()
   }
+
+  const handleShare = async () => {
+    if (!shareLink) return
+    if (navigator.share) {
+      await navigator.share({
+        title: "Rejoins BetAnalytic",
+        text: "Inscris-toi et reçois 50 crédits offerts !",
+        url: shareLink,
+      })
+      incrementShare.mutate()
+    } else {
+      await handleCopy()
+    }
+  }
+
+  const isLoading = codeLoading || statsLoading
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
@@ -50,137 +57,184 @@ export default function ReferralPage() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 p-4 pb-24 overflow-y-auto">
-        {/* Commission Card */}
-        <div
-          className="rounded-2xl p-6 mb-6 text-center"
-          style={{
-            background: "linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(255, 107, 53, 0.1))",
-          }}
-        >
-          <p className="text-xs text-text-secondary mb-1">💰 Commission ce mois</p>
-          <p className="font-mono text-4xl font-bold text-accent-green mb-1">
-            {MOCK_DATA.commission.toFixed(2)} €
-          </p>
-          <p className="text-xs text-text-tertiary">
-            {MOCK_DATA.renewals} renouvellements
-          </p>
-        </div>
+      <main className="flex-1 p-4 pb-28 space-y-6">
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-bg-secondary rounded-xl p-4 text-center">
-            <p className="font-mono text-xl font-bold text-text-primary">
-              {MOCK_DATA.totalReferrals}
-            </p>
-            <p className="text-xs text-text-tertiary mt-1">Filleuls</p>
+        {isLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="w-6 h-6 text-accent-cyan animate-spin" />
           </div>
-          <div className="bg-bg-secondary rounded-xl p-4 text-center">
-            <p className="font-mono text-xl font-bold text-text-primary">
-              {MOCK_DATA.activeReferrals}
-            </p>
-            <p className="text-xs text-text-tertiary mt-1">Actifs</p>
-          </div>
-          <div className="bg-bg-secondary rounded-xl p-4 text-center">
-            <p className="font-mono text-xl font-bold text-text-primary">
-              {MOCK_DATA.commissionRate}%
-            </p>
-            <p className="text-xs text-text-tertiary mt-1">/renouv.</p>
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* ── Hero stats ─────────────────────────────────────────────── */}
+            <div className="rounded-2xl p-6 text-center bg-linear-to-br from-accent-cyan/10 to-accent-purple/10 border border-accent-cyan/20">
+              <p className="text-xs text-text-tertiary mb-1">Programme ambassadeur</p>
+              <p className="font-mono text-4xl font-bold text-accent-cyan mb-1">
+                {stats?.totalReferrals ?? 0}
+              </p>
+              <p className="text-sm text-text-secondary">
+                {stats?.totalReferrals === 1 ? "filleul inscrit" : "filleuls inscrits"}
+              </p>
+            </div>
 
-        {/* Unique Link Section */}
-        <div className="mb-6">
-          <h2 className="font-display font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <span>🔗</span>
-            Votre lien unique
-          </h2>
-          <div className="flex items-center gap-2 bg-bg-secondary rounded-xl p-3">
-            <input
-              type="text"
-              value={MOCK_DATA.referralLink}
-              readOnly
-              className="flex-1 bg-transparent font-mono text-xs text-text-primary outline-none"
-            />
-            <button
-              onClick={handleCopy}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors flex items-center gap-1",
-                copied
-                  ? "bg-accent-green text-bg-primary"
-                  : "bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90"
-              )}
-            >
-              {copied ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  Copié
-                </>
+            {/* ── Stats grid ─────────────────────────────────────────────── */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-bg-secondary rounded-2xl p-4 text-center border border-bg-tertiary">
+                <p className="font-mono text-xl font-bold text-text-primary">
+                  {stats?.activeReferrals ?? 0}
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Actifs</p>
+              </div>
+              <div className="bg-bg-secondary rounded-2xl p-4 text-center border border-bg-tertiary">
+                <p className="font-mono text-xl font-bold text-text-primary">
+                  {stats?.clickCount ?? 0}
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Clics</p>
+              </div>
+              <div className="bg-bg-secondary rounded-2xl p-4 text-center border border-bg-tertiary">
+                <p className="font-mono text-xl font-bold text-amber-400">
+                  {stats?.totalRewardsEarned ?? 0}
+                </p>
+                <p className="text-xs text-text-tertiary mt-1">Crédits gagnés</p>
+              </div>
+            </div>
+
+            {/* ── Comment ça marche ──────────────────────────────────────── */}
+            <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-4 space-y-3">
+              <h2 className="font-display font-semibold text-text-primary flex items-center gap-2">
+                <Gift className="w-4 h-4 text-amber-400" />
+                Comment ça marche
+              </h2>
+              <div className="space-y-2.5">
+                {[
+                  { icon: Share2, text: "Partagez votre lien unique à des amis", color: "text-accent-cyan", bg: "bg-accent-cyan/10" },
+                  { icon: Users, text: "Votre filleul reçoit 50 crédits à l'inscription", color: "text-green-400", bg: "bg-green-400/10" },
+                  { icon: TrendingUp, text: "Vous gagnez 100 crédits quand il souscrit", color: "text-amber-400", bg: "bg-amber-400/10" },
+                ].map(({ icon: Icon, text, color, bg }, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", bg)}>
+                      <Icon className={cn("w-4 h-4", color)} />
+                    </div>
+                    <p className="text-sm text-text-secondary">{text}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── Lien de parrainage ─────────────────────────────────────── */}
+            <div className="space-y-3">
+              <h2 className="font-display font-semibold text-text-primary flex items-center gap-2">
+                <span className="text-base">🔗</span>
+                Votre lien unique
+              </h2>
+
+              {referralCode ? (
+                <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-3 space-y-3">
+                  {/* Code badge */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-text-tertiary">Code</span>
+                    <span className="font-mono font-bold text-accent-cyan text-sm bg-accent-cyan/10 px-2 py-0.5 rounded-lg">
+                      {referralCode.code}
+                    </span>
+                  </div>
+
+                  {/* Link input */}
+                  <div className="flex items-center gap-2 bg-bg-primary rounded-xl p-3">
+                    <input
+                      type="text"
+                      value={shareLink}
+                      readOnly
+                      className="flex-1 bg-transparent font-mono text-xs text-text-secondary outline-none"
+                    />
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={handleCopy}
+                      className={cn(
+                        "flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-colors",
+                        copied
+                          ? "bg-green-400/10 text-green-400 border border-green-400/20"
+                          : "bg-bg-tertiary text-text-primary hover:bg-accent-cyan/10 hover:text-accent-cyan"
+                      )}
+                    >
+                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                      {copied ? "Copié !" : "Copier"}
+                    </button>
+                    <button
+                      onClick={handleShare}
+                      className="flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90 transition-colors"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Partager
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  Copier
-                </>
+                <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-6 text-center">
+                  <p className="text-text-tertiary text-sm">Génération du lien...</p>
+                </div>
               )}
-            </button>
-          </div>
-        </div>
+            </div>
 
-        {/* Recent Notifications */}
-        <div className="mb-6">
-          <h2 className="font-display font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <span>🔔</span>
-            Notifications récentes
-          </h2>
-          <div className="space-y-2">
-            {MOCK_DATA.notifications.map((notif) => (
-              <div
-                key={notif.id}
-                className="flex items-center justify-between p-4 bg-bg-secondary rounded-xl border-l-4 border-accent-green"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-accent-green/20 rounded-lg flex items-center justify-center">
-                    <span className="text-accent-green">✅</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary">
-                      @{notif.username} {notif.action}
-                    </p>
-                    <p className="text-xs text-accent-green">+{notif.amount.toFixed(2)}€</p>
-                  </div>
+            {/* ── Liste des filleuls ─────────────────────────────────────── */}
+            {(stats?.referrals?.length ?? 0) > 0 && (
+              <div className="space-y-3">
+                <h2 className="font-display font-semibold text-text-primary">Mes filleuls</h2>
+                <div className="space-y-2">
+                  {stats!.referrals.map((r) => (
+                    <div
+                      key={r.id}
+                      className="flex items-center justify-between p-3 bg-bg-secondary rounded-xl border border-bg-tertiary"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-accent-cyan/10 flex items-center justify-center">
+                          <span className="font-bold text-accent-cyan text-sm">
+                            {(r.displayName ?? r.username ?? "?").charAt(0).toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-text-primary">
+                            {r.displayName ?? r.username}
+                          </p>
+                          <p className="text-xs text-text-tertiary">
+                            {r.convertedAt
+                              ? new Date(r.convertedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })
+                              : "—"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {r.rewardGiven && (
+                          <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">
+                            +100 pts
+                          </span>
+                        )}
+                        <span className={cn(
+                          "text-[10px] font-bold px-1.5 py-0.5 rounded-full border",
+                          r.status === "ACTIVE"
+                            ? "text-green-400 bg-green-400/10 border-green-400/20"
+                            : "text-text-tertiary bg-bg-tertiary border-bg-tertiary"
+                        )}>
+                          {r.status === "ACTIVE" ? "Actif" : "Inactif"}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <span className="text-xs text-text-tertiary">{notif.time}</span>
               </div>
-            ))}
-          </div>
-        </div>
+            )}
 
-        {/* Payment History */}
-        <div>
-          <h2 className="font-display font-semibold text-text-primary mb-3 flex items-center gap-2">
-            <span>📊</span>
-            Historique paiements
-          </h2>
-          <div className="space-y-2">
-            {MOCK_DATA.paymentHistory.map((payment) => (
-              <div
-                key={payment.id}
-                className="flex items-center justify-between p-4 bg-bg-secondary rounded-xl"
-              >
-                <div>
-                  <p className="text-sm font-medium text-text-primary">{payment.month}</p>
-                  <p className="text-xs text-text-tertiary">
-                    {payment.renewals} renouvellements
-                  </p>
-                </div>
-                <span className="font-mono text-accent-green font-semibold">
-                  {payment.amount.toFixed(2)}€
-                </span>
+            {/* Empty state */}
+            {(stats?.referrals?.length ?? 0) === 0 && !statsLoading && (
+              <div className="text-center py-8">
+                <div className="text-4xl mb-3">🤝</div>
+                <p className="text-sm font-semibold text-text-primary">Aucun filleul pour l'instant</p>
+                <p className="text-xs text-text-tertiary mt-1">Partagez votre lien pour commencer à gagner des crédits</p>
               </div>
-            ))}
-          </div>
-        </div>
+            )}
+          </>
+        )}
       </main>
 
       <DashboardNav />

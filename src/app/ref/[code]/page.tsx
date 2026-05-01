@@ -29,11 +29,11 @@ export default function ReferralLandingPage() {
   }, [code, trackClickMutation])
 
   const handleSignup = () => {
-    router.push("/auth/signup")
+    router.push("/register")
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-bg-primary via-accent-cyan/5 to-accent-purple/5 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-bg-primary flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         {/* Hero Card */}
         <div className="bg-bg-secondary rounded-3xl border border-bg-tertiary shadow-2xl p-8 md:p-12 text-center">

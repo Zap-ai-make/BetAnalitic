@@ -1,224 +1,192 @@
 "use client"
 
-/**
- * Epic 9 Story 9.1: Subscription Plans Display Page
- */
-
 import * as React from "react"
+import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
-import { Crown, Sparkles, TrendingUp, Check } from "lucide-react"
+import { ChevronLeft, Check, Crown, Zap } from "lucide-react"
 import { cn } from "~/lib/utils"
-import { PlanCard } from "~/components/features/subscription/PlanCard"
-import { PlanComparison } from "~/components/features/subscription/PlanComparison"
-import {
-  SUBSCRIPTION_PLANS,
-  PLAN_ORDER,
-  getYearlyDiscount,
-  calculateYearlySavings,
-} from "~/lib/subscription/plans"
-import type { BillingCycle, PlanId } from "~/lib/subscription/plans"
+import { DashboardNav } from "~/components/shared/DashboardNav"
+import { SUBSCRIPTION_PLANS } from "~/lib/subscription/plans"
+
+type Currency = "fcfa" | "usd"
 
 export default function SubscriptionPage() {
+  const router = useRouter()
   const { data: session } = useSession()
-  const [billingCycle, setBillingCycle] = React.useState<BillingCycle>("month")
-  const [showComparison, setShowComparison] = React.useState(false)
+  const [currency, setCurrency] = React.useState<Currency>("fcfa")
 
-  const currentPlan = (session?.user?.subscriptionTier ?? "FREE") as PlanId
+  const currentPlan = (session?.user?.subscriptionTier ?? "FREE") as "FREE" | "PREMIUM"
 
-  const handleSelectPlan = (planId: PlanId) => {
-    if (planId === currentPlan) return
-    window.location.href = `mailto:contact@betanalytic.app?subject=Upgrade%20vers%20${planId}`
+  const free = SUBSCRIPTION_PLANS.FREE
+  const premium = SUBSCRIPTION_PLANS.PREMIUM
+
+  const premiumPrice = currency === "fcfa"
+    ? `${premium.price.monthlyFcfa.toLocaleString("fr-FR")} FCFA`
+    : `$${premium.price.monthly.toFixed(2)}`
+
+  const handleUpgrade = () => {
+    window.location.href = `mailto:contact@betanalytic.app?subject=Upgrade%20vers%20PREMIUM`
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary pb-20">
+    <div className="min-h-screen bg-bg-primary flex flex-col">
       {/* Header */}
-      <div className="bg-gradient-to-r from-accent-cyan/10 to-accent-purple/10 border-b border-bg-tertiary">
-        <div className="max-w-7xl mx-auto px-4 py-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Crown className="w-8 h-8 text-accent-gold animate-pulse" />
-            <h1 className="text-3xl font-display font-bold text-text-primary">
-              Abonnements
-            </h1>
-          </div>
-          <p className="text-center text-text-secondary max-w-2xl mx-auto">
-            Choisissez le plan qui correspond à vos besoins et débloquez tout le
-            potentiel de vos analyses sportives.
-          </p>
+      <header className="sticky top-0 z-20 bg-bg-primary border-b border-bg-tertiary">
+        <div className="flex items-center justify-between px-4 py-3">
+          <button
+            onClick={() => router.back()}
+            className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors min-h-11"
+          >
+            <ChevronLeft className="w-5 h-5" />
+            <span className="font-medium">Abonnement</span>
+          </button>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-        {/* Billing Cycle Toggle */}
-        <div className="flex flex-col items-center gap-4">
-          <div className="flex items-center gap-4 p-1 bg-bg-secondary rounded-xl border border-bg-tertiary">
+      <main className="flex-1 p-4 pb-28 space-y-5">
+        {/* Hero */}
+        <div className="text-center pt-2 pb-1">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-400/10 border border-amber-400/20 mb-3">
+            <Crown className="w-7 h-7 text-amber-400" />
+          </div>
+          <h1 className="font-display font-bold text-xl text-text-primary">Choisissez votre plan</h1>
+          <p className="text-sm text-text-tertiary mt-1">Débloquez tout le potentiel de vos analyses</p>
+        </div>
+
+        {/* Currency toggle */}
+        <div className="flex justify-center">
+          <div className="flex items-center gap-1 p-1 bg-bg-secondary rounded-xl border border-bg-tertiary">
             <button
-              onClick={() => setBillingCycle("month")}
+              onClick={() => setCurrency("fcfa")}
               className={cn(
-                "px-6 py-2 rounded-lg font-semibold transition-all",
-                billingCycle === "month"
-                  ? "bg-accent-cyan text-bg-primary"
-                  : "text-text-secondary hover:text-text-primary"
+                "px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                currency === "fcfa" ? "bg-accent-cyan text-bg-primary" : "text-text-secondary"
               )}
             >
-              Mensuel
+              FCFA
             </button>
             <button
-              onClick={() => setBillingCycle("year")}
+              onClick={() => setCurrency("usd")}
               className={cn(
-                "px-6 py-2 rounded-lg font-semibold transition-all relative",
-                billingCycle === "year"
-                  ? "bg-accent-cyan text-bg-primary"
-                  : "text-text-secondary hover:text-text-primary"
+                "px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors",
+                currency === "usd" ? "bg-accent-cyan text-bg-primary" : "text-text-secondary"
               )}
             >
-              Annuel
-              <div className="absolute -top-2 -right-2 px-2 py-0.5 bg-accent-green rounded-full">
-                <span className="text-xs font-bold text-bg-primary">
-                  -{getYearlyDiscount("PREMIUM")}%
-                </span>
-              </div>
+              USD
             </button>
           </div>
+        </div>
 
-          {billingCycle === "year" && (
-            <div className="flex items-center gap-2 text-sm text-accent-green animate-in fade-in duration-300">
-              <TrendingUp className="w-4 h-4" />
-              <span>
-                Économisez jusqu&apos;à{" "}
-                {calculateYearlySavings("PREMIUM").toFixed(2)}€ par an avec le
-                paiement annuel
-              </span>
+        {/* FREE plan */}
+        <div className={cn(
+          "rounded-2xl border p-5 space-y-4",
+          currentPlan === "FREE"
+            ? "bg-bg-secondary border-accent-cyan/40"
+            : "bg-bg-secondary border-bg-tertiary"
+        )}>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display font-bold text-text-primary text-lg">Free</h2>
+                {currentPlan === "FREE" && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
+                    Actuel
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-text-tertiary mt-0.5">{free.tagline}</p>
             </div>
+            <div className="text-right">
+              <p className="font-mono font-bold text-2xl text-text-primary">0</p>
+              <p className="text-xs text-text-tertiary">/mois</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {free.features.filter(f => f.included).map((f, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Check className="w-4 h-4 text-text-tertiary shrink-0" />
+                <p className="text-sm text-text-secondary">{f.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* PREMIUM plan */}
+        <div className={cn(
+          "rounded-2xl border-2 p-5 space-y-4 relative overflow-hidden",
+          currentPlan === "PREMIUM"
+            ? "bg-bg-secondary border-accent-cyan"
+            : "bg-linear-to-br from-accent-cyan/5 to-accent-purple/5 border-accent-cyan/60"
+        )}>
+          {/* Popular badge */}
+          <div className="absolute top-0 right-0">
+            <div className="bg-accent-cyan text-bg-primary text-[10px] font-bold px-3 py-1 rounded-bl-xl">
+              RECOMMANDÉ
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display font-bold text-text-primary text-lg">Premium</h2>
+                {currentPlan === "PREMIUM" && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
+                    Actuel
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-text-tertiary mt-0.5">{premium.tagline}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono font-bold text-2xl text-accent-cyan">{premiumPrice}</p>
+              <p className="text-xs text-text-tertiary">/mois</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {premium.features.map((f, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Check className={cn("w-4 h-4 shrink-0", f.highlight ? "text-accent-cyan" : "text-green-400")} />
+                <p className={cn("text-sm", f.highlight ? "font-semibold text-text-primary" : "text-text-secondary")}>
+                  {f.text}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          {currentPlan !== "PREMIUM" && (
+            <button
+              onClick={handleUpgrade}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-accent-cyan text-bg-primary font-semibold text-sm hover:bg-accent-cyan/90 transition-colors"
+            >
+              <Zap className="w-4 h-4" />
+              Passer à Premium
+            </button>
           )}
         </div>
 
-        {/* Plans Grid */}
-        <div className="grid md:grid-cols-3 gap-8 md:gap-6 mt-12">
-          {PLAN_ORDER.map((planId) => {
-            const plan = SUBSCRIPTION_PLANS[planId]
-            if (!plan) return null
-
-            return (
-              <PlanCard
-                key={planId}
-                plan={plan}
-                billingCycle={billingCycle}
-                currentPlan={currentPlan}
-                onSelect={handleSelectPlan}
-              />
-            )
-          })}
-        </div>
-
-        {/* Compare Plans Button */}
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => setShowComparison(!showComparison)}
-            className="px-6 py-3 bg-bg-secondary border border-bg-tertiary rounded-xl font-semibold text-text-primary hover:border-accent-cyan transition-colors"
-          >
-            {showComparison ? "Masquer" : "Comparer"} les plans
-          </button>
-        </div>
-
-        {/* Comparison Table */}
-        {showComparison && (
-          <div className="mt-8 bg-bg-secondary rounded-2xl p-6 border border-bg-tertiary animate-in slide-in-from-top duration-300">
-            <PlanComparison
-              currentPlan={currentPlan}
-              onSelectPlan={handleSelectPlan}
-            />
-          </div>
-        )}
-
-        {/* Value Props */}
-        <section className="mt-12 grid md:grid-cols-3 gap-6">
-          <div className="bg-bg-secondary rounded-xl p-6 border border-bg-tertiary">
-            <div className="w-12 h-12 rounded-full bg-accent-cyan/20 flex items-center justify-center mb-4">
-              <Sparkles className="w-6 h-6 text-accent-cyan" />
-            </div>
-            <h3 className="font-semibold text-text-primary mb-2">
-              Analyses IA Avancées
-            </h3>
-            <p className="text-sm text-text-tertiary leading-relaxed">
-              Accédez à nos 6 agents IA spécialisés pour des prédictions ultra
-              précises basées sur les données, l&apos;intelligence et la
-              stratégie.
-            </p>
-          </div>
-
-          <div className="bg-bg-secondary rounded-xl p-6 border border-bg-tertiary">
-            <div className="w-12 h-12 rounded-full bg-accent-purple/20 flex items-center justify-center mb-4">
-              <Crown className="w-6 h-6 text-accent-purple" />
-            </div>
-            <h3 className="font-semibold text-text-primary mb-2">
-              Programme Expert
-            </h3>
-            <p className="text-sm text-text-tertiary leading-relaxed">
-              Devenez une référence vérifiée, créez du contenu exclusif et
-              monétisez votre expertise avec un revenue share de 70/30.
-            </p>
-          </div>
-
-          <div className="bg-bg-secondary rounded-xl p-6 border border-bg-tertiary">
-            <div className="w-12 h-12 rounded-full bg-accent-green/20 flex items-center justify-center mb-4">
-              <Check className="w-6 h-6 text-accent-green" />
-            </div>
-            <h3 className="font-semibold text-text-primary mb-2">
-              Garantie Satisfait
-            </h3>
-            <p className="text-sm text-text-tertiary leading-relaxed">
-              Annulez à tout moment sans engagement. Vos données restent
-              accessibles même après annulation.
-            </p>
-          </div>
-        </section>
-
         {/* FAQ */}
-        <section className="mt-8 bg-gradient-to-br from-accent-cyan/10 to-accent-purple/10 rounded-2xl p-6 border border-accent-cyan/30">
-          <h3 className="font-display font-bold text-lg text-text-primary mb-4">
-            Questions fréquentes
-          </h3>
-          <ul className="space-y-3">
-            <li className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-accent-cyan shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-text-primary text-sm">
-                  Puis-je changer de plan à tout moment ?
-                </p>
-                <p className="text-sm text-text-tertiary">
-                  Oui, vous pouvez upgrader immédiatement ou downgrader à la fin
-                  de votre cycle de facturation.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-accent-cyan shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-text-primary text-sm">
-                  Comment fonctionne la monétisation Expert ?
-                </p>
-                <p className="text-sm text-text-tertiary">
-                  Créez du contenu premium, fixez votre prix, et recevez 70% des
-                  revenus. Paiements mensuels via Stripe Connect.
-                </p>
-              </div>
-            </li>
-            <li className="flex items-start gap-3">
-              <Check className="w-5 h-5 text-accent-cyan shrink-0 mt-0.5" />
-              <div>
-                <p className="font-semibold text-text-primary text-sm">
-                  Les paiements sont-ils sécurisés ?
-                </p>
-                <p className="text-sm text-text-tertiary">
-                  Tous les paiements sont gérés par Stripe avec 3D Secure. Nous ne
-                  stockons jamais vos données bancaires.
-                </p>
-              </div>
-            </li>
-          </ul>
-        </section>
-      </div>
+        <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary p-4 space-y-3">
+          <h3 className="font-display font-semibold text-text-primary text-sm">Questions fréquentes</h3>
+          <div className="space-y-3 divide-y divide-bg-tertiary">
+            <div className="pt-0">
+              <p className="text-sm font-medium text-text-primary">Puis-je annuler à tout moment ?</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Oui, sans engagement. Votre accès reste actif jusqu'à la fin de la période.</p>
+            </div>
+            <div className="pt-3">
+              <p className="text-sm font-medium text-text-primary">Quels moyens de paiement ?</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Mobile Money, virement et carte bancaire via Stripe sécurisé.</p>
+            </div>
+            <div className="pt-3">
+              <p className="text-sm font-medium text-text-primary">Comment souscrire ?</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Cliquez sur "Passer à Premium" — notre équipe vous contacte sous 24h.</p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <DashboardNav />
     </div>
   )
 }

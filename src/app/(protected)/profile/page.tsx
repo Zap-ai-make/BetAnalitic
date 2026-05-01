@@ -157,6 +157,23 @@ export default function ProfilePage() {
     enabled: !!session?.user?.id,
   })
 
+  // Salles stats for the Communauté card
+  const { data: myRooms } = api.room.getMyRooms.useQuery(undefined, {
+    enabled: !!session?.user?.id,
+    staleTime: 5 * 60 * 1000,
+  })
+  const sallesSubtitle = React.useMemo(() => {
+    if (!myRooms) return "Salles créées et rejointes"
+    const created = myRooms.filter((r) => r.myRole === "OWNER").length
+    const joined  = myRooms.filter((r) => r.myRole !== "OWNER").length
+    const members = myRooms.reduce((s, r) => s + (r.memberCount ?? 0), 0)
+    const parts: string[] = []
+    if (created > 0) parts.push(`${created} créée${created > 1 ? "s" : ""}`)
+    if (joined  > 0) parts.push(`${joined} rejointe${joined > 1 ? "s" : ""}`)
+    if (members > 0) parts.push(`${members} membre${members > 1 ? "s" : ""}`)
+    return parts.length ? parts.join(" · ") : "Aucune salle"
+  }, [myRooms])
+
   // Logout
   const [isLoggingOut, setIsLoggingOut] = React.useState(false)
 
@@ -306,7 +323,7 @@ export default function ProfilePage() {
                 icon={<Home className="h-4 w-4 text-blue-400" />}
                 iconBg="bg-blue-400/10"
                 label="Mes Salles"
-                subtitle="Salles créées et rejointes"
+                subtitle={sallesSubtitle}
                 onClick={() => router.push("/salles")}
               />
             </div>
@@ -348,16 +365,16 @@ export default function ProfilePage() {
       {showNotifSheet && (
         <>
           <div
-            className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/60 z-[55] backdrop-blur-sm"
             onClick={() => setShowNotifSheet(false)}
           />
-          <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-secondary rounded-t-2xl border-t border-bg-tertiary pb-safe">
+          <div className="fixed bottom-0 left-0 right-0 z-[60] bg-bg-secondary rounded-t-2xl border-t border-bg-tertiary">
             {/* Handle */}
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 bg-bg-tertiary rounded-full" />
             </div>
 
-            <div className="px-5 pb-8 pt-2">
+            <div className="px-5 pt-2 pb-24">
               <div className="flex items-center justify-between mb-5">
                 <div>
                   <h3 className="font-display font-bold text-text-primary">Notifications</h3>
