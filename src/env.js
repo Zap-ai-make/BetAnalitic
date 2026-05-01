@@ -32,6 +32,8 @@ export const env = createEnv({
     CRON_SECRET: z.string().optional(),
     API_SECRET: z.string().optional(),
     VAPID_PRIVATE_KEY: z.string().optional(),
+    BLOB_READ_WRITE_TOKEN: z.string().optional(),
+    VERCEL_URL: z.string().optional(),
   },
 
   /**
@@ -66,6 +68,8 @@ export const env = createEnv({
     CRON_SECRET: process.env.CRON_SECRET,
     API_SECRET: process.env.API_SECRET,
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
+    BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
+    VERCEL_URL: process.env.VERCEL_URL,
     NEXT_PUBLIC_ABLY_KEY: process.env.NEXT_PUBLIC_ABLY_KEY,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
     NEXT_PUBLIC_VAPID_PUBLIC_KEY: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,

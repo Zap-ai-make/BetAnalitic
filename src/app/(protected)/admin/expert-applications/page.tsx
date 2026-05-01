@@ -7,6 +7,7 @@
 
 import * as React from "react"
 import { Crown, Filter, Search } from "lucide-react"
+import { useSession } from "next-auth/react"
 import { cn } from "~/lib/utils"
 import { api } from "~/trpc/react"
 import { ExpertApplicationReview } from "~/components/features/expert/ExpertApplicationReview"
@@ -17,8 +18,8 @@ export default function AdminExpertApplicationsPage() {
   const [filterStatus, setFilterStatus] = React.useState<FilterStatus>("PENDING")
   const [searchQuery, setSearchQuery] = React.useState("")
 
-  // TODO: Replace with real admin check
-  const isAdmin = true // Mock
+  const { data: session } = useSession()
+  const isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "MODERATOR"
 
   const { data: applications, refetch } = api.expert.admin.listApplications.useQuery({
     status: filterStatus === "ALL" ? undefined : filterStatus,

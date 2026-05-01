@@ -380,7 +380,7 @@ export default function ProfilePage() {
                 iconBg="bg-bg-tertiary"
                 label="Centre d'aide"
                 subtitle="FAQ, tutoriels, nous contacter"
-                onClick={() => router.push("/help")}
+                onClick={() => router.push("/aide")}
               />
             </div>
           </section>
