@@ -4,6 +4,7 @@ import * as React from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
+import { api } from "~/trpc/react"
 
 export function Header() {
   const { data: session } = useSession()
@@ -21,6 +22,17 @@ export function Header() {
     localStorage.setItem("betanalytic_lang", next)
     window.dispatchEvent(new StorageEvent("storage", { key: "betanalytic_lang", newValue: next }))
   }
+
+  // Unread badge: sum open tickets across all joined rooms
+  const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, {
+    enabled: !!session?.user?.id,
+    refetchInterval: 30_000,
+    staleTime: 20_000,
+  })
+  const totalUnread = React.useMemo(
+    () => (unreadCounts ?? []).reduce((s, r) => s + r.openTickets, 0),
+    [unreadCounts]
+  )
 
   const username = session?.user?.name ?? session?.user?.email?.split("@")[0] ?? "U"
   const userAvatar = session?.user?.image ?? undefined
@@ -77,12 +89,16 @@ export function Header() {
 
           {/* Bell */}
           <button
-            className="flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
+            onClick={() => router.push("/notifications")}
+            className="relative flex items-center justify-center w-9 h-9 rounded-full text-text-secondary hover:text-text-primary hover:bg-bg-secondary transition-colors"
             aria-label="Notifications"
           >
-            <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" />
             </svg>
+            {totalUnread > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-1 ring-bg-primary" />
+            )}
           </button>
 
           {/* Avatar */}

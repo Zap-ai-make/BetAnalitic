@@ -72,29 +72,23 @@ export default function ReferralPage() {
                 {stats?.totalReferrals ?? 0}
               </p>
               <p className="text-sm text-text-secondary">
-                {stats?.totalReferrals === 1 ? "filleul inscrit" : "filleuls inscrits"}
+                {stats?.totalReferrals === 1 ? "filleul parrainé" : "filleuls parrainés"}
               </p>
             </div>
 
             {/* ── Stats grid ─────────────────────────────────────────────── */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="bg-bg-secondary rounded-2xl p-4 text-center border border-bg-tertiary">
                 <p className="font-mono text-xl font-bold text-text-primary">
                   {stats?.activeReferrals ?? 0}
                 </p>
-                <p className="text-xs text-text-tertiary mt-1">Actifs</p>
+                <p className="text-xs text-text-tertiary mt-1">Abonnés actifs</p>
               </div>
               <div className="bg-bg-secondary rounded-2xl p-4 text-center border border-bg-tertiary">
                 <p className="font-mono text-xl font-bold text-text-primary">
                   {stats?.clickCount ?? 0}
                 </p>
                 <p className="text-xs text-text-tertiary mt-1">Clics</p>
-              </div>
-              <div className="bg-bg-secondary rounded-2xl p-4 text-center border border-bg-tertiary">
-                <p className="font-mono text-xl font-bold text-amber-400">
-                  {stats?.totalRewardsEarned ?? 0}
-                </p>
-                <p className="text-xs text-text-tertiary mt-1">Crédits gagnés</p>
               </div>
             </div>
 
@@ -106,9 +100,9 @@ export default function ReferralPage() {
               </h2>
               <div className="space-y-2.5">
                 {[
-                  { icon: Share2, text: "Partagez votre lien unique à des amis", color: "text-accent-cyan", bg: "bg-accent-cyan/10" },
-                  { icon: Users, text: "Votre filleul reçoit 50 crédits à l'inscription", color: "text-green-400", bg: "bg-green-400/10" },
-                  { icon: TrendingUp, text: "Vous gagnez 100 crédits quand il souscrit", color: "text-amber-400", bg: "bg-amber-400/10" },
+                  { icon: Share2, text: "Partagez votre lien unique à vos amis", color: "text-accent-cyan", bg: "bg-accent-cyan/10" },
+                  { icon: Users, text: "Votre filleul s'inscrit et souscrit à Premium", color: "text-green-400", bg: "bg-green-400/10" },
+                  { icon: TrendingUp, text: "Vous recevez 20% sur chaque abonnement de votre filleul", color: "text-amber-400", bg: "bg-amber-400/10" },
                 ].map(({ icon: Icon, text, color, bg }, i) => (
                   <div key={i} className="flex items-center gap-3">
                     <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center shrink-0", bg)}>
@@ -207,7 +201,7 @@ export default function ReferralPage() {
                       <div className="flex items-center gap-2">
                         {r.rewardGiven && (
                           <span className="text-[10px] font-bold text-amber-400 bg-amber-400/10 px-1.5 py-0.5 rounded-full border border-amber-400/20">
-                            +100 pts
+                            20%
                           </span>
                         )}
                         <span className={cn(

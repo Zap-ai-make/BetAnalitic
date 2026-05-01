@@ -4,8 +4,8 @@ import * as React from "react"
 import { useSession, signOut } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import {
-  Crown, Bell, Gift, Home, HelpCircle, Pencil,
-  LogOut, ChevronRight, X,
+  Crown, Bell, Gift, HelpCircle, Pencil,
+  LogOut, ChevronRight, X, Users,
 } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { Header } from "~/components/shared/Header"
@@ -316,16 +316,56 @@ export default function ProfilePage() {
                 icon={<Gift className="h-4 w-4 text-green-400" />}
                 iconBg="bg-green-400/10"
                 label="Parrainage"
-                subtitle="Invitez des amis, gagnez des crédits"
+                subtitle="Invitez des amis, gagnez 20% sur leur abonnement"
                 onClick={() => router.push("/referral")}
               />
-              <MenuRow
-                icon={<Home className="h-4 w-4 text-blue-400" />}
-                iconBg="bg-blue-400/10"
-                label="Mes Salles"
-                subtitle={sallesSubtitle}
-                onClick={() => router.push("/salles")}
-              />
+            </div>
+          </section>
+
+          {/* ── Salles ──────────────────────────────────────────────────────── */}
+          <section>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-text-tertiary mb-2.5 px-1">
+              Salles
+            </p>
+            <div className="bg-bg-secondary rounded-2xl border border-bg-tertiary overflow-hidden">
+              {/* Summary row */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-bg-tertiary">
+                <div className="w-9 h-9 rounded-xl bg-blue-400/10 flex items-center justify-center shrink-0">
+                  <Users className="h-4 w-4 text-blue-400" />
+                </div>
+                <p className="text-sm text-text-secondary">{sallesSubtitle}</p>
+              </div>
+
+              {/* Per-room list */}
+              {myRooms && myRooms.length > 0 ? (
+                myRooms.map((room) => (
+                  <button
+                    key={room.id}
+                    onClick={() => router.push(`/salles/${room.id}`)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-bg-tertiary/50 transition-colors border-b border-bg-tertiary last:border-b-0"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className={cn(
+                        "text-[9px] font-bold px-1.5 py-0.5 rounded shrink-0",
+                        room.myRole === "OWNER"
+                          ? "bg-accent-cyan/10 text-accent-cyan"
+                          : "bg-bg-tertiary text-text-tertiary"
+                      )}>
+                        {room.myRole === "OWNER" ? "créée" : "rejoint"}
+                      </span>
+                      <p className="text-sm font-medium text-text-primary truncate">{room.name}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      <Users className="h-3 w-3 text-text-tertiary" />
+                      <span className="text-xs text-text-tertiary">{room.memberCount ?? 0}</span>
+                    </div>
+                  </button>
+                ))
+              ) : (
+                <div className="px-4 py-4 text-sm text-text-tertiary text-center">
+                  Aucune salle pour l&apos;instant
+                </div>
+              )}
             </div>
           </section>
 
