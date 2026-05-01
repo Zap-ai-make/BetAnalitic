@@ -41,7 +41,10 @@ export function Header() {
   const isPro = tier === "PREMIUM" || tier === "EXPERT"
 
   return (
-    <header className={cn("sticky top-0 z-50 w-full", "bg-bg-primary/95 backdrop-blur-sm", "border-b border-bg-tertiary/60")}>
+    <header
+      className={cn("fixed top-0 z-50 w-full", "bg-bg-primary/95 backdrop-blur-sm", "border-b border-bg-tertiary/60")}
+      style={{ paddingTop: "env(safe-area-inset-top)" }}
+    >
       <div className="flex items-center justify-between h-14 px-4">
 
         {/* Logo + badge */}

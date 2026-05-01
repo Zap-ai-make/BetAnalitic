@@ -65,6 +65,11 @@
   }
 }
 
+/* Header height CSS variable — used everywhere instead of hardcoded 64px */
+:root {
+  --header-h: calc(3.5rem + env(safe-area-inset-top, 0px));
+}
+
 /* Safe area insets for PWA */
 @layer base {
   .safe-area-insets {

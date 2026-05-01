@@ -195,7 +195,7 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <RoomNavigationContext.Provider value={navCtx}>
-      <div className="flex h-[calc(100dvh-64px)] overflow-hidden">
+      <div className="flex overflow-hidden" style={{ height: "calc(100dvh - var(--header-h))" }}>
 
         {/* ── Desktop: always side-by-side ── */}
         <div className="hidden md:flex border-r border-bg-tertiary">
