@@ -727,6 +727,7 @@ export default function DashboardPage() {
       >
         {intro && <IntroSplash onDone={handleIntroDone} />}
         <Header />
+        <div aria-hidden style={{ height: "var(--header-h)", flexShrink: 0 }} />
         <OracleConsole
           username={username}
           ready={!intro}
