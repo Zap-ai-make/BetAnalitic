@@ -467,7 +467,7 @@ export default function AnalysisPage() {
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
+    <div className="bg-bg-primary flex flex-col" style={{ minHeight: "calc(100dvh - var(--header-h))" }}>
       <Header />
 
       <main className="flex-1 overflow-hidden pb-16">
