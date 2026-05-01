@@ -18,7 +18,10 @@ export default async function ProtectedLayout({
     <RealtimeProvider>
       {/* Spacer that pushes content below the fixed header, accounting for safe-area-inset-top */}
       <div aria-hidden style={{ height: "var(--header-h)" }} />
-      {children}
+      {/* Scroll container scoped to viewport minus header — prevents body scroll in PWA */}
+      <div style={{ height: "calc(100dvh - var(--header-h))", overflowY: "auto" }}>
+        {children}
+      </div>
       <InstallBanner />
     </RealtimeProvider>
   )
