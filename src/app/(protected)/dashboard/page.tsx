@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { Header } from "~/components/shared/Header"
+import { useLang } from "~/lib/lang"
 
 // ── Agent definitions ────────────────────────────────────────
 const AGENTS = [
@@ -124,20 +125,27 @@ let introShownThisSession = false
 // ── Intro splash ─────────────────────────────────────────────
 interface IntroSplashProps { onDone: () => void }
 
-// Lines: 3 × 2 chars each → ~1270ms to fully appear
-// Timeline: in(0) → exit-title(1650) → type(2100) → hold → out
 // L0 — prise de conscience (slow, display)
 // L1 — ce que vous pouvez faire (fast, mono list)
 // L2 — transformation CTA (very slow, accent)
-const INTRO_LINES = [
-  "Les gagnants n'ont pas plus de chance. Ils ont plus d'informations.",
-  "Compositions réelles · Blessures cachées · Tensions de vestiaire · Forme des joueurs · Signaux de value en direct.",
-  "Arrêtez de parier. Commencez à investir.",
-] as const
+const INTRO_LINES = {
+  FR: [
+    "Les gagnants n'ont pas plus de chance. Ils ont plus d'informations.",
+    "Compositions réelles · Blessures cachées · Tensions de vestiaire · Forme des joueurs · Signaux de value en direct.",
+    "Arrêtez de parier. Commencez à investir.",
+  ],
+  EN: [
+    "Winners don't have more luck. They have more information.",
+    "Real lineups · Hidden injuries · Locker room tensions · Player form · Live value signals.",
+    "Stop gambling. Start investing.",
+  ],
+} as const
 
 const INTRO_SPEEDS = [32, 14, 42] as const
 
 function IntroSplash({ onDone }: IntroSplashProps) {
+  const { lang } = useLang()
+  const lines = INTRO_LINES[lang]
   const [phase, setPhase] = useState<"in" | "exit-title" | "type" | "hold" | "out">("in")
   const [lineIdx, setLineIdx] = useState(0)
   const [typed, setTyped] = useState("")
@@ -160,7 +168,7 @@ function IntroSplash({ onDone }: IntroSplashProps) {
   // Typewriter — types line by line
   useEffect(() => {
     if (phase !== "type") return
-    const line = INTRO_LINES[lineIdx] ?? ""
+    const line = lines[lineIdx] ?? ""
     let i = 0
     const id = setInterval(() => {
       i++
@@ -168,7 +176,7 @@ function IntroSplash({ onDone }: IntroSplashProps) {
       if (i >= line.length) {
         clearInterval(id)
         const next = lineIdx + 1
-        if (next < INTRO_LINES.length) {
+        if (next < lines.length) {
           setTimeout(() => { setLineIdx(next); setTyped("") }, 320)
         } else {
           setTimeout(() => setPhase("hold"), 320)
@@ -216,8 +224,8 @@ function IntroSplash({ onDone }: IntroSplashProps) {
 
       {showSub && (
         <div className="intro-subtitle-wrap">
-          {INTRO_LINES.map((line, i) => (
-            <p key={i} className={`intro-subtitle${i === 0 ? " intro-subtitle--hook" : i === INTRO_LINES.length - 1 ? " intro-subtitle--cta" : ""}`}>
+          {lines.map((line, i) => (
+            <p key={i} className={`intro-subtitle${i === 0 ? " intro-subtitle--hook" : i === lines.length - 1 ? " intro-subtitle--cta" : ""}`}>
               {i < lineIdx
                 ? line
                 : i === lineIdx
@@ -314,7 +322,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
   const [showHistory, setShowHistory] = useState(false)
   const [typingGreeting, setTypingGreeting] = useState<TypingGreeting | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
-  const [lang, setLang] = useState<"FR" | "EN">("FR")
+  const { lang, t: tl } = useLang()
   const convIdRef = useRef<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
@@ -359,11 +367,8 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, pendingAgent])
 
-  // Load lang + conversations from localStorage on mount
+  // Load conversations from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem("betanalytic_lang")
-    if (stored === "FR" || stored === "EN") setLang(stored)
-
     const convs = loadConvs()
     setConversations(convs)
 
@@ -376,12 +381,6 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
       if (last.matchCtx) { setMatchCtx(last.matchCtx); matchCtxRef.current = last.matchCtx }
       restoredRef.current = true
     }
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "betanalytic_lang" && (e.newValue === "FR" || e.newValue === "EN")) setLang(e.newValue)
-    }
-    window.addEventListener("storage", onStorage)
-    return () => window.removeEventListener("storage", onStorage)
   }, [])
 
   // Start greeting only after intro is done, and only if no restored conversation
@@ -448,11 +447,11 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
     setOpen(false)
 
     if (alreadySeen) {
-      setExtra((e) => [...e, { role: "system", body: `— ${label} ${lang === "EN" ? "active" : "actif"} —` }])
+      setExtra((e) => [...e, { role: "system", body: `— ${label} ${tl.oracle.agentActive} —` }])
       setTypingGreeting(null)
     } else {
       if (extra.length > 0 || typingGreeting) {
-        setExtra((e) => [...e, { role: "system", body: `─── ${label} ${lang === "EN" ? "activated" : "activé"} ───` }])
+        setExtra((e) => [...e, { role: "system", body: `─── ${label} ${tl.oracle.agentActivated} ───` }])
       }
       const base = agentGreeting(id, username, lang)
       const withMatch = matchCtx && id !== "Oracle"
@@ -475,8 +474,8 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
       setExtra((e) => [...e, {
         role: "oracle",
         body: isOracle
-          ? (lang === "EN" ? `Analyzing via @GoalMaster + @TacticMaster…${matchSuffix}` : `Analyse en cours via @GoalMaster + @TacticMaster…${matchSuffix}`)
-          : (lang === "EN" ? `@${agent} processing your query — conf 78%${matchSuffix}` : `@${agent} traite ta requête — conf 78%${matchSuffix}`),
+          ? `${tl.oracle.analyzingVia}${matchSuffix}`
+          : `@${agent} ${tl.oracle.processing}${matchSuffix}`,
         agentId: agent,
       }])
     }, 600)
@@ -549,10 +548,10 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
     el.style.height = `${Math.min(el.scrollHeight, 180)}px`
   }
 
-  const ddHeader = lang === "EN" ? "CHOOSE AN AGENT" : "CHOISIR UN AGENT"
-  const placeholder = lang === "EN" ? "Type your message here…" : "Tape ton message ici…"
-  const historyTitle = lang === "EN" ? "Conversation History" : "Historique des conversations"
-  const historyEmpty = lang === "EN" ? "No recent conversations." : "Aucune conversation récente."
+  const ddHeader = tl.oracle.agentSelector
+  const placeholder = tl.oracle.messagePlaceholder
+  const historyTitle = tl.oracle.history
+  const historyEmpty = tl.oracle.noHistory
 
   return (
     <div className="console">
@@ -563,7 +562,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
       <div className="gpt-header">
         {/* Left: selector + subtitle */}
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
-          <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }} aria-label={open ? (lang === "EN" ? "Close agent selector" : "Fermer la sélection d'agent") : (lang === "EN" ? "Open agent selector" : "Ouvrir la sélection d'agent")} aria-expanded={open}>
+          <button className="gpt-model-btn" onClick={() => { setOpen((o) => !o); setShowHistory(false) }} aria-label={ddHeader} aria-expanded={open}>
             <AgentFace id={agent} size={22} />
             <span className="gpt-model-name">{isOracle ? "Oracle" : cur!.id}</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
@@ -572,7 +571,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
             </svg>
           </button>
           <span style={{ fontSize: 9, color: "#444e5e", fontFamily: "var(--font-jetbrains-mono,monospace)", letterSpacing: "0.04em", paddingLeft: 2 }}>
-            {lang === "EN" ? "14 agents ready to analyze" : "14 agents prêts à analyser"}
+            {tl.oracle.agentsReady}
           </span>
         </div>
 
@@ -584,7 +583,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
               <AgentFace id="Oracle" size={28} />
               <div className="ao-info">
                 <div className="ao-name">Oracle</div>
-                <div className="ao-cat">{lang === "EN" ? "Generalist · auto-routing" : "Généraliste · routage auto"}</div>
+                <div className="ao-cat">{tl.oracle.generalAgent}</div>
               </div>
             </div>
             {AGENTS.map((a) => (
@@ -595,7 +594,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
               </div>
             ))}
             <div style={{ padding: "8px 14px 6px", fontFamily: "var(--font-jetbrains-mono, monospace)", fontSize: 10, color: "#545e71", textAlign: "center", borderTop: "1px solid rgba(255,255,255,0.05)", marginTop: 4 }}>
-              {lang === "EN" ? "14 agents ready to analyze the match for you" : "14 agents prêts à analyser le match pour vous"}
+              {tl.oracle.agentsReadyLong}
             </div>
           </div>
         )}
@@ -607,7 +606,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
             <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l4 2" />
           </svg>
         </button>
-        <button className="gpt-icon-btn" onClick={clearChat} title={lang === "EN" ? "New conversation" : "Nouvelle conversation"} aria-label={lang === "EN" ? "New conversation" : "Nouvelle conversation"}>
+        <button className="gpt-icon-btn" onClick={clearChat} title={tl.oracle.newConversation} aria-label={tl.oracle.newConversation}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 20h9" /><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
           </svg>

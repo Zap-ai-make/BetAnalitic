@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { Header } from "~/components/shared/Header"
 import { DashboardNav } from "~/components/shared/DashboardNav"
+import { useLang } from "~/lib/lang"
 import { cn } from "~/lib/utils"
 import { Trash2, Send, Mic, Volume2, Pause, Zap, TrendingUp, MessageSquare, X, Plus } from "lucide-react"
 import { Button } from "~/components/ui/button"
@@ -85,6 +86,7 @@ function touchStreak() {
 export default function AnalysisPage() {
   const router = useRouter()
   const { data: session } = useSession()
+  const { lang, t } = useLang()
 
   // ── AI Picks ──────────────────────────────────────────────────────────────
   const { data: aiPicks = [], isLoading: picksLoading } = api.match.getAIPicks.useQuery({})
@@ -391,11 +393,11 @@ export default function AnalysisPage() {
     const win = window as any
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const SpeechRecognitionClass = win.SpeechRecognition ?? win.webkitSpeechRecognition
-    if (!SpeechRecognitionClass) { alert("Votre navigateur ne supporte pas la reconnaissance vocale."); return }
+    if (!SpeechRecognitionClass) { alert(t.analysis.noSpeech); return }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
     const rec = new SpeechRecognitionClass()
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    rec.lang = "fr-FR"; rec.continuous = true; rec.interimResults = true
+    rec.lang = lang === "FR" ? "fr-FR" : "en-US"; rec.continuous = true; rec.interimResults = true
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     rec.onresult = (event: any) => {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
@@ -406,7 +408,7 @@ export default function AnalysisPage() {
     rec.onerror = (e: any) => {
       setIsRecording(false)
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      if (e.error === "not-allowed") alert("Accès micro refusé.")
+      if (e.error === "not-allowed") alert(t.analysis.micDenied)
     }
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     rec.onend = () => setIsRecording(false)
@@ -427,10 +429,10 @@ export default function AnalysisPage() {
 
   // ── TTS ────────────────────────────────────────────────────────────────────
   const startTTS = (msgId: string, content: string) => {
-    if (!("speechSynthesis" in window)) { alert("TTS non supporté"); return }
+    if (!("speechSynthesis" in window)) { alert(t.analysis.ttsNotSupported); return }
     window.speechSynthesis.cancel()
     const u = new SpeechSynthesisUtterance(content)
-    u.lang = "fr-FR"; u.rate = speechRate
+    u.lang = lang === "FR" ? "fr-FR" : "en-US"; u.rate = speechRate
     u.onend = () => { setPlayingMessageId(null); utteranceRef.current = null }
     u.onerror = () => { setPlayingMessageId(null); utteranceRef.current = null }
     utteranceRef.current = u
@@ -443,27 +445,29 @@ export default function AnalysisPage() {
   }
 
   // ── Confidence styles ─────────────────────────────────────────────────────
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
+
   const getConfidenceStyle = (c: number) =>
-    c >= 80 ? { label: "Haute", bgColor: "bg-green-500/20", textColor: "text-green-500", borderColor: "border-green-500/30" }
-    : c >= 50 ? { label: "Moyenne", bgColor: "bg-yellow-500/20", textColor: "text-yellow-500", borderColor: "border-yellow-500/30" }
-    : { label: "Faible", bgColor: "bg-orange-500/20", textColor: "text-orange-500", borderColor: "border-orange-500/30" }
+    c >= 80 ? { label: t.analysis.confHigh, bgColor: "bg-green-500/20", textColor: "text-green-500", borderColor: "border-green-500/30" }
+    : c >= 50 ? { label: t.analysis.confMid, bgColor: "bg-yellow-500/20", textColor: "text-yellow-500", borderColor: "border-yellow-500/30" }
+    : { label: t.analysis.confLow, bgColor: "bg-orange-500/20", textColor: "text-orange-500", borderColor: "border-orange-500/30" }
 
   const getAccuracyStyle = (a: number) =>
-    a >= 70 ? { label: "Excellente", bgColor: "bg-green-500/20", textColor: "text-green-500", borderColor: "border-green-500/30" }
-    : a >= 60 ? { label: "Bonne", bgColor: "bg-yellow-500/20", textColor: "text-yellow-500", borderColor: "border-yellow-500/30" }
-    : { label: "Moyenne", bgColor: "bg-orange-500/20", textColor: "text-orange-500", borderColor: "border-orange-500/30" }
+    a >= 70 ? { label: t.analysis.accExcellent, bgColor: "bg-green-500/20", textColor: "text-green-500", borderColor: "border-green-500/30" }
+    : a >= 60 ? { label: t.analysis.accGood, bgColor: "bg-yellow-500/20", textColor: "text-yellow-500", borderColor: "border-yellow-500/30" }
+    : { label: t.analysis.confMid, bgColor: "bg-orange-500/20", textColor: "text-orange-500", borderColor: "border-orange-500/30" }
 
   // ── Signal level ──────────────────────────────────────────────────────────
   const signalLevel = (confidence: number) =>
-    confidence >= 0.75 ? { label: "SIGNAL FORT", color: "text-red-400", border: "border-accent-cyan/60", dot: "bg-red-400" }
-    : confidence >= 0.60 ? { label: "SIGNAL MOYEN", color: "text-amber-400", border: "border-amber-400/40", dot: "bg-amber-400" }
-    : { label: "SIGNAL FAIBLE", color: "text-text-tertiary", border: "border-bg-tertiary", dot: "bg-text-tertiary" }
+    confidence >= 0.75 ? { label: t.analysis.signalStrong, color: "text-red-400", border: "border-accent-cyan/60", dot: "bg-red-400" }
+    : confidence >= 0.60 ? { label: t.analysis.signalMedium, color: "text-amber-400", border: "border-amber-400/40", dot: "bg-amber-400" }
+    : { label: t.analysis.signalWeak, color: "text-text-tertiary", border: "border-bg-tertiary", dot: "bg-text-tertiary" }
 
   const predictionLabel = (prediction: string) =>
     prediction === "home" ? "V1" : prediction === "draw" ? "X" : "V2"
 
   // ── Today's date ──────────────────────────────────────────────────────────
-  const todayLabel = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+  const todayLabel = new Date().toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" })
 
   // ─── JSX ──────────────────────────────────────────────────────────────────
   return (
@@ -489,7 +493,7 @@ export default function AnalysisPage() {
               </div>
             )}
             <div className="text-right">
-              <div className="text-xs text-text-tertiary">Solde</div>
+              <div className="text-xs text-text-tertiary">{t.analysis.balance}</div>
               <div className="text-sm font-bold text-accent-cyan font-mono">{fmtAmount(balance.amount, balance.currency)}</div>
             </div>
           </div>
@@ -514,12 +518,12 @@ export default function AnalysisPage() {
                     <div>
                       {picksStats.yesterday.total > 0 && (
                         <p className="text-xs text-text-primary font-medium">
-                          IA hier : ✅ {picksStats.yesterday.correct}/{picksStats.yesterday.total} corrects
+                          {t.analysis.aiYesterday} : ✅ {picksStats.yesterday.correct}/{picksStats.yesterday.total} {t.analysis.correct}
                         </p>
                       )}
                       {picksStats.last30Days.accuracy !== null && (
                         <p className="text-xs text-text-tertiary">
-                          Précision 30j : {picksStats.last30Days.accuracy}%
+                          {t.analysis.accuracy30} : {picksStats.last30Days.accuracy}%
                         </p>
                       )}
                     </div>
@@ -531,7 +535,7 @@ export default function AnalysisPage() {
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-text-secondary uppercase tracking-wide">
-                    Signaux du Jour
+                    {t.analysis.signals}
                   </h2>
                   {aiPicks.length > 0 && (
                     <span className="text-xs text-text-tertiary">{aiPicks.length} match{aiPicks.length > 1 ? "s" : ""}</span>
@@ -549,8 +553,8 @@ export default function AnalysisPage() {
                 {!picksLoading && aiPicks.length === 0 && (
                   <div className="text-center py-10">
                     <div className="text-4xl mb-3">🤖</div>
-                    <p className="text-sm text-text-secondary font-medium">Aucun signal pour aujourd&apos;hui</p>
-                    <p className="text-xs text-text-tertiary mt-1">Les agents analysent les matchs à 08:00</p>
+                    <p className="text-sm text-text-secondary font-medium">{t.analysis.noSignals}</p>
+                    <p className="text-xs text-text-tertiary mt-1">{t.analysis.noSignalsHint}</p>
                   </div>
                 )}
 
@@ -558,7 +562,7 @@ export default function AnalysisPage() {
                   const level = signalLevel(pick.confidence)
                   const isSelected = selectedSignals.includes(pick.matchId)
                   const pct = Math.round(pick.confidence * 100)
-                  const kickoff = new Date(pick.expiresAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+                  const kickoff = new Date(pick.expiresAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
 
                   return (
                     <div
@@ -622,7 +626,7 @@ export default function AnalysisPage() {
                           className="flex-1 text-xs py-1.5 rounded-lg border border-bg-tertiary text-text-secondary hover:text-accent-cyan hover:border-accent-cyan/40 transition-colors flex items-center justify-center gap-1"
                         >
                           <MessageSquare className="h-3 w-3" />
-                          Analyser
+                          {t.analysis.analyze}
                         </button>
                         <button
                           onClick={() => toggleSignal(pick.matchId)}
@@ -634,7 +638,7 @@ export default function AnalysisPage() {
                           )}
                         >
                           {isSelected ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-                          {isSelected ? "Retirer" : "Coupon"}
+                          {isSelected ? t.analysis.removeCoupon : t.analysis.addCoupon}
                         </button>
                       </div>
                     </div>
@@ -648,7 +652,7 @@ export default function AnalysisPage() {
               <div className="sticky bottom-0 border-t-2 border-accent-cyan/30 bg-bg-secondary p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold text-text-primary">
-                    Mon Coupon ({selectedPicksData.length})
+                    {t.analysis.myCoupon} ({selectedPicksData.length})
                   </span>
                   <span className="text-sm font-mono text-accent-cyan font-bold">×{totalOdds.toFixed(2)}</span>
                 </div>
@@ -674,7 +678,7 @@ export default function AnalysisPage() {
                     min="0"
                     value={stake}
                     onChange={(e) => setStake(e.target.value)}
-                    placeholder={`Mise en ${balance.currency}`}
+                    placeholder={`${t.analysis.stakeIn} ${balance.currency}`}
                     className={cn(
                       "flex-1 px-3 py-2 rounded-lg text-sm",
                       "bg-bg-primary border border-bg-tertiary",
@@ -687,7 +691,7 @@ export default function AnalysisPage() {
 
                 {stakeNum > 0 && (
                   <p className="text-xs text-text-tertiary">
-                    Gain potentiel : <span className="text-green-400 font-bold">{fmtAmount(potentialWin, balance.currency)}</span>
+                    {t.analysis.potentialWin} : <span className="text-green-400 font-bold">{fmtAmount(potentialWin, balance.currency)}</span>
                   </p>
                 )}
 
@@ -696,7 +700,7 @@ export default function AnalysisPage() {
                     onClick={() => setSelectedSignals([])}
                     className="px-3 py-2 rounded-lg text-xs text-text-secondary hover:text-accent-red border border-bg-tertiary transition-colors"
                   >
-                    Vider
+                    {t.analysis.clearCoupon}
                   </button>
                   <button
                     onClick={handlePlaceBet}
@@ -708,7 +712,7 @@ export default function AnalysisPage() {
                         : "bg-bg-tertiary text-text-tertiary cursor-not-allowed"
                     )}
                   >
-                    Valider le coupon →
+                    {t.analysis.validateCoupon}
                   </button>
                 </div>
               </div>
@@ -726,7 +730,7 @@ export default function AnalysisPage() {
                 onClick={() => setShowChatMobile(false)}
                 className="text-text-secondary hover:text-text-primary transition-colors flex items-center gap-1 text-sm"
               >
-                ← Signaux
+                {t.analysis.backToSignals}
               </button>
               {pendingMatchForChat && (
                 <span className="text-xs text-text-tertiary ml-2">
@@ -741,7 +745,7 @@ export default function AnalysisPage() {
               {pendingMatchForChat ? (
                 <div className="bg-bg-secondary rounded-xl p-3 border border-accent-cyan/30 flex items-center justify-between">
                   <div>
-                    <p className="text-xs text-accent-cyan font-semibold uppercase tracking-wide mb-0.5">Match chargé</p>
+                    <p className="text-xs text-accent-cyan font-semibold uppercase tracking-wide mb-0.5">{t.analysis.matchLoaded}</p>
                     <p className="text-sm font-bold text-text-primary">
                       {pendingMatchForChat.homeTeam} vs {pendingMatchForChat.awayTeam}
                     </p>
@@ -757,8 +761,8 @@ export default function AnalysisPage() {
               ) : (
                 <div className="text-center py-8">
                   <div className="text-4xl mb-3">🤖</div>
-                  <p className="text-sm text-text-secondary">Cliquez sur &ldquo;Analyser&rdquo; sur un signal pour charger un match</p>
-                  <p className="text-xs text-text-tertiary mt-1">ou tapez @AgentName dans le chat</p>
+                  <p className="text-sm text-text-secondary">{t.analysis.noMatchHint}</p>
+                  <p className="text-xs text-text-tertiary mt-1">{t.analysis.noMatchHint2}</p>
                 </div>
               )}
 
@@ -768,8 +772,8 @@ export default function AnalysisPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-xl">⚡</span>
                     <div>
-                      <div className="font-display font-bold text-text-primary text-sm">Burst Mode Actif</div>
-                      <div className="text-xs text-text-secondary">Invocations illimitées LIVE</div>
+                      <div className="font-display font-bold text-text-primary text-sm">{t.analysis.burstModeActive}</div>
+                      <div className="text-xs text-text-secondary">{t.analysis.burstModeHint}</div>
                     </div>
                   </div>
                   <div className="text-accent-gold font-mono font-bold text-xl">∞</div>
@@ -784,7 +788,7 @@ export default function AnalysisPage() {
                   className="w-full bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/30 hover:bg-accent-cyan/20"
                   disabled={isFullAnalysis}
                 >
-                  {isFullAnalysis ? `⚡ Analyse... ${fullAnalysisProgress}/${AGENTS.length}` : "⚡ Analyse Complète (14 agents)"}
+                  {isFullAnalysis ? `⚡ ${t.analysis.analyzing} ${fullAnalysisProgress}/${AGENTS.length}` : `⚡ ${t.analysis.fullAnalysis}`}
                 </Button>
               )}
 
@@ -848,14 +852,14 @@ export default function AnalysisPage() {
                           )
                         })()}
                         <span className="text-xs text-text-tertiary ml-auto">
-                          {message.timestamp.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                          {message.timestamp.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
                     )}
                     <p className="text-sm text-text-primary whitespace-pre-wrap">{message.content}</p>
                     {message.type === "user" && (
                       <div className="text-xs text-text-tertiary mt-1 text-right">
-                        {message.timestamp.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        {message.timestamp.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}
                       </div>
                     )}
                   </div>
@@ -864,13 +868,13 @@ export default function AnalysisPage() {
                   <div className="rounded-lg p-3 bg-bg-primary border border-bg-tertiary">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-accent-cyan rounded-full animate-pulse" />
-                      <span className="text-sm text-text-secondary">Agent en cours d&apos;analyse…</span>
+                      <span className="text-sm text-text-secondary">{t.analysis.agentAnalyzing}</span>
                     </div>
                   </div>
                 )}
                 {uniqueAgentCount >= 2 && (
                   <Button variant="outline" size="sm" onClick={() => setShowComparison(true)} className="w-full">
-                    🔄 Comparer les agents ({uniqueAgentCount})
+                    🔄 {t.analysis.compareAgents} ({uniqueAgentCount})
                   </Button>
                 )}
               </div>
@@ -884,7 +888,7 @@ export default function AnalysisPage() {
                   value={agentInput}
                   onChange={(e) => setAgentInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter" && selectedAgent) void handleInvokeAgent() }}
-                  placeholder="@AgentName — ex: @Scout analyse ce match"
+                  placeholder={t.analysis.inputPlaceholder}
                   className={cn(
                     "w-full px-4 py-3 pr-24 rounded-lg",
                     "bg-bg-secondary border-2 border-bg-tertiary",
@@ -949,16 +953,16 @@ export default function AnalysisPage() {
           <div className="fixed inset-0 bg-black/50 z-40" onClick={() => setShowFullAnalysisConfirm(false)} />
           <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[90%] max-w-md">
             <div className="bg-bg-secondary rounded-lg border border-bg-tertiary p-6 space-y-4">
-              <h3 className="font-display text-lg font-bold text-text-primary">Lancer l&apos;analyse complète ?</h3>
+              <h3 className="font-display text-lg font-bold text-text-primary">{t.analysis.launchFullAnalysis}</h3>
               <p className="text-sm text-text-secondary">
-                Les {AGENTS.length} agents vont analyser{" "}
+                {AGENTS.length} {t.analysis.agentsWillAnalyze}{" "}
                 <span className="font-semibold text-accent-cyan">
-                  {pendingMatchForChat ? `${pendingMatchForChat.homeTeam} vs ${pendingMatchForChat.awayTeam}` : "ce match"}
+                  {pendingMatchForChat ? `${pendingMatchForChat.homeTeam} vs ${pendingMatchForChat.awayTeam}` : t.analysis.thisMatch}
                 </span>.
               </p>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowFullAnalysisConfirm(false)} className="flex-1">Annuler</Button>
-                <Button onClick={handleFullAnalysis} className="flex-1 bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90">Lancer</Button>
+                <Button variant="outline" onClick={() => setShowFullAnalysisConfirm(false)} className="flex-1">{t.analysis.cancel}</Button>
+                <Button onClick={handleFullAnalysis} className="flex-1 bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90">{t.analysis.launch}</Button>
               </div>
             </div>
           </div>
@@ -972,7 +976,7 @@ export default function AnalysisPage() {
           <div className="fixed inset-4 z-50 flex items-center justify-center">
             <div className="bg-bg-secondary rounded-lg border border-bg-tertiary p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display text-lg font-bold text-text-primary">Comparaison des Agents</h3>
+                <h3 className="font-display text-lg font-bold text-text-primary">{t.analysis.agentComparison}</h3>
                 <button onClick={() => setShowComparison(false)} className="text-text-secondary hover:text-text-primary transition-colors">✕</button>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1006,12 +1010,12 @@ export default function AnalysisPage() {
                 const stdDev = Math.sqrt(variance)
                 return (
                   <div className="mt-4 p-4 bg-bg-tertiary rounded-lg">
-                    <div className="text-sm font-medium text-text-primary mb-2">Indicateur de consensus</div>
+                    <div className="text-sm font-medium text-text-primary mb-2">{t.analysis.consensusIndicator}</div>
                     <div className="text-xs text-text-secondary">
-                      {stdDev < 10 ? "✅ Fort consensus" : stdDev < 20 ? "⚖️ Consensus modéré" : "⚠️ Opinions divergentes"}
+                      {stdDev < 10 ? t.analysis.strongConsensus : stdDev < 20 ? t.analysis.moderateConsensus : t.analysis.divergingOpinions}
                     </div>
                     <div className="text-xs text-text-tertiary mt-1">
-                      Confiance moyenne : {avg.toFixed(1)}% (écart-type : {stdDev.toFixed(1)})
+                      {t.analysis.avgConfidence} : {avg.toFixed(1)}% ({t.analysis.stdDev} : {stdDev.toFixed(1)})
                     </div>
                   </div>
                 )
@@ -1042,20 +1046,20 @@ export default function AnalysisPage() {
                 </div>
                 {!accuracy || accuracy.totalPredictions < 30 ? (
                   <div className="bg-bg-primary rounded-lg p-4 text-center">
-                    <p className="text-text-secondary text-sm">⏳ Données insuffisantes</p>
-                    <p className="text-text-tertiary text-xs mt-1">{accuracy?.totalPredictions ?? 0} prédictions (minimum 30 requis)</p>
+                    <p className="text-text-secondary text-sm">{t.analysis.insufficientData}</p>
+                    <p className="text-text-tertiary text-xs mt-1">{accuracy?.totalPredictions ?? 0} {t.analysis.predictionsMinimum}</p>
                   </div>
                 ) : (
                   <>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-text-secondary">Précision Globale</span>
+                      <span className="text-sm font-medium text-text-secondary">{t.analysis.overallAccuracy}</span>
                       {(() => {
                         const s = getAccuracyStyle(accuracy.overallAccuracy)
                         return <div className={cn("px-3 py-1 rounded-full text-sm font-semibold border-2", s.bgColor, s.textColor, s.borderColor)}>{accuracy.overallAccuracy}%</div>
                       })()}
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium text-text-secondary">Forme Récente (30j)</span>
+                      <span className="text-sm font-medium text-text-secondary">{t.analysis.recentForm}</span>
                       <div className="flex items-center gap-2">
                         <span className={cn("text-lg", accuracy.recentForm > accuracy.overallAccuracy ? "text-green-500" : accuracy.recentForm < accuracy.overallAccuracy ? "text-orange-500" : "text-text-tertiary")}>
                           {accuracy.recentForm > accuracy.overallAccuracy ? "↑" : accuracy.recentForm < accuracy.overallAccuracy ? "↓" : "→"}
@@ -1065,10 +1069,10 @@ export default function AnalysisPage() {
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { label: "Résultat", value: accuracy.predictionBreakdown.result },
-                        { label: "Buts", value: accuracy.predictionBreakdown.goals },
-                        { label: "Corners", value: accuracy.predictionBreakdown.corners },
-                        { label: "Cartes", value: accuracy.predictionBreakdown.cards },
+                        { label: t.analysis.result, value: accuracy.predictionBreakdown.result },
+                        { label: t.analysis.goals, value: accuracy.predictionBreakdown.goals },
+                        { label: t.analysis.corners, value: accuracy.predictionBreakdown.corners },
+                        { label: t.analysis.cards, value: accuracy.predictionBreakdown.cards },
                       ].map((item) => (
                         <div key={item.label} className="bg-bg-primary rounded-lg p-3 border border-bg-tertiary">
                           <div className="text-xs text-text-tertiary mb-1">{item.label}</div>
@@ -1078,10 +1082,10 @@ export default function AnalysisPage() {
                     </div>
                     <div className="bg-bg-primary rounded-lg p-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-text-tertiary">Valeur ajoutée vs hasard (50%)</span>
+                        <span className="text-xs text-text-tertiary">{t.analysis.addedValue}</span>
                         <span className="text-accent-cyan font-semibold">+{(accuracy.overallAccuracy - 50).toFixed(1)}%</span>
                       </div>
-                      <div className="text-xs text-text-tertiary mt-1">{accuracy.totalPredictions} prédictions analysées</div>
+                      <div className="text-xs text-text-tertiary mt-1">{accuracy.totalPredictions} {t.analysis.predictionsAnalyzed}</div>
                     </div>
                   </>
                 )}
@@ -1101,12 +1105,12 @@ export default function AnalysisPage() {
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-linear-to-br from-accent-gold to-accent-orange flex items-center justify-center">
                   <span className="text-3xl">⚡</span>
                 </div>
-                <h3 className="font-display text-xl font-bold text-text-primary mb-2">Burst Mode Premium</h3>
-                <p className="text-sm text-text-secondary">Match LIVE détecté ! Débloquez l&apos;accès illimité aux agents pendant les matchs en direct.</p>
+                <h3 className="font-display text-xl font-bold text-text-primary mb-2">{t.analysis.burstModePremium}</h3>
+                <p className="text-sm text-text-secondary">{t.analysis.liveMatchDetected}</p>
               </div>
               <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setShowBurstUpsell(false)} className="flex-1">Plus tard</Button>
-                <Button onClick={() => router.push("/subscription")} className="flex-1 bg-linear-to-r from-accent-gold to-accent-orange text-bg-primary hover:opacity-90">Passer Premium</Button>
+                <Button variant="outline" onClick={() => setShowBurstUpsell(false)} className="flex-1">{t.analysis.later}</Button>
+                <Button onClick={() => router.push("/subscription")} className="flex-1 bg-linear-to-r from-accent-gold to-accent-orange text-bg-primary hover:opacity-90">{t.analysis.goPremium}</Button>
               </div>
             </div>
           </div>

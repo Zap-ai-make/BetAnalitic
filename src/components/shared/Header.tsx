@@ -5,23 +5,14 @@ import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
 import { api } from "~/trpc/react"
+import { useLang } from "~/lib/lang"
 
 export function Header() {
   const { data: session } = useSession()
   const router = useRouter()
-  const [lang, setLang] = React.useState<"FR" | "EN">("FR")
+  const { lang, setLang } = useLang()
 
-  React.useEffect(() => {
-    const stored = localStorage.getItem("betanalytic_lang")
-    if (stored === "EN" || stored === "FR") setLang(stored)
-  }, [])
-
-  const toggleLang = () => {
-    const next = lang === "FR" ? "EN" : "FR"
-    setLang(next)
-    localStorage.setItem("betanalytic_lang", next)
-    window.dispatchEvent(new StorageEvent("storage", { key: "betanalytic_lang", newValue: next }))
-  }
+  const toggleLang = () => setLang(lang === "FR" ? "EN" : "FR")
 
   // Unread badge: sum open tickets across all joined rooms
   const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, {
