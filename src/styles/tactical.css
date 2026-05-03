@@ -225,13 +225,23 @@
   -webkit-text-stroke: 1.5px #00f0ff;
   color: transparent;
 }
+#tactical-hud .intro-subtitle-wrap {
+  display: flex; flex-direction: column; gap: 14px;
+  animation: hudLineIn 0.4s ease both;
+  max-width: 400px;
+}
 #tactical-hud .intro-subtitle {
-  margin: 28px 0 0;
-  font-family: var(--font-mono); font-size: 13px;
-  line-height: 1.75; letter-spacing: 0.02em;
+  margin: 0;
+  font-family: var(--font-mono); font-size: 12px;
+  line-height: 1.8; letter-spacing: 0.015em;
   color: #6b7a90;
-  max-width: 380px;
-  animation: hudLineIn 0.35s ease both;
+  min-height: 1.8em;
+}
+#tactical-hud .intro-subtitle--hook {
+  font-size: 15px; font-weight: 600;
+  color: #c8d4e8; letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  min-height: 1.4em;
 }
 #tactical-hud .intro-sub-caret {
   display: inline-block;

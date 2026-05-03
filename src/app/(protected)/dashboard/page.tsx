@@ -121,51 +121,81 @@ function AgentFace({ id, size = 36 }: { id: "Oracle" | AgentId; size?: number })
 // Module-level flag: false on full page load, true after first play within same SPA session
 let introShownThisSession = false
 
-// ── Intro splash (CSS-animated + typewriter subtitle) ────────
+// ── Intro splash ─────────────────────────────────────────────
 interface IntroSplashProps { onDone: () => void }
 
-const INTRO_SUBTITLE =
-  "Compos secrètes · Blessures cachées · Dynamiques de vestiaire · Forme réelle · Sentiment du marché — " +
-  "tout ce que les bookmakers ne veulent pas que vous sachiez."
+// Lines: 3 × 2 chars each → ~1270ms to fully appear
+// Timeline: in(0) → exit-title(1650) → type(2100) → hold → out
+const INTRO_LINES = [
+  "Fini de parier à l'aveugle.",
+  "Compositions secrètes, blessures cachées, tensions de vestiaire, forme réelle des joueurs, signaux de value en direct.",
+  "Tout ce que les bookmakers font pour vous cacher — enfin entre vos mains.",
+] as const
 
 function IntroSplash({ onDone }: IntroSplashProps) {
-  const [phase, setPhase] = useState<"in" | "type" | "hold" | "out">("in")
+  const [phase, setPhase] = useState<"in" | "exit-title" | "type" | "hold" | "out">("in")
+  const [lineIdx, setLineIdx] = useState(0)
   const [typed, setTyped] = useState("")
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
-  // Start typewriter after the 3 lines have slid in (~1270ms)
+  // Trigger h1 exit after lines are fully in
   useEffect(() => {
-    const t = setTimeout(() => setPhase("type"), 1350)
+    const t = setTimeout(() => setPhase("exit-title"), 1650)
     return () => clearTimeout(t)
   }, [])
 
-  // Typewriter loop
+  // Start typewriter after h1 has exited (380ms transition)
+  useEffect(() => {
+    if (phase !== "exit-title") return
+    const t = setTimeout(() => { setPhase("type"); setLineIdx(0); setTyped("") }, 420)
+    return () => clearTimeout(t)
+  }, [phase])
+
+  // Typewriter — types line by line
   useEffect(() => {
     if (phase !== "type") return
+    const line = INTRO_LINES[lineIdx] ?? ""
     let i = 0
     const id = setInterval(() => {
       i++
-      setTyped(INTRO_SUBTITLE.slice(0, i))
-      if (i >= INTRO_SUBTITLE.length) {
+      setTyped(line.slice(0, i))
+      if (i >= line.length) {
         clearInterval(id)
-        setPhase("hold")
+        const next = lineIdx + 1
+        if (next < INTRO_LINES.length) {
+          setTimeout(() => { setLineIdx(next); setTyped("") }, 320)
+        } else {
+          setTimeout(() => setPhase("hold"), 320)
+        }
       }
-    }, 20)
+    }, lineIdx === 0 ? 28 : 16)
     return () => clearInterval(id)
-  }, [phase])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, lineIdx])
 
-  // After hold, fade out
+  // Fade out after hold
   useEffect(() => {
     if (phase !== "hold") return
-    const tOut  = setTimeout(() => setPhase("out"), 900)
-    const tDone = setTimeout(() => onDoneRef.current(), 1600)
+    const tOut  = setTimeout(() => setPhase("out"),  1000)
+    const tDone = setTimeout(() => onDoneRef.current(), 1700)
     return () => { clearTimeout(tOut); clearTimeout(tDone) }
   }, [phase])
 
+  const showTitle = phase === "in" || phase === "exit-title"
+  const showSub   = phase === "type" || phase === "hold" || phase === "out"
+
   return (
     <div className={`intro-splash${phase === "out" ? " fade-out" : ""}`}>
-      <h1 className="intro-mega">
+      <h1
+        className="intro-mega"
+        style={{
+          transition: "opacity 0.38s ease, transform 0.38s ease",
+          opacity: showTitle ? 1 : 0,
+          transform: showTitle ? "none" : "translateY(-12px) scale(0.97)",
+          pointerEvents: "none",
+        }}
+      >
         <div className="intro-line" style={{ "--intro-delay": "0ms" } as React.CSSProperties}>
           <span className="fill">READ THE</span>
         </div>
@@ -176,11 +206,19 @@ function IntroSplash({ onDone }: IntroSplashProps) {
           <span className="outline">DECODE IT.</span>
         </div>
       </h1>
-      {phase !== "in" && (
-        <p className="intro-subtitle">
-          {typed}
-          {phase === "type" && <span className="intro-sub-caret" />}
-        </p>
+
+      {showSub && (
+        <div className="intro-subtitle-wrap">
+          {INTRO_LINES.map((line, i) => (
+            <p key={i} className={`intro-subtitle${i === 0 ? " intro-subtitle--hook" : ""}`}>
+              {i < lineIdx
+                ? line
+                : i === lineIdx
+                  ? <>{typed}{phase === "type" && <span className="intro-sub-caret" />}</>
+                  : null}
+            </p>
+          ))}
+        </div>
       )}
     </div>
   )
