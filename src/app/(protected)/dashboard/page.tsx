@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { Header } from "~/components/shared/Header"
@@ -118,47 +118,36 @@ function AgentFace({ id, size = 36 }: { id: "Oracle" | AgentId; size?: number })
   )
 }
 
-// ── Intro splash typewriter ──────────────────────────────────
+// Module-level flag: false on full page load, true after first play within same SPA session
+let introShownThisSession = false
+
+// ── Intro splash (CSS-animated) ──────────────────────────────
 interface IntroSplashProps { onDone: () => void }
 
 function IntroSplash({ onDone }: IntroSplashProps) {
-  const [step, setStep] = useState(0)
-  const [t1, setT1] = useState("")
-  const [t2, setT2] = useState("")
-  const [t3, setT3] = useState("")
-  const [fade, setFade] = useState(false)
-
-  const type = useCallback(
-    (text: string, set: (v: string) => void, speed: number, cb: () => void) => {
-      let i = 0
-      const id = setInterval(() => {
-        i++
-        set(text.slice(0, i))
-        if (i >= text.length) { clearInterval(id); setTimeout(cb, 380) }
-      }, speed)
-      return () => clearInterval(id)
-    },
-    []
-  )
+  const [phase, setPhase] = useState<"in" | "out">("in")
+  const onDoneRef = useRef(onDone)
+  onDoneRef.current = onDone
 
   useEffect(() => {
-    if (step === 0) return type("READ THE", setT1, 55, () => setStep(1))
-    if (step === 1) return type("GAME.", setT2, 65, () => setStep(2))
-    if (step === 2) return type("DECODE IT.", setT3, 50, () => setStep(3))
-    if (step === 3) {
-      const ta = setTimeout(() => setFade(true), 500)
-      const tb = setTimeout(onDone, 1100)
-      return () => { clearTimeout(ta); clearTimeout(tb) }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step])
+    // Lines stagger at 0ms / 300ms / 620ms, each takes 600ms → all done ~1220ms
+    const tOut  = setTimeout(() => setPhase("out"),  1800)
+    const tDone = setTimeout(() => onDoneRef.current(), 2500)
+    return () => { clearTimeout(tOut); clearTimeout(tDone) }
+  }, [])
 
   return (
-    <div className={`intro-splash${fade ? " fade-out" : ""}`}>
+    <div className={`intro-splash${phase === "out" ? " fade-out" : ""}`}>
       <h1 className="intro-mega">
-        <div><span className="fill">{t1}</span>{step === 0 && <span className="intro-caret" />}</div>
-        <div><span className="accent">{t2}</span>{step === 1 && <span className="intro-caret" />}</div>
-        <div><span className="outline">{t3}</span>{step === 2 && <span className="intro-caret" />}</div>
+        <div className="intro-line" style={{ "--intro-delay": "0ms" } as React.CSSProperties}>
+          <span className="fill">READ THE</span>
+        </div>
+        <div className="intro-line" style={{ "--intro-delay": "300ms" } as React.CSSProperties}>
+          <span className="accent">GAME.</span>
+        </div>
+        <div className="intro-line" style={{ "--intro-delay": "620ms" } as React.CSSProperties}>
+          <span className="outline">DECODE IT.</span>
+        </div>
       </h1>
     </div>
   )
@@ -687,14 +676,11 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
 // ── Main page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [intro, setIntro] = useState(true)
+  const [intro, setIntro] = useState(!introShownThisSession)
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
   const [pendingAgent, setPendingAgent] = useState<string | null>(null)
 
   useEffect(() => {
-    if (typeof window !== "undefined" && sessionStorage.getItem("betanalytic_intro_done")) {
-      setIntro(false)
-    }
     // Read match pushed by Matchs page or Rapport page
     const raw = sessionStorage.getItem("pending_match")
     if (raw) {
@@ -710,7 +696,7 @@ export default function DashboardPage() {
   }, [])
 
   const handleIntroDone = () => {
-    sessionStorage.setItem("betanalytic_intro_done", "1")
+    introShownThisSession = true
     setIntro(false)
   }
 

@@ -177,37 +177,42 @@
   background: radial-gradient(ellipse at center, #0a0f1a 0%, #030509 70%);
   display: flex; flex-direction: column; justify-content: center;
   padding: 0 22px;
-  transition: opacity 0.7s ease, transform 0.7s ease;
+  will-change: opacity, transform;
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 1, 1), transform 0.55s cubic-bezier(0.4, 0, 1, 1);
+}
+/* Scan line that sweeps down once on entry */
+#tactical-hud .intro-splash::after {
+  content: '';
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 40%, rgba(0,240,255,0.05) 50%, transparent 60%);
+  animation: hudIntroScan 1.2s cubic-bezier(0.4, 0, 0.6, 1) 0.1s both;
+}
+@keyframes hudIntroScan {
+  from { transform: translateY(-120%); }
+  to   { transform: translateY(120%); }
 }
 #tactical-hud .intro-splash.fade-out {
-  opacity: 0; transform: scale(1.05); pointer-events: none;
+  opacity: 0; transform: scale(1.04); pointer-events: none;
 }
-#tactical-hud .intro-tag {
-  display: inline-flex; align-items: center; gap: 8px;
-  padding: 6px 12px;
-  border: 1px solid rgba(0,240,255,0.4);
-  background: linear-gradient(90deg, rgba(0,240,255,0.1), transparent);
-  font-family: var(--font-mono); font-size: 10px;
-  letter-spacing: 0.18em; text-transform: uppercase;
-  color: #00f0ff;
-  border-radius: 3px; margin-bottom: 24px;
-  align-self: flex-start;
-  animation: hudIntroIn 0.6s ease both;
-}
-#tactical-hud .intro-tag .sq {
-  width: 7px; height: 7px;
-  background: #00f0ff;
-  box-shadow: 0 0 10px #00f0ff;
-}
-#tactical-hud .intro-tag .sep { color: rgba(255,255,255,0.2); }
-#tactical-hud .intro-tag .num { color: #8893a8; }
-@keyframes hudIntroIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; } }
 #tactical-hud .intro-mega {
   font-family: var(--font-display); font-weight: 900;
   font-size: 56px; line-height: 0.95; letter-spacing: -0.04em;
   text-transform: uppercase; margin: 0;
 }
-#tactical-hud .intro-mega > div { min-height: 0.95em; }
+/* Each line clips overflow so the slide-up starts hidden */
+#tactical-hud .intro-line {
+  overflow: hidden;
+  padding-bottom: 0.08em; /* prevent descender clip on transform */
+}
+#tactical-hud .intro-line > span {
+  display: inline-block;
+  will-change: transform, opacity;
+  animation: hudSlideUp 0.65s cubic-bezier(0.16, 1, 0.3, 1) var(--intro-delay, 0ms) both;
+}
+@keyframes hudSlideUp {
+  from { transform: translateY(110%) skewY(2deg); opacity: 0; }
+  to   { transform: none; opacity: 1; }
+}
 #tactical-hud .intro-mega .fill {
   background: linear-gradient(180deg, #fff 0%, #8891a5 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
@@ -215,25 +220,10 @@
 #tactical-hud .intro-mega .accent {
   background: linear-gradient(90deg, #00f0ff 0%, oklch(0.68 0.28 330) 100%);
   -webkit-background-clip: text; background-clip: text; color: transparent;
-  filter: drop-shadow(0 0 18px rgba(0,240,255,0.4));
 }
 #tactical-hud .intro-mega .outline {
   -webkit-text-stroke: 1.5px #00f0ff;
   color: transparent;
-  text-shadow: 0 0 18px rgba(0,240,255,0.4);
-}
-#tactical-hud .intro-caret {
-  display: inline-block; width: 10px; height: 0.85em;
-  background: #00f0ff; box-shadow: 0 0 12px #00f0ff;
-  vertical-align: -2px; margin-left: 4px;
-  animation: hudCaret 0.7s steps(2) infinite;
-}
-#tactical-hud .intro-load {
-  margin-top: 30px;
-  font-family: var(--font-mono); font-size: 11px;
-  letter-spacing: 0.16em; color: #00f0ff;
-  text-transform: uppercase;
-  animation: hudIntroIn 0.4s ease both;
 }
 
 /* ─── CONSOLE / CHAT ────────────────────────────────────────── */
