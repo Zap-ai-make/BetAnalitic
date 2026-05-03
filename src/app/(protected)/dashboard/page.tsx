@@ -177,8 +177,8 @@ function IntroSplash({ onDone }: IntroSplashProps) {
   // Fade out after hold
   useEffect(() => {
     if (phase !== "hold") return
-    const tOut  = setTimeout(() => setPhase("out"),  1000)
-    const tDone = setTimeout(() => onDoneRef.current(), 1700)
+    const tOut  = setTimeout(() => setPhase("out"),  3400)
+    const tDone = setTimeout(() => onDoneRef.current(), 4100)
     return () => { clearTimeout(tOut); clearTimeout(tDone) }
   }, [phase])
 
