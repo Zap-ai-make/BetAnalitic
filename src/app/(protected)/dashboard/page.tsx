@@ -121,20 +121,47 @@ function AgentFace({ id, size = 36 }: { id: "Oracle" | AgentId; size?: number })
 // Module-level flag: false on full page load, true after first play within same SPA session
 let introShownThisSession = false
 
-// ── Intro splash (CSS-animated) ──────────────────────────────
+// ── Intro splash (CSS-animated + typewriter subtitle) ────────
 interface IntroSplashProps { onDone: () => void }
 
+const INTRO_SUBTITLE =
+  "Compos secrètes · Blessures cachées · Dynamiques de vestiaire · Forme réelle · Sentiment du marché — " +
+  "tout ce que les bookmakers ne veulent pas que vous sachiez."
+
 function IntroSplash({ onDone }: IntroSplashProps) {
-  const [phase, setPhase] = useState<"in" | "out">("in")
+  const [phase, setPhase] = useState<"in" | "type" | "hold" | "out">("in")
+  const [typed, setTyped] = useState("")
   const onDoneRef = useRef(onDone)
   onDoneRef.current = onDone
 
+  // Start typewriter after the 3 lines have slid in (~1270ms)
   useEffect(() => {
-    // Lines stagger at 0ms / 300ms / 620ms, each takes 600ms → all done ~1220ms
-    const tOut  = setTimeout(() => setPhase("out"),  1800)
-    const tDone = setTimeout(() => onDoneRef.current(), 2500)
-    return () => { clearTimeout(tOut); clearTimeout(tDone) }
+    const t = setTimeout(() => setPhase("type"), 1350)
+    return () => clearTimeout(t)
   }, [])
+
+  // Typewriter loop
+  useEffect(() => {
+    if (phase !== "type") return
+    let i = 0
+    const id = setInterval(() => {
+      i++
+      setTyped(INTRO_SUBTITLE.slice(0, i))
+      if (i >= INTRO_SUBTITLE.length) {
+        clearInterval(id)
+        setPhase("hold")
+      }
+    }, 20)
+    return () => clearInterval(id)
+  }, [phase])
+
+  // After hold, fade out
+  useEffect(() => {
+    if (phase !== "hold") return
+    const tOut  = setTimeout(() => setPhase("out"), 900)
+    const tDone = setTimeout(() => onDoneRef.current(), 1600)
+    return () => { clearTimeout(tOut); clearTimeout(tDone) }
+  }, [phase])
 
   return (
     <div className={`intro-splash${phase === "out" ? " fade-out" : ""}`}>
@@ -149,6 +176,12 @@ function IntroSplash({ onDone }: IntroSplashProps) {
           <span className="outline">DECODE IT.</span>
         </div>
       </h1>
+      {phase !== "in" && (
+        <p className="intro-subtitle">
+          {typed}
+          {phase === "type" && <span className="intro-sub-caret" />}
+        </p>
+      )}
     </div>
   )
 }

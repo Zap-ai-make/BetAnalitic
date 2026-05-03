@@ -225,6 +225,22 @@
   -webkit-text-stroke: 1.5px #00f0ff;
   color: transparent;
 }
+#tactical-hud .intro-subtitle {
+  margin: 28px 0 0;
+  font-family: var(--font-mono); font-size: 13px;
+  line-height: 1.75; letter-spacing: 0.02em;
+  color: #6b7a90;
+  max-width: 380px;
+  animation: hudLineIn 0.35s ease both;
+}
+#tactical-hud .intro-sub-caret {
+  display: inline-block;
+  width: 7px; height: 0.82em;
+  background: #00f0ff;
+  box-shadow: 0 0 10px rgba(0,240,255,0.7);
+  vertical-align: -2px; margin-left: 2px;
+  animation: hudCaret 0.8s steps(2) infinite;
+}
 
 /* ─── CONSOLE / CHAT ────────────────────────────────────────── */
 #tactical-hud .console {
