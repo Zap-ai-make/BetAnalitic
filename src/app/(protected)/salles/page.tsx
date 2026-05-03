@@ -7,11 +7,13 @@ import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
 import { DashboardNav } from "~/components/shared/DashboardNav"
 import { Header } from "~/components/shared/Header"
+import { useLang } from "~/lib/lang"
 
 type ViewMode = "my-rooms" | "explore"
 
 // ── Create Room Modal ─────────────────────────────────────────
 function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreated: (id: string) => void }) {
+  const { t } = useLang()
   const [name, setName] = React.useState("")
   const [description, setDescription] = React.useState("")
   const [visibility, setVisibility] = React.useState<"PUBLIC" | "PRIVATE" | "INVITE_ONLY">("PUBLIC")
@@ -34,7 +36,7 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
       <div className="relative w-full max-w-md bg-bg-secondary border border-bg-tertiary rounded-2xl p-6 space-y-5 max-h-[85vh] overflow-y-auto">
         {/* Title */}
         <div className="flex items-center justify-between">
-          <h2 className="font-display text-lg font-bold text-text-primary">Créer une salle</h2>
+          <h2 className="font-display text-lg font-bold text-text-primary">{t.salles.createRoom}</h2>
           <button onClick={onClose} className="text-text-tertiary hover:text-text-primary transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -43,7 +45,7 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Nom de la salle *</label>
+            <label className="text-sm font-medium text-text-secondary">{t.salles.roomName}</label>
             <input
               type="text"
               value={name}
@@ -59,11 +61,11 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
           {/* Description */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Description <span className="text-text-tertiary">(optionnel)</span></label>
+            <label className="text-sm font-medium text-text-secondary">{t.salles.description} <span className="text-text-tertiary">({t.salles.optional})</span></label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Décrivez votre salle..."
+              placeholder={t.salles.descriptionPlaceholder}
               maxLength={200}
               rows={2}
               className="w-full px-4 py-3 rounded-xl bg-bg-primary border border-bg-tertiary focus:border-accent-cyan focus:outline-none text-text-primary placeholder:text-text-tertiary transition-colors resize-none"
@@ -72,7 +74,7 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
           {/* Visibility */}
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-text-secondary">Visibilité</label>
+            <label className="text-sm font-medium text-text-secondary">{t.salles.visibility}</label>
             <div className="grid grid-cols-3 gap-2">
               {(["PUBLIC", "PRIVATE", "INVITE_ONLY"] as const).map((v) => (
                 <button
@@ -86,7 +88,7 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
                       : "bg-bg-primary border-bg-tertiary text-text-secondary hover:border-bg-tertiary/80"
                   )}
                 >
-                  {v === "PUBLIC" ? "🌍 Publique" : v === "PRIVATE" ? "🔒 Privée" : "✉️ Invitation"}
+                  {v === "PUBLIC" ? t.salles.visPublic : v === "PRIVATE" ? t.salles.visPrivate : t.salles.visInvite}
                 </button>
               ))}
             </div>
@@ -101,7 +103,7 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
             disabled={createRoom.isPending || name.trim().length < 3}
             className="w-full py-3 bg-accent-cyan text-bg-primary rounded-xl font-semibold text-sm disabled:opacity-50 transition-opacity min-h-11"
           >
-            {createRoom.isPending ? "Création..." : "Créer la salle"}
+            {createRoom.isPending ? t.salles.creating : t.salles.create}
           </button>
         </form>
       </div>
@@ -111,6 +113,8 @@ function CreateRoomModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
 export default function SallesPage() {
   const router = useRouter()
+  const { t, lang } = useLang()
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
   const utils = api.useUtils()
   const [viewMode, setViewMode] = React.useState<ViewMode>("my-rooms")
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -142,14 +146,14 @@ export default function SallesPage() {
       <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
         <div className="px-4 pt-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h1 className="font-display text-xl font-bold text-text-primary">Salles</h1>
+            <h1 className="font-display text-xl font-bold text-text-primary">{t.salles.title}</h1>
             {viewMode === "my-rooms" && (
               <button
                 className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm min-h-11 flex items-center gap-2"
                 onClick={() => setShowCreate(true)}
               >
                 <Plus className="w-4 h-4" />
-                Créer
+                {t.salles.createBtn}
               </button>
             )}
           </div>
@@ -165,7 +169,7 @@ export default function SallesPage() {
                   : "bg-bg-tertiary text-text-secondary"
               )}
             >
-              Mes Salles
+              {t.salles.myRooms}
             </button>
             <button
               onClick={() => setViewMode("explore")}
@@ -176,7 +180,7 @@ export default function SallesPage() {
                   : "bg-bg-tertiary text-text-secondary"
               )}
             >
-              Explorer
+              {t.salles.explore}
             </button>
           </div>
 
@@ -188,7 +192,7 @@ export default function SallesPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher une salle..."
+                placeholder={t.salles.searchPlaceholder}
                 className={cn(
                   "w-full pl-10 pr-10 py-3 rounded-xl bg-bg-secondary",
                   "text-text-primary placeholder:text-text-tertiary",
@@ -222,15 +226,15 @@ export default function SallesPage() {
           ) : (rooms ?? []).length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <div className="text-6xl">💬</div>
-              <h2 className="font-display text-xl text-text-primary">Aucune salle</h2>
+              <h2 className="font-display text-xl text-text-primary">{t.salles.noRooms}</h2>
               <p className="text-text-tertiary text-center max-w-md">
-                Rejoignez une salle depuis l&apos;onglet Explorer
+                {t.salles.noRoomsHint}
               </p>
               <button
                 onClick={() => setViewMode("explore")}
                 className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg font-semibold text-sm"
               >
-                Explorer les salles
+                {t.salles.exploreRooms}
               </button>
             </div>
           ) : (
@@ -256,7 +260,7 @@ export default function SallesPage() {
                   </h3>
                   {room.type === "OFFICIAL" && (
                     <span className="px-2 py-0.5 bg-accent-cyan/10 text-accent-cyan text-xs rounded-full">
-                      Officiel
+                      {t.salles.official}
                     </span>
                   )}
                 </div>
@@ -282,13 +286,13 @@ export default function SallesPage() {
             <div className="flex items-center gap-4 text-xs text-text-secondary">
               <div className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
-                <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
+                <span>{room.memberCount} {t.salles.members}{room.memberCount > 1 ? "s" : ""}</span>
               </div>
               {room.match && (
                 <div className="flex items-center gap-1.5">
                   <Clock className="w-4 h-4" />
                   <span>
-                    {new Date(room.match.kickoffTime).toLocaleDateString("fr-FR", {
+                    {new Date(room.match.kickoffTime).toLocaleDateString(locale, {
                       day: "numeric",
                       month: "short",
                     })}
@@ -328,6 +332,7 @@ export default function SallesPage() {
  */
 function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
   const router = useRouter()
+  const { t } = useLang()
   const utils = api.useUtils()
   const { data: allRooms, isLoading } = api.room.getPublicRooms.useQuery()
 
@@ -367,10 +372,10 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
       <div className="flex flex-col items-center justify-center py-12 gap-4">
         <div className="text-6xl">🔍</div>
         <h2 className="font-display text-xl text-text-primary">
-          {searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucune salle disponible"}
+          {searchQuery ? `${t.salles.noResults} "${searchQuery}"` : t.salles.noRoomsAvailable}
         </h2>
         <p className="text-text-tertiary text-center max-w-md">
-          {searchQuery ? "Essayez un autre terme de recherche" : "Les salles apparaîtront ici"}
+          {searchQuery ? t.salles.tryAnotherSearch : t.salles.roomsWillAppear}
         </p>
       </div>
     )
@@ -383,7 +388,7 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
     <div className="space-y-6">
       {officialRooms.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-display font-semibold text-text-primary">Salles Officielles</h2>
+          <h2 className="font-display font-semibold text-text-primary">{t.salles.officialRooms}</h2>
           {officialRooms.map((room) => (
             <RoomDiscoveryCard
               key={room.id}
@@ -398,7 +403,7 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
 
       {communityRooms.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-display font-semibold text-text-primary">Salles Communautaires</h2>
+          <h2 className="font-display font-semibold text-text-primary">{t.salles.communityRooms}</h2>
           {communityRooms.map((room) => (
             <RoomDiscoveryCard
               key={room.id}
@@ -414,10 +419,10 @@ function ExploreRoomsContent({ searchQuery }: { searchQuery: string }) {
   )
 }
 
-const VISIBILITY_LABELS: Record<string, { emoji: string; label: string; color: string }> = {
-  PUBLIC: { emoji: "🌍", label: "Publique", color: "text-green-400" },
-  PRIVATE: { emoji: "🔒", label: "Privée", color: "text-text-tertiary" },
-  INVITE_ONLY: { emoji: "✉️", label: "Invitation", color: "text-accent-gold" },
+const VISIBILITY_COLORS: Record<string, string> = {
+  PUBLIC: "text-green-400",
+  PRIVATE: "text-text-tertiary",
+  INVITE_ONLY: "text-accent-gold",
 }
 
 function RoomDiscoveryCard({
@@ -442,7 +447,12 @@ function RoomDiscoveryCard({
   onJoin: () => void
   isJoining: boolean
 }) {
-  const vis = VISIBILITY_LABELS[room.visibility] ?? VISIBILITY_LABELS.PUBLIC!
+  const { t } = useLang()
+  const visColor = VISIBILITY_COLORS[room.visibility] ?? "text-green-400"
+  const visLabel = room.visibility === "PUBLIC" ? t.salles.visPublicLabel
+    : room.visibility === "PRIVATE" ? t.salles.visPrivateLabel
+    : t.salles.visInviteLabel
+  const visEmoji = room.visibility === "PUBLIC" ? "🌍" : room.visibility === "PRIVATE" ? "🔒" : "✉️"
   const isPublic = room.visibility === "PUBLIC"
 
   return (
@@ -464,7 +474,7 @@ function RoomDiscoveryCard({
             </h3>
             {room.type === "OFFICIAL" && (
               <span className="px-2 py-0.5 bg-accent-cyan/10 text-accent-cyan text-xs rounded-full">
-                Officiel
+                {t.salles.official}
               </span>
             )}
           </div>
@@ -472,7 +482,7 @@ function RoomDiscoveryCard({
             <p className="text-sm text-text-tertiary truncate mt-1">{room.description}</p>
           )}
           <p className="text-xs text-text-tertiary mt-1">
-            Créé par {room.owner.displayName ?? room.owner.username}
+            {t.salles.createdBy} {room.owner.displayName ?? room.owner.username}
           </p>
         </div>
       </div>
@@ -482,10 +492,10 @@ function RoomDiscoveryCard({
         <div className="flex items-center gap-4 text-xs text-text-secondary">
           <div className="flex items-center gap-1.5">
             <Users className="w-4 h-4" />
-            <span>{room.memberCount} membre{room.memberCount > 1 ? "s" : ""}</span>
+            <span>{room.memberCount} {t.salles.members}{room.memberCount > 1 ? "s" : ""}</span>
           </div>
-          <span className={cn("text-xs font-medium", vis.color)}>
-            {vis.emoji} {vis.label}
+          <span className={cn("text-xs font-medium", visColor)}>
+            {visEmoji} {visLabel}
           </span>
         </div>
 
@@ -494,7 +504,7 @@ function RoomDiscoveryCard({
             onClick={(e) => { e.stopPropagation(); onAccess() }}
             className="px-3 py-1.5 bg-accent-cyan/10 text-accent-cyan text-xs font-semibold rounded-lg hover:bg-accent-cyan/20 transition-colors shrink-0"
           >
-            Accéder →
+            {t.salles.access}
           </button>
         ) : isPublic ? (
           <button
@@ -502,10 +512,10 @@ function RoomDiscoveryCard({
             disabled={isJoining}
             className="px-3 py-1.5 bg-accent-cyan text-bg-primary text-xs font-semibold rounded-lg hover:bg-accent-cyan/90 transition-colors shrink-0 disabled:opacity-50"
           >
-            {isJoining ? "..." : "Rejoindre"}
+            {isJoining ? "..." : t.salles.join}
           </button>
         ) : (
-          <span className="text-xs text-text-tertiary shrink-0">🔒 Sur invitation</span>
+          <span className="text-xs text-text-tertiary shrink-0">{t.salles.inviteOnly}</span>
         )}
       </div>
     </div>

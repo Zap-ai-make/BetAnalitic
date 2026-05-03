@@ -119,8 +119,10 @@ function AgentFace({ id, size = 36 }: { id: "Oracle" | AgentId; size?: number })
   )
 }
 
-// Module-level flag: false on full page load, true after first play within same SPA session
-let introShownThisSession = false
+// sessionStorage key: survives SPA navigation, cleared on tab close / reload
+const INTRO_KEY = "introShown"
+const introShownThisSession = () =>
+  typeof window !== "undefined" && sessionStorage.getItem(INTRO_KEY) === "1"
 
 // ── Intro splash ─────────────────────────────────────────────
 interface IntroSplashProps { onDone: () => void }
@@ -753,7 +755,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
 // ── Main page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [intro, setIntro] = useState(!introShownThisSession)
+  const [intro, setIntro] = useState(() => !introShownThisSession())
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
   const [pendingAgent, setPendingAgent] = useState<string | null>(null)
 
@@ -773,7 +775,7 @@ export default function DashboardPage() {
   }, [])
 
   const handleIntroDone = () => {
-    introShownThisSession = true
+    sessionStorage.setItem(INTRO_KEY, "1")
     setIntro(false)
   }
 

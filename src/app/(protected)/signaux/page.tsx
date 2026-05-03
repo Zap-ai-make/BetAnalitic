@@ -10,6 +10,7 @@ import { api } from "~/trpc/react"
 import { type Balance, readBalance } from "~/lib/balance"
 import { predictionLabel, SIGNAL_TYPE_LABELS } from "~/lib/labels"
 import { CouponPanel } from "~/components/features/betting/CouponPanel"
+import { useLang } from "~/lib/lang"
 
 function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0]!
@@ -21,12 +22,12 @@ function addDays(dateStr: string, days: number): string {
   return toDateStr(d)
 }
 
-function signalLevel(confidence: number) {
+function signalLevel(confidence: number, t: { signalStrong: string; signalMedium: string; signalWeak: string }) {
   return confidence >= 0.75
-    ? { label: "SIGNAL FORT",   color: "text-red-400",      border: "border-accent-cyan/60", dot: "bg-red-400" }
+    ? { label: t.signalStrong, color: "text-red-400",      border: "border-accent-cyan/60", dot: "bg-red-400" }
     : confidence >= 0.60
-    ? { label: "SIGNAL MOYEN",  color: "text-amber-400",    border: "border-amber-400/40",   dot: "bg-amber-400" }
-    : { label: "SIGNAL FAIBLE", color: "text-text-tertiary", border: "border-bg-tertiary",   dot: "bg-text-tertiary" }
+    ? { label: t.signalMedium, color: "text-amber-400",    border: "border-amber-400/40",   dot: "bg-amber-400" }
+    : { label: t.signalWeak,   color: "text-text-tertiary", border: "border-bg-tertiary",   dot: "bg-text-tertiary" }
 }
 
 // ─── Signal Card ──────────────────────────────────────────────────────────────
@@ -55,10 +56,12 @@ const SignalCard = React.memo(function SignalCard({
   onToggle: (id: string) => void
   onRapport: (matchId: string) => void
 }) {
-  const level = signalLevel(pick.confidence)
+  const { t, lang } = useLang()
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
+  const level = signalLevel(pick.confidence, t.analysis)
   const pct = Math.round(pick.confidence * 100)
   const kickoff = pick.expiresAt
-    ? new Date(pick.expiresAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+    ? new Date(pick.expiresAt).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
     : "—"
   const signalTypeLabel = SIGNAL_TYPE_LABELS[pick.signalType as keyof typeof SIGNAL_TYPE_LABELS] ?? pick.signalType
   const ev = pick.confidence * pick.odds - 1
@@ -98,7 +101,7 @@ const SignalCard = React.memo(function SignalCard({
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         {pick.agentReports.length > 0 && (
           <span className="text-[10px] text-text-tertiary">
-            {supportingAgents}/{pick.agentReports.length} agents en accord
+            {supportingAgents}/{pick.agentReports.length} {t.signaux.agentsAgree}
           </span>
         )}
         {ev > 0.05 && (
@@ -116,7 +119,7 @@ const SignalCard = React.memo(function SignalCard({
           className="flex-1 text-xs py-1.5 rounded-lg border border-bg-tertiary text-text-secondary hover:text-accent-cyan hover:border-accent-cyan/40 transition-colors flex items-center justify-center gap-1"
         >
           <FileText className="h-3 w-3" />
-          Rapport
+          {t.signaux.report}
         </button>
         <button
           onClick={() => onToggle(pick.id)}
@@ -128,7 +131,7 @@ const SignalCard = React.memo(function SignalCard({
           )}
         >
           {isSelected ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-          {isSelected ? "Retirer" : "Coupon"}
+          {isSelected ? t.analysis.removeCoupon : t.analysis.addCoupon}
         </button>
       </div>
     </div>
@@ -139,6 +142,8 @@ const SignalCard = React.memo(function SignalCard({
 
 export default function SignauxPage() {
   const router = useRouter()
+  const { t, lang } = useLang()
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
 
   // ── Date picker ───────────────────────────────────────────────────────────
   const todayStr = React.useMemo(() => toDateStr(new Date()), [])
@@ -154,7 +159,7 @@ export default function SignauxPage() {
   const prevDay = () => { if (!isMinDate) setSelectedDate(addDays(selectedDate, -1)) }
   const nextDay = () => { if (!isToday) setSelectedDate(addDays(selectedDate, 1)) }
 
-  const displayDate = new Date(selectedDate + "T12:00:00").toLocaleDateString("fr-FR", {
+  const displayDate = new Date(selectedDate + "T12:00:00").toLocaleDateString(locale, {
     weekday: "short", day: "numeric", month: "short",
   })
 
@@ -196,15 +201,15 @@ export default function SignauxPage() {
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-bold text-text-primary flex items-center gap-2">
             <Zap className="h-5 w-5 text-accent-cyan" />
-            Intelligence Briefing
+            {t.signaux.title}
           </h1>
           {isToday ? (
             <span className="text-[10px] font-bold uppercase tracking-wider text-accent-cyan bg-accent-cyan/10 border border-accent-cyan/30 px-2 py-0.5 rounded-full">
-              Aujourd&apos;hui
+              {t.signaux.todayBadge}
             </span>
           ) : (
             <span className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary bg-bg-tertiary border border-bg-tertiary/60 px-2 py-0.5 rounded-full">
-              Historique
+              {t.signaux.historyBadge}
             </span>
           )}
         </div>
@@ -254,12 +259,12 @@ export default function SignauxPage() {
               <div>
                 {picksStats.yesterday.total > 0 && (
                   <p className="text-xs text-text-primary font-medium">
-                    IA hier : ✅ {picksStats.yesterday.correct}/{picksStats.yesterday.total} corrects
+                    {t.analysis.aiYesterday} : ✅ {picksStats.yesterday.correct}/{picksStats.yesterday.total} {t.analysis.correct}
                   </p>
                 )}
                 {picksStats.last30Days.accuracy !== null && (
                   <p className="text-xs text-text-tertiary">
-                    Précision 30j : {picksStats.last30Days.accuracy}%
+                    {t.analysis.accuracy30} : {picksStats.last30Days.accuracy}%
                   </p>
                 )}
               </div>
@@ -270,7 +275,7 @@ export default function SignauxPage() {
           {aiPicks.length > 0 && (
             <div className="flex items-center justify-between">
               <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-wide">
-                Signaux
+                {t.signaux.signals}
               </h2>
               <span className="text-xs text-text-tertiary">
                 {aiPicks.length} signal{aiPicks.length > 1 ? "s" : ""}
@@ -293,12 +298,12 @@ export default function SignauxPage() {
               <div className="text-4xl mb-3">🤖</div>
               {isToday ? (
                 <>
-                  <p className="text-sm text-text-secondary font-medium">Aucun signal pour aujourd&apos;hui</p>
-                  <p className="text-xs text-text-tertiary mt-1">Les agents analysent les matchs à 08:00</p>
+                  <p className="text-sm text-text-secondary font-medium">{t.analysis.noSignals}</p>
+                  <p className="text-xs text-text-tertiary mt-1">{t.analysis.noSignalsHint}</p>
                 </>
               ) : (
                 <p className="text-sm text-text-secondary font-medium">
-                  Aucun signal pour le {displayDate}
+                  {t.signaux.noSignalForDate} {displayDate}
                 </p>
               )}
             </div>

@@ -11,6 +11,7 @@ import {
   ChevronDown, Search, X, Brain, TicketPlus, Calendar,
   Check, Loader2, ChevronRight,
 } from "lucide-react"
+import { useLang } from "~/lib/lang"
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -126,8 +127,8 @@ function vpsStatus(s: string): "live" | "upcoming" | "finished" {
   return "upcoming"
 }
 
-function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })
+function fmtTime(iso: string, locale: string) {
+  return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
 }
 
 function fmtDate(d: Date) {
@@ -138,6 +139,8 @@ function fmtDate(d: Date) {
 function MatchRow({ match }: { match: VpsMatch }) {
   const router = useRouter()
   const { addMatch, removeMatch, isSelected } = useCouponStore()
+  const { t, lang } = useLang()
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
   const selected = isSelected(match.match_id)
   const status = vpsStatus(match.status)
 
@@ -151,10 +154,10 @@ function MatchRow({ match }: { match: VpsMatch }) {
         homeTeam: match.home_team,
         awayTeam: match.away_team,
         league: match.competition,
-        time: fmtTime(match.date_iso),
+        time: fmtTime(match.date_iso, locale),
         addedAt: new Date(),
         odds: (match.odds["1"] != null && match.odds.X != null && match.odds["2"] != null)
-          ? { "1": match.odds["1"]!, X: match.odds.X!, "2": match.odds["2"]! }
+          ? { "1": match.odds["1"], X: match.odds.X, "2": match.odds["2"] }
           : undefined,
       })
       router.push("/paris")
@@ -169,7 +172,7 @@ function MatchRow({ match }: { match: VpsMatch }) {
       awayTeam: match.away_team,
       competition: match.competition,
       country: match.country ?? "",
-      time: fmtTime(match.date_iso),
+      time: fmtTime(match.date_iso, locale),
       status,
     }))
     router.push("/dashboard")
@@ -186,16 +189,16 @@ function MatchRow({ match }: { match: VpsMatch }) {
       <div className="px-4 pt-3 pb-2">
         {/* Time + status */}
         <div className="flex items-center justify-between mb-2.5">
-          <span className="text-text-tertiary text-xs font-mono">{fmtTime(match.date_iso)}</span>
+          <span className="text-text-tertiary text-xs font-mono">{fmtTime(match.date_iso, locale)}</span>
           {status === "live" ? (
             <span className="flex items-center gap-1 text-xs font-semibold text-red-400">
               <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
               LIVE
             </span>
           ) : status === "finished" ? (
-            <span className="text-xs text-text-tertiary font-medium">Terminé</span>
+            <span className="text-xs text-text-tertiary font-medium">{t.matches.finished}</span>
           ) : (
-            <span className="text-xs text-text-tertiary font-medium">À venir</span>
+            <span className="text-xs text-text-tertiary font-medium">{t.matches.upcoming}</span>
           )}
         </div>
 
@@ -231,7 +234,7 @@ function MatchRow({ match }: { match: VpsMatch }) {
           className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-sm font-medium text-text-secondary hover:text-accent-cyan hover:bg-accent-cyan/5 transition-colors rounded-bl-xl"
         >
           <Brain className="w-3.5 h-3.5" />
-          Analyser
+          {t.matches.analyze}
         </button>
         <div className="w-px bg-bg-tertiary" />
         <button
@@ -244,7 +247,7 @@ function MatchRow({ match }: { match: VpsMatch }) {
           )}
         >
           {selected ? <Check className="w-3.5 h-3.5" /> : <TicketPlus className="w-3.5 h-3.5" />}
-          {selected ? "Ajouté" : "Coupon"}
+          {selected ? t.matches.added : t.matches.addToCoupon}
         </button>
       </div>
     </div>
@@ -268,6 +271,8 @@ function CompHeader({ country, competition }: { country: string; competition: st
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function MatchesPage() {
+  const { t, lang } = useLang()
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
   const [searchQuery, setSearchQuery] = useState("")
   const [countryFilter, setCountryFilter] = useState<string | null>(null)
   const [competitionFilter, setCompetitionFilter] = useState<string | null>(null)
@@ -365,14 +370,14 @@ export default function MatchesPage() {
       {/* Sticky filter bar */}
       <div className="sticky top-14 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-xl font-bold text-text-primary">Matchs</h1>
+          <h1 className="font-display text-xl font-bold text-text-primary">{t.matches.title}</h1>
           {activeFilters > 0 && (
             <button
               onClick={clearFilters}
               className="flex items-center gap-1.5 text-xs text-accent-cyan"
             >
               <X className="w-3.5 h-3.5" />
-              Effacer ({activeFilters})
+              {t.matches.clear} ({activeFilters})
             </button>
           )}
         </div>
@@ -384,7 +389,7 @@ export default function MatchesPage() {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Équipe, compétition..."
+            placeholder={t.matches.searchPlaceholder}
             className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-cyan focus:outline-none transition-colors"
           />
           {searchQuery && (
@@ -405,8 +410,8 @@ export default function MatchesPage() {
             <Calendar className="w-3.5 h-3.5" />
             <span>
               {selectedDate === fmtDate(new Date())
-                ? "Aujourd'hui"
-                : new Date(selectedDate + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                ? t.matches.today
+                : new Date(selectedDate + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "short" })}
             </span>
             <input
               type="date"
@@ -429,7 +434,7 @@ export default function MatchesPage() {
             >
               {countryFilter
                 ? <><span>{COUNTRY_FLAG[countryFilter] ?? "⚽"}</span><span className="truncate">{countryFilter}</span></>
-                : "Pays"
+                : t.matches.country
               }
               <ChevronDown className="w-3.5 h-3.5 shrink-0" />
             </button>
@@ -444,7 +449,7 @@ export default function MatchesPage() {
                       !countryFilter ? "text-accent-cyan" : "text-text-primary"
                     )}
                   >
-                    Tous les pays
+                    {t.matches.allCountries}
                   </button>
                   <div className="border-t border-bg-tertiary" />
                   {countries.map((c) => (
@@ -476,7 +481,7 @@ export default function MatchesPage() {
                   : "bg-bg-tertiary text-text-secondary"
               )}
             >
-              <span className="truncate">{competitionFilter ?? "Compétition"}</span>
+              <span className="truncate">{competitionFilter ?? t.matches.competition}</span>
               <ChevronDown className="w-3.5 h-3.5 shrink-0" />
             </button>
             {showCompetitions && (
@@ -490,7 +495,7 @@ export default function MatchesPage() {
                       !competitionFilter ? "text-accent-cyan" : "text-text-primary"
                     )}
                   >
-                    Toutes les compétitions
+                    {t.matches.allCompetitions}
                   </button>
                   <div className="border-t border-bg-tertiary" />
                   {competitions.map(([comp, country]) => {
@@ -525,13 +530,13 @@ export default function MatchesPage() {
         {isFetching && (
           <div className="flex items-center justify-center gap-2 py-2">
             <Loader2 className="w-3.5 h-3.5 text-accent-cyan animate-spin" />
-            <p className="text-xs text-text-tertiary">Actualisation…</p>
+            <p className="text-xs text-text-tertiary">{t.matches.refreshing}</p>
           </div>
         )}
 
         {isPlaceholderData && !isFetching && (
           <div className="mt-3 mb-1 px-3 py-2 bg-bg-tertiary rounded-lg text-xs text-text-tertiary text-center">
-            Données de démonstration · <button onClick={() => void refetch()} className="text-accent-cyan underline">Réessayer</button>
+            {t.matches.demoData} · <button onClick={() => void refetch()} className="text-accent-cyan underline">{t.matches.retry}</button>
           </div>
         )}
 
@@ -539,11 +544,11 @@ export default function MatchesPage() {
           <div className="text-center py-16">
             <span className="text-5xl">⚽</span>
             <p className="text-text-secondary mt-4 text-sm">
-              {searchQuery ? `Aucun résultat pour "${searchQuery}"` : "Aucun match pour cette période"}
+              {searchQuery ? `${t.matches.noResults} "${searchQuery}"` : t.matches.noMatchesPeriod}
             </p>
             {activeFilters > 0 && (
               <button onClick={clearFilters} className="mt-4 px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium">
-                Effacer les filtres
+                {t.matches.clearFilters}
               </button>
             )}
           </div>

@@ -11,6 +11,7 @@ import {
   Wallet, Pencil, Check, X, Trash2, TicketPlus,
   Clock, History, ChevronRight, Loader2, TrendingUp,
 } from "lucide-react"
+import { useLang } from "~/lib/lang"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -118,11 +119,12 @@ function fmtDate(iso: string) {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 function StatusBadge({ status }: { status: BetStatus }) {
+  const { t } = useLang()
   const cfg: Record<BetStatus, { label: string; cls: string }> = {
-    pending:   { label: "En cours", cls: "bg-accent-gold/15 text-accent-gold" },
-    won:       { label: "Gagné",    cls: "bg-accent-green/15 text-accent-green" },
-    lost:      { label: "Perdu",    cls: "bg-accent-red/15 text-accent-red" },
-    cancelled: { label: "Annulé",  cls: "bg-bg-tertiary text-text-tertiary" },
+    pending:   { label: t.paris.statusPending,   cls: "bg-accent-gold/15 text-accent-gold" },
+    won:       { label: t.paris.statusWon,        cls: "bg-accent-green/15 text-accent-green" },
+    lost:      { label: t.paris.statusLost,       cls: "bg-accent-red/15 text-accent-red" },
+    cancelled: { label: t.paris.statusCancelled,  cls: "bg-bg-tertiary text-text-tertiary" },
   }
   const { label, cls } = cfg[status]
   return <span className={cn("text-xs px-2 py-0.5 rounded-full font-medium shrink-0", cls)}>{label}</span>
@@ -133,6 +135,7 @@ function StatusBadge({ status }: { status: BetStatus }) {
 function BalanceBar({ balance, currency, onSave }: {
   balance: number; currency: Currency; onSave: (a: number, c: Currency) => void
 }) {
+  const { t } = useLang()
   const [editing, setEditing] = useState(false)
   const [draftAmt, setDraftAmt] = useState("")
   const [draftCur, setDraftCur] = useState<Currency>(currency)
@@ -148,7 +151,7 @@ function BalanceBar({ balance, currency, onSave }: {
     <div className="flex items-center justify-between px-4 py-3 bg-bg-secondary border-b border-bg-tertiary">
       <div className="flex items-center gap-2">
         <Wallet className="w-4 h-4 text-accent-cyan" />
-        <span className="text-sm font-semibold text-text-primary">Paris Virtuels</span>
+        <span className="text-sm font-semibold text-text-primary">{t.paris.virtualBets}</span>
       </div>
       {editing ? (
         <div className="flex items-center gap-2">
@@ -190,10 +193,11 @@ function MatchBuilderCard({ match, selected, onSelect, onRemove }: {
   onSelect: (key: OddKey) => void
   onRemove: () => void
 }) {
-  // V1 = domicile gagne, X = nul, V2 = extérieur gagne (style 1xbet FR)
+  const { t } = useLang()
+  // V1 = home wins, X = draw, V2 = away wins
   const btns: { key: OddKey; label: string; sub: string }[] = [
     { key: "1", label: "V1", sub: match.homeTeam },
-    { key: "X", label: "X",  sub: "Nul" },
+    { key: "X", label: "X",  sub: t.paris.draw },
     { key: "2", label: "V2", sub: match.awayTeam },
   ]
   return (
@@ -227,7 +231,7 @@ function MatchBuilderCard({ match, selected, onSelect, onRemove }: {
           ))}
         </div>
       ) : (
-        <p className="text-xs text-text-tertiary text-center py-1.5 bg-bg-tertiary/50 rounded-lg">Cotes non disponibles</p>
+        <p className="text-xs text-text-tertiary text-center py-1.5 bg-bg-tertiary/50 rounded-lg">{t.paris.noOdds}</p>
       )}
     </div>
   )
@@ -236,12 +240,13 @@ function MatchBuilderCard({ match, selected, onSelect, onRemove }: {
 // ─── Local coupon card (En cours / Historique) ────────────────────────────────
 
 function LocalCouponCard({ coupon, currency }: { coupon: LocalCoupon; currency: Currency }) {
+  const { t } = useLang()
   return (
     <div className="bg-bg-secondary rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <div>
           <p className="text-sm font-bold text-text-primary">
-            Coupon combiné · {coupon.legs.length} match{coupon.legs.length > 1 ? "s" : ""}
+            {t.paris.combinedCoupon} · {coupon.legs.length} match{coupon.legs.length > 1 ? "s" : ""}
           </p>
           <p className="text-xs text-text-tertiary mt-0.5">{fmtDate(coupon.createdAt)}</p>
         </div>
@@ -269,15 +274,15 @@ function LocalCouponCard({ coupon, currency }: { coupon: LocalCoupon; currency: 
 
       <div className="border-t border-bg-tertiary pt-2.5 grid grid-cols-3 gap-2 text-center">
         <div>
-          <p className="text-[10px] text-text-tertiary mb-0.5">Cote totale</p>
+          <p className="text-[10px] text-text-tertiary mb-0.5">{t.paris.totalOdds}</p>
           <p className="font-mono font-bold text-sm text-text-primary">×{coupon.totalOdds.toFixed(2)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-text-tertiary mb-0.5">Mise</p>
+          <p className="text-[10px] text-text-tertiary mb-0.5">{t.paris.stake}</p>
           <p className="font-mono font-bold text-sm text-text-primary">{fmtAmount(coupon.stake, currency)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-text-tertiary mb-0.5">Gain potentiel</p>
+          <p className="text-[10px] text-text-tertiary mb-0.5">{t.paris.potentialWin}</p>
           <p className={cn("font-mono font-bold text-sm", coupon.status === "won" ? "text-accent-green" : "text-accent-cyan")}>
             {fmtAmount(coupon.potentialWin, currency)}
           </p>
@@ -290,6 +295,7 @@ function LocalCouponCard({ coupon, currency }: { coupon: LocalCoupon; currency: 
 // ─── API bet card ─────────────────────────────────────────────────────────────
 
 function ApiBetCard({ bet, currency }: { bet: ApiBet; currency: Currency }) {
+  const { t } = useLang()
   return (
     <div className="bg-bg-secondary rounded-xl p-4 space-y-2.5">
       <div className="flex items-start justify-between gap-2">
@@ -301,12 +307,12 @@ function ApiBetCard({ bet, currency }: { bet: ApiBet; currency: Currency }) {
       </div>
       <div className="grid grid-cols-2 gap-2 text-center">
         <div className="bg-bg-tertiary/60 rounded-lg px-3 py-2">
-          <p className="text-[10px] text-text-tertiary mb-0.5">Mise</p>
+          <p className="text-[10px] text-text-tertiary mb-0.5">{t.paris.stake}</p>
           <p className="font-mono font-bold text-sm text-text-primary">{fmtAmount(bet.stake, currency)}</p>
         </div>
         {(bet.status === "pending" || bet.status === "won") && (
           <div className="bg-bg-tertiary/60 rounded-lg px-3 py-2">
-            <p className="text-[10px] text-text-tertiary mb-0.5">Gain potentiel</p>
+            <p className="text-[10px] text-text-tertiary mb-0.5">{t.paris.potentialWin}</p>
             <p className={cn("font-mono font-bold text-sm", bet.status === "won" ? "text-accent-green" : "text-accent-cyan")}>
               {fmtAmount(bet.potential_win, currency)}
             </p>
@@ -335,6 +341,7 @@ function EmptyState({ icon, title, sub }: { icon: React.ReactNode; title: string
 
 export default function ParisPage() {
   const router = useRouter()
+  const { t } = useLang()
   const { matches: couponMatches, removeMatch, clearCoupon } = useCouponStore()
 
   // Balance — lazy init from localStorage (no hydration flash)
@@ -413,7 +420,7 @@ export default function ParisPage() {
         // Store V1/X/V2 as outcome code + team name for display
         const outcomeCode: Record<OddKey, string> = { "1": "V1", X: "X", "2": "V2" }
         const apiPrediction: Record<OddKey, string> = { "1": "home", X: "draw", "2": "away" }
-        const teamLabel: Record<OddKey, string> = { "1": m.homeTeam, X: "Nul", "2": m.awayTeam }
+        const teamLabel: Record<OddKey, string> = { "1": m.homeTeam, X: t.paris.draw, "2": m.awayTeam }
         return {
           matchId: m.id, homeTeam: m.homeTeam, awayTeam: m.awayTeam,
           predictionLabel: `${outcomeCode[key]} — ${teamLabel[key]}`,
@@ -458,10 +465,10 @@ export default function ParisPage() {
       saveBalance(balance - stake, currency)
       clearCoupon()
       setOddsSelection({})
-      showToast(`✓ Coupon placé — Gain potentiel : ${fmtAmount(potentialWin, currency)}`)
+      showToast(`✓ ${t.paris.couponPlaced} : ${fmtAmount(potentialWin, currency)}`)
       setTab("encours")
     } catch {
-      showToast("Erreur inattendue — réessaie")
+      showToast(t.paris.unexpectedError)
     } finally {
       setPlacing(false)
     }
@@ -483,9 +490,9 @@ export default function ParisPage() {
   void localIds // suppress unused warning
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode; badge?: number }[] = [
-    { id: "coupon",     label: "Coupon",     icon: <TicketPlus className="w-4 h-4" />, badge: couponMatches.length || undefined },
-    { id: "encours",    label: "En cours",   icon: <Clock className="w-4 h-4" />,      badge: totalPending || undefined },
-    { id: "historique", label: "Historique", icon: <History className="w-4 h-4" /> },
+    { id: "coupon",     label: t.paris.tabCoupon,  icon: <TicketPlus className="w-4 h-4" />, badge: couponMatches.length || undefined },
+    { id: "encours",    label: t.paris.tabPending, icon: <Clock className="w-4 h-4" />,      badge: totalPending || undefined },
+    { id: "historique", label: t.paris.tabHistory, icon: <History className="w-4 h-4" /> },
   ]
 
   return (
@@ -539,14 +546,14 @@ export default function ParisPage() {
                   <TicketPlus className="w-7 h-7 text-text-tertiary" />
                 </div>
                 <div>
-                  <p className="font-semibold text-text-primary">Coupon vide</p>
-                  <p className="text-sm text-text-tertiary mt-1">Ajoute des matchs depuis la page Matchs</p>
+                  <p className="font-semibold text-text-primary">{t.paris.emptyCoupon}</p>
+                  <p className="text-sm text-text-tertiary mt-1">{t.paris.addMatchesHint}</p>
                 </div>
                 <button
                   onClick={() => router.push("/matches")}
                   className="flex items-center gap-2 px-4 py-2 bg-accent-cyan/15 text-accent-cyan rounded-lg text-sm font-medium hover:bg-accent-cyan/25 transition-colors"
                 >
-                  Voir les matchs <ChevronRight className="w-4 h-4" />
+                  {t.paris.seeMatches} <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             ) : (
@@ -566,15 +573,15 @@ export default function ParisPage() {
                 {/* Sticky recap */}
                 <div className="sticky bottom-0 -mx-4 px-4 pt-3 pb-2 bg-bg-primary/95 backdrop-blur border-t border-bg-tertiary space-y-3">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-text-tertiary text-xs">{matchesWithOdd.length}/{couponMatches.length} cotes sélectionnées</span>
+                    <span className="text-text-tertiary text-xs">{matchesWithOdd.length}/{couponMatches.length} {t.paris.oddsSelected}</span>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-text-tertiary text-xs">Cote totale</span>
+                      <span className="text-text-tertiary text-xs">{t.paris.totalOdds}</span>
                       <span className="font-mono font-bold text-accent-cyan">×{totalOdds.toFixed(2)}</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 bg-bg-secondary rounded-xl px-4 py-3">
-                    <span className="text-xs text-text-tertiary shrink-0">Mise</span>
+                    <span className="text-xs text-text-tertiary shrink-0">{t.paris.stake}</span>
                     <input
                       type="number"
                       min={0}
@@ -586,12 +593,12 @@ export default function ParisPage() {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-text-tertiary">Gain potentiel</span>
+                    <span className="text-sm text-text-tertiary">{t.paris.potentialWin}</span>
                     <span className="font-mono font-bold text-accent-green">{fmtAmount(potentialWin, currency)}</span>
                   </div>
 
                   {stake > balance && (
-                    <p className="text-xs text-accent-red text-center -mt-1">Solde insuffisant — max {fmtAmount(balance, currency)}</p>
+                    <p className="text-xs text-accent-red text-center -mt-1">{t.paris.insufficientBalance} {fmtAmount(balance, currency)}</p>
                   )}
 
                   <div className="flex gap-2 pb-1">
@@ -599,7 +606,7 @@ export default function ParisPage() {
                       onClick={() => { clearCoupon(); setOddsSelection({}) }}
                       className="shrink-0 px-4 py-2.5 bg-bg-tertiary text-text-secondary rounded-xl text-sm font-medium hover:bg-bg-tertiary/70 transition-colors"
                     >
-                      Vider
+                      {t.paris.clear}
                     </button>
                     <button
                       onClick={() => { void handlePlaceBet() }}
@@ -612,7 +619,7 @@ export default function ParisPage() {
                       )}
                     >
                       {placing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                      Valider le coupon
+                      {t.paris.validateCoupon}
                     </button>
                   </div>
                 </div>
@@ -641,8 +648,8 @@ export default function ParisPage() {
             {!apiLoading && totalPending === 0 && (
               <EmptyState
                 icon={<Clock className="w-6 h-6" />}
-                title="Aucun pari en cours"
-                sub="Tes coupons actifs apparaîtront ici"
+                title={t.paris.noPendingBets}
+                sub={t.paris.pendingHint}
               />
             )}
           </div>
@@ -663,8 +670,8 @@ export default function ParisPage() {
             {!apiLoading && historyCoupons.length === 0 && historyApi.length === 0 && (
               <EmptyState
                 icon={<TrendingUp className="w-6 h-6" />}
-                title="Aucun historique"
-                sub="Tes coupons terminés apparaîtront ici"
+                title={t.paris.noHistory}
+                sub={t.paris.historyHint}
               />
             )}
           </div>
