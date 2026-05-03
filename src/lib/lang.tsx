@@ -201,7 +201,7 @@ export const T = {
       delete: "Delete",
     },
   },
-} as const
+}
 
 export type Translations = typeof T.FR
 
