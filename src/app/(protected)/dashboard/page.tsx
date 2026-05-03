@@ -190,6 +190,8 @@ function IntroSplash({ onDone }: IntroSplashProps) {
       <h1
         className="intro-mega"
         style={{
+          // Once invisible, pull out of flow so subtitle centers without h1 pushing it down
+          position: showTitle ? undefined : "absolute",
           transition: "opacity 0.38s ease, transform 0.38s ease",
           opacity: showTitle ? 1 : 0,
           transform: showTitle ? "none" : "translateY(-12px) scale(0.97)",
