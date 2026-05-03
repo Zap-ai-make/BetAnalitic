@@ -126,11 +126,16 @@ interface IntroSplashProps { onDone: () => void }
 
 // Lines: 3 × 2 chars each → ~1270ms to fully appear
 // Timeline: in(0) → exit-title(1650) → type(2100) → hold → out
+// L0 — prise de conscience (slow, display)
+// L1 — ce que vous pouvez faire (fast, mono list)
+// L2 — transformation CTA (very slow, accent)
 const INTRO_LINES = [
-  "Fini de parier à l'aveugle.",
-  "Compositions secrètes, blessures cachées, tensions de vestiaire, forme réelle des joueurs, signaux de value en direct.",
-  "Tout ce que les bookmakers font pour vous cacher — enfin entre vos mains.",
+  "Les gagnants n'ont pas plus de chance. Ils ont plus d'informations.",
+  "Compositions réelles · Blessures cachées · Tensions de vestiaire · Forme des joueurs · Signaux de value en direct.",
+  "Arrêtez de parier. Commencez à investir.",
 ] as const
+
+const INTRO_SPEEDS = [32, 14, 42] as const
 
 function IntroSplash({ onDone }: IntroSplashProps) {
   const [phase, setPhase] = useState<"in" | "exit-title" | "type" | "hold" | "out">("in")
@@ -169,7 +174,7 @@ function IntroSplash({ onDone }: IntroSplashProps) {
           setTimeout(() => setPhase("hold"), 320)
         }
       }
-    }, lineIdx === 0 ? 28 : 16)
+    }, INTRO_SPEEDS[lineIdx] ?? 18)
     return () => clearInterval(id)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, lineIdx])
@@ -212,7 +217,7 @@ function IntroSplash({ onDone }: IntroSplashProps) {
       {showSub && (
         <div className="intro-subtitle-wrap">
           {INTRO_LINES.map((line, i) => (
-            <p key={i} className={`intro-subtitle${i === 0 ? " intro-subtitle--hook" : ""}`}>
+            <p key={i} className={`intro-subtitle${i === 0 ? " intro-subtitle--hook" : i === INTRO_LINES.length - 1 ? " intro-subtitle--cta" : ""}`}>
               {i < lineIdx
                 ? line
                 : i === lineIdx
