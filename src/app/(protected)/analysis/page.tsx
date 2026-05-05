@@ -3,8 +3,6 @@
 import * as React from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { useLang } from "~/lib/lang"
 import { cn } from "~/lib/utils"
 import { Trash2, Send, Mic, Volume2, Pause, Zap, TrendingUp, MessageSquare, X, Plus } from "lucide-react"
@@ -472,8 +470,6 @@ export default function AnalysisPage() {
   // ─── JSX ──────────────────────────────────────────────────────────────────
   return (
     <div className="bg-bg-primary flex flex-col" style={{ height: "calc(100dvh - var(--header-h))" }}>
-      <Header />
-
       <main className="flex-1 flex flex-col overflow-hidden pb-16">
 
         {/* ── Page Header ───────────────────────────────────────────────── */}
@@ -1117,7 +1113,6 @@ export default function AnalysisPage() {
         </>
       )}
 
-      <DashboardNav />
     </div>
   )
 }

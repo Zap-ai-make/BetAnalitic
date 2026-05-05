@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { ChevronLeft, Check, Crown, Zap } from "lucide-react"
 import { cn } from "~/lib/utils"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { SUBSCRIPTION_PLANS } from "~/lib/subscription/plans"
 
 type Currency = "fcfa" | "usd"
@@ -186,7 +185,6 @@ export default function SubscriptionPage() {
         </div>
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

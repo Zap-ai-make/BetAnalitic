@@ -53,7 +53,7 @@ type SignalDef = {
 
 function buildSignals(home: string, away: string, matchOdds: Record<string, number>): SignalDef[] {
   const h1 = matchOdds["1"] ?? 2
-  const hx = matchOdds["X"] ?? 3.2
+
   const h2 = matchOdds["2"] ?? 3.5
   const favorite = h1 < h2 ? "home" : "away"
   const favOdds = Math.min(h1, h2)

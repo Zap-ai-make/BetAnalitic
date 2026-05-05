@@ -5,8 +5,6 @@
  */
 
 import * as React from "react"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { Search, X } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { api } from "~/trpc/react"
@@ -46,8 +44,6 @@ export default function ExpertsPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      <Header />
-
       {/* Search & Filters */}
       <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
         <div className="px-4 pt-4 space-y-3">
@@ -204,7 +200,6 @@ export default function ExpertsPage() {
         )}
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

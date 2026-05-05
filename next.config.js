@@ -99,8 +99,16 @@ const withPWA = withPWAInit({
 /** @type {import("next").NextConfig} */
 const config = {
   reactStrictMode: true,
+  poweredByHeader: false,
   eslint: {
     ignoreDuringBuilds: true,
+  },
+  compiler: {
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
+  },
+  experimental: {
+    // Tree-shake large icon/component libraries to only import what's used
+    optimizePackageImports: ["lucide-react", "@radix-ui/react-icons"],
   },
   async headers() {
     return [

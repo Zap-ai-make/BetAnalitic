@@ -2,8 +2,6 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { cn } from "~/lib/utils"
 import { Zap, TrendingUp, X, Plus, FileText, ChevronLeft, ChevronRight } from "lucide-react"
 import { api } from "~/trpc/react"
@@ -192,8 +190,6 @@ export default function SignauxPage() {
 
   return (
     <div className="h-full bg-bg-primary flex flex-col">
-      <Header />
-
       {/* Sub-header — sits at top of flex column, never scrolls */}
       <div className="shrink-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
 
@@ -330,7 +326,6 @@ export default function SignauxPage() {
         onClear={() => setSelectedSignals([])}
       />
 
-      <DashboardNav />
     </div>
   )
 }

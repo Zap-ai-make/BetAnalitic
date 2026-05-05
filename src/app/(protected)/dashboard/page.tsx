@@ -2,8 +2,6 @@
 
 import { useEffect, useState, useRef } from "react"
 import { useSession } from "next-auth/react"
-import { DashboardNav } from "~/components/shared/DashboardNav"
-import { Header } from "~/components/shared/Header"
 import { useLang } from "~/lib/lang"
 
 // ── Agent definitions ────────────────────────────────────────
@@ -805,7 +803,6 @@ export default function DashboardPage() {
         style={{ position: "fixed", inset: 0, background: "#030509", display: "flex", flexDirection: "column", overflow: "hidden" }}
       >
         {intro && <IntroSplash onDone={handleIntroDone} />}
-        <Header />
         <div aria-hidden style={{ height: "var(--header-h)", flexShrink: 0 }} />
         <OracleConsole
           username={username}
@@ -815,7 +812,6 @@ export default function DashboardPage() {
           onMatchConsumed={() => { setPendingMatch(null); setPendingAgent(null) }}
         />
       </div>
-      <DashboardNav />
     </>
   )
 }

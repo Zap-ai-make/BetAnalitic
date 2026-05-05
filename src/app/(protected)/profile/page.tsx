@@ -8,8 +8,6 @@ import {
   LogOut, ChevronRight, X, Users,
 } from "lucide-react"
 import { cn } from "~/lib/utils"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { api } from "~/trpc/react"
 
 // ─── Plan config ──────────────────────────────────────────────────────────────
@@ -215,8 +213,6 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      <Header />
-
       <main className="flex-1 pb-28">
 
         {/* ── Hero ──────────────────────────────────────────────────────────── */}
@@ -453,7 +449,6 @@ export default function ProfilePage() {
         </>
       )}
 
-      <DashboardNav />
     </div>
   )
 }

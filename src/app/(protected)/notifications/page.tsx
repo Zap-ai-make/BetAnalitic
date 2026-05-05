@@ -4,7 +4,6 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { ChevronLeft, Bell, Users } from "lucide-react"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { api } from "~/trpc/react"
 
 export default function NotificationsPage() {
@@ -81,7 +80,6 @@ export default function NotificationsPage() {
         )}
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

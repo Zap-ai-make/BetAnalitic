@@ -608,7 +608,7 @@ export const roomRouter = createTRPCRouter({
       const humanMembers = members.map((m) => ({
         userId: m.user.id,
         userName: m.user.displayName ?? m.user.username,
-        userAvatar: m.user.avatarUrl as string | null,
+        userAvatar: m.user.avatarUrl,
         role: m.role,
         joinedAt: m.joinedAt,
         isOnline: false,

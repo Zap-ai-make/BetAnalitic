@@ -25,6 +25,6 @@ export async function GET(
     `/api/matches/${matchId}?${qs.toString()}`,
     apiKey
   )
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

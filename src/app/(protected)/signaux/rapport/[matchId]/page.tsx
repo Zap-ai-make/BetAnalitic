@@ -5,8 +5,6 @@ import { useRouter, useParams } from "next/navigation"
 import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
 import { ChevronLeft, Plus, X } from "lucide-react"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { type Balance, readBalance, fmtAmount } from "~/lib/balance"
 import { predictionLabel } from "~/lib/labels"
 import { CouponPanel } from "~/components/features/betting/CouponPanel"
@@ -191,7 +189,6 @@ export default function RapportPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
-        <Header />
         <main className="flex-1 p-4 pb-20">
           <div className="h-8 bg-bg-secondary rounded-lg animate-pulse mb-4 w-32" />
           <div className="space-y-4">
@@ -200,7 +197,6 @@ export default function RapportPage() {
             ))}
           </div>
         </main>
-        <DashboardNav />
       </div>
     )
   }
@@ -208,7 +204,6 @@ export default function RapportPage() {
   if (signals.length === 0) {
     return (
       <div className="min-h-screen bg-bg-primary flex flex-col">
-        <Header />
         <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="text-4xl mb-3">🤖</div>
@@ -218,7 +213,6 @@ export default function RapportPage() {
             </button>
           </div>
         </main>
-        <DashboardNav />
       </div>
     )
   }
@@ -227,8 +221,6 @@ export default function RapportPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      <Header />
-
       <main className="flex-1 overflow-y-auto pb-32">
         {/* ── Back header ─────────────────────────────────────────────────── */}
         <div className="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-bg-tertiary px-4 py-3">
@@ -357,7 +349,6 @@ export default function RapportPage() {
         onClear={() => setSelectedSignals([])}
       />
 
-      <DashboardNav />
     </div>
   )
 }

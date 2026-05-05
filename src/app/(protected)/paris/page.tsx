@@ -3,8 +3,6 @@
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import { cn } from "~/lib/utils"
 import {
@@ -497,8 +495,6 @@ export default function ParisPage() {
 
   return (
     <div className="h-full bg-bg-primary flex flex-col">
-      <Header />
-
       {/* Toast */}
       {toast && (
         <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 bg-accent-cyan text-bg-primary rounded-xl shadow-lg text-sm font-semibold max-w-72 text-center">
@@ -679,7 +675,6 @@ export default function ParisPage() {
 
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

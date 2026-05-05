@@ -66,7 +66,8 @@ export function useRoomChat({
               userName: (meta.userName as string) ?? "Anonyme",
               userAvatar: meta.userAvatar as string | undefined,
               content: msg.content ?? "",
-              type: (msg.type === "ROOM_MESSAGE" || msg.type === "TYPING") ? "system" : msg.type as "text" | "agent" | "system",
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+              type: (msg.type === "ROOM_MESSAGE" || msg.type === "TYPING") ? "system" : msg.type,
               createdAt: msg.timestamp,
             }
             setMessages((prev) => [...prev, roomMessage])

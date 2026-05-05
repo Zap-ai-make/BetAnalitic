@@ -26,6 +26,6 @@ export async function GET(
     `/api/analytics/match/${matchId}/poisson?${qs.toString()}`,
     apiKey
   )
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

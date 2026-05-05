@@ -29,6 +29,6 @@ export async function POST(
     apiKey,
     { method: "POST", body: JSON.stringify(body) }
   )
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

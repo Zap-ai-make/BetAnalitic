@@ -1,9 +1,14 @@
 "use client"
 
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { cn } from "~/lib/utils"
-import { TypewriterText } from "./TypewriterText"
 import { X } from "lucide-react"
+
+const TypewriterText = dynamic(
+  () => import("./TypewriterText").then((m) => m.TypewriterText),
+  { ssr: false }
+)
 import { CitationLink, type Citation } from "./CitationLink"
 import { AgentFeedback, type FeedbackType } from "./AgentFeedback"
 import { AgentResponseActions } from "./AgentResponseActions"

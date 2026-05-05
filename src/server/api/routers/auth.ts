@@ -55,7 +55,7 @@ const loginSchema = z.object({
 const BCRYPT_COST = 12;
 
 // Token expiration times
-const EMAIL_VERIFICATION_EXPIRY = 24 * 60 * 60 * 1000; // 24 hours
+
 const PASSWORD_RESET_EXPIRY = 60 * 60 * 1000; // 1 hour
 const MAGIC_LINK_EXPIRY = 15 * 60 * 1000; // 15 minutes
 const SESSION_EXPIRY = 30 * 24 * 60 * 60 * 1000; // 30 days

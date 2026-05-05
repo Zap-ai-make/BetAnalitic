@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { cn } from "~/lib/utils"
 import { Trophy, Clock, TrendingUp, Wallet, RefreshCw, ChevronDown, ChevronUp } from "lucide-react"
 
@@ -221,8 +219,6 @@ export default function CouponsPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      <Header />
-
       {/* Title + Refresh */}
       <div className="px-4 pt-4 pb-2 flex items-center justify-between">
         <div>
@@ -326,7 +322,6 @@ export default function CouponsPage() {
         ))}
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

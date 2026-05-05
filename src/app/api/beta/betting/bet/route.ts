@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   if (searchParams.get("per_page")) qs.set("per_page", searchParams.get("per_page")!)
 
   const res = await betaFetch(`/api/betting/bets?${qs.toString()}`, apiKey)
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }
 
@@ -30,11 +30,11 @@ export async function POST(req: NextRequest) {
   const apiKey = await getBetaApiKey(session.user.id)
   if (!apiKey) return NextResponse.json({ error: "BetAnalytic sync failed" }, { status: 503 })
 
-  const body = await req.json()
+  const body: unknown = await req.json()
   const res = await betaFetch("/api/betting/bet", apiKey, {
     method: "POST",
     body: JSON.stringify(body),
   })
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

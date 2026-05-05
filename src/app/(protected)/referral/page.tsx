@@ -4,7 +4,6 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { ChevronLeft, Copy, Check, Share2, Users, TrendingUp, Gift, Loader2 } from "lucide-react"
 import { cn } from "~/lib/utils"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { api } from "~/trpc/react"
 
 export default function ReferralPage() {
@@ -231,7 +230,6 @@ export default function ReferralPage() {
         )}
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

@@ -18,6 +18,6 @@ export async function GET(req: NextRequest) {
   if (searchParams.get("competition")) params.set("competition", searchParams.get("competition")!)
 
   const res = await betaFetch(`/api/matches?${params.toString()}`, apiKey)
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

@@ -13,6 +13,6 @@ export async function GET() {
   if (!apiKey) return NextResponse.json({ error: "BetAnalytic sync failed" }, { status: 503 })
 
   const res = await betaFetch("/api/betting/leaderboard", apiKey)
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

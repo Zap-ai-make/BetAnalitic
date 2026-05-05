@@ -3,8 +3,6 @@
 import { useState, useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
-import { Header } from "~/components/shared/Header"
-import { DashboardNav } from "~/components/shared/DashboardNav"
 import { cn } from "~/lib/utils"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import {
@@ -365,8 +363,6 @@ export default function MatchesPage() {
 
   return (
     <div className="h-full bg-bg-primary flex flex-col">
-      <Header />
-
       {/* Sub-header — sits at top of flex column, never scrolls */}
       <div className="shrink-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between">
@@ -564,7 +560,6 @@ export default function MatchesPage() {
         ))}
       </main>
 
-      <DashboardNav />
     </div>
   )
 }

@@ -5,8 +5,6 @@ import { api } from "~/trpc/react"
 import { Users, Clock, Crown, Plus, Search, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { cn } from "~/lib/utils"
-import { DashboardNav } from "~/components/shared/DashboardNav"
-import { Header } from "~/components/shared/Header"
 import { useLang } from "~/lib/lang"
 
 type ViewMode = "my-rooms" | "explore"
@@ -140,8 +138,6 @@ export default function SallesPage() {
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
-      <Header />
-
       {/* Tabs & Search */}
       <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
         <div className="px-4 pt-4 space-y-3">
@@ -322,7 +318,6 @@ export default function SallesPage() {
       </main>
 
       {showCreate && <CreateRoomModal onClose={() => setShowCreate(false)} onCreated={handleCreated} />}
-      <DashboardNav />
     </div>
   )
 }

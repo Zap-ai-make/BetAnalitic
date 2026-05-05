@@ -16,13 +16,13 @@ export async function POST(
   if (!apiKey) return NextResponse.json({ error: "BetAnalytic sync failed" }, { status: 503 })
 
   const { roomId } = await params
-  const body = await req.json()
+  const body: unknown = await req.json()
   const res = await betaFetch(
     `/api/rooms/${roomId}/message`,
     apiKey,
     { method: "POST", body: JSON.stringify(body) }
   )
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }
 
@@ -47,6 +47,6 @@ export async function GET(
     `/api/rooms/${roomId}/messages?${qs.toString()}`,
     apiKey
   )
-  const data = await res.json()
+  const data: unknown = await res.json()
   return NextResponse.json(data, { status: res.status })
 }

@@ -91,7 +91,7 @@ export function InstallBanner() {
               <p className="text-sm font-semibold text-text-primary">Installer BetAnalytic</p>
               <p className="text-xs text-text-secondary mt-0.5">
                 Appuie sur <Share className="inline w-3 h-3 mx-0.5" /> dans Safari, puis{" "}
-                <strong className="text-text-primary">"Sur l&apos;écran d&apos;accueil"</strong>
+                <strong className="text-text-primary">&quot;Sur l&apos;écran d&apos;accueil&quot;</strong>
               </p>
             </div>
             <button onClick={dismiss} className="text-text-tertiary hover:text-text-primary p-1 -mt-1 -mr-1">
