@@ -9,6 +9,7 @@
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import { ZodError } from "zod";
+import { UserRole } from "@prisma/client";
 
 import { db } from "~/server/db";
 import { type Session } from "next-auth";
@@ -105,3 +106,17 @@ const enforceUserIsAuthed = t.middleware(({ ctx, next }) => {
 });
 
 export const protectedProcedure = t.procedure.use(enforceUserIsAuthed);
+
+export const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== UserRole.ADMIN) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Admin access required" });
+  }
+  return next({ ctx });
+});
+
+export const moderatorProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.session.user.role !== UserRole.ADMIN && ctx.session.user.role !== UserRole.MODERATOR) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Moderator or admin access required" });
+  }
+  return next({ ctx });
+});

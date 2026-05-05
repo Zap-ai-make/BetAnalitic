@@ -3,6 +3,3 @@ export type { Agent, AgentId, AgentPillProps, AgentPillRowProps } from "./AgentP
 
 export { AgentMessage } from "./AgentMessage"
 export type { AgentMessageProps } from "./AgentMessage"
-
-export { AgentInvokeInput } from "./AgentInvokeInput"
-export type { AgentInvokeInputProps } from "./AgentInvokeInput"

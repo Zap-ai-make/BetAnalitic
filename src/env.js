@@ -24,9 +24,6 @@ export const env = createEnv({
     BETANALYTIC_INTERNAL_SECRET: z.string().optional(),
     BETANALYTIC_ADMIN_KEY: z.string().optional(),
     BETANALYTIC_JWT_SECRET: z.string().optional(),
-    // Legacy / fallback
-    OPENCLAW_BASE_URL: z.string().url().optional(),
-    OPENCLAW_API_KEY: z.string().optional(),
     OLLAMA_BASE_URL: z.string().url().optional(),
     SPORTMONKS_API_KEY: z.string().optional(),
     CRON_SECRET: z.string().optional(),
@@ -60,9 +57,6 @@ export const env = createEnv({
     BETANALYTIC_INTERNAL_SECRET: process.env.BETANALYTIC_INTERNAL_SECRET,
     BETANALYTIC_ADMIN_KEY: process.env.BETANALYTIC_ADMIN_KEY,
     BETANALYTIC_JWT_SECRET: process.env.BETANALYTIC_JWT_SECRET,
-    // Legacy / fallback
-    OPENCLAW_BASE_URL: process.env.OPENCLAW_BASE_URL,
-    OPENCLAW_API_KEY: process.env.OPENCLAW_API_KEY,
     OLLAMA_BASE_URL: process.env.OLLAMA_BASE_URL,
     SPORTMONKS_API_KEY: process.env.SPORTMONKS_API_KEY,
     CRON_SECRET: process.env.CRON_SECRET,

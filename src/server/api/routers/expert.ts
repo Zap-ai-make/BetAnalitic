@@ -4,7 +4,7 @@
  */
 
 import { z } from "zod"
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc"
+import { createTRPCRouter, protectedProcedure, adminProcedure } from "~/server/api/trpc"
 import { TRPCError } from "@trpc/server"
 
 export const expertRouter = createTRPCRouter({
@@ -593,7 +593,7 @@ export const expertRouter = createTRPCRouter({
     /**
      * List all expert applications (admin only)
      */
-    listApplications: protectedProcedure
+    listApplications: adminProcedure
       .input(
         z
           .object({
@@ -602,9 +602,6 @@ export const expertRouter = createTRPCRouter({
           .optional()
       )
       .query(async ({ ctx, input }) => {
-        // TODO: Add admin role check
-        // For now, assume user is admin
-
         const applications = await ctx.db.expertApplication.findMany({
           where: input?.status ? { status: input.status } : undefined,
           include: {
@@ -627,14 +624,13 @@ export const expertRouter = createTRPCRouter({
     /**
      * Approve expert application (admin only)
      */
-    approveApplication: protectedProcedure
+    approveApplication: adminProcedure
       .input(
         z.object({
           applicationId: z.string(),
         })
       )
       .mutation(async ({ ctx, input }) => {
-        // TODO: Add admin role check
         const adminId = ctx.session.user.id
 
         const application = await ctx.db.expertApplication.findUnique({
@@ -689,7 +685,7 @@ export const expertRouter = createTRPCRouter({
     /**
      * Reject expert application (admin only)
      */
-    rejectApplication: protectedProcedure
+    rejectApplication: adminProcedure
       .input(
         z.object({
           applicationId: z.string(),
@@ -697,7 +693,6 @@ export const expertRouter = createTRPCRouter({
         })
       )
       .mutation(async ({ ctx, input }) => {
-        // TODO: Add admin role check
         const adminId = ctx.session.user.id
 
         const application = await ctx.db.expertApplication.findUnique({

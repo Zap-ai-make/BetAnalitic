@@ -109,11 +109,19 @@ export default function ParrainagePage() {
           <div className="bg-bg-primary rounded-xl p-4 mb-4">
             <p className="text-xs text-text-tertiary mb-2">Code de parrainage</p>
             <p className="text-3xl font-display font-bold text-accent-cyan tracking-wider mb-4">
-              {referralData?.code ?? "XXXXXXXX"}
+              {isLoadingCode ? (
+                <span className="animate-pulse bg-bg-tertiary rounded-lg inline-block w-32 h-8" />
+              ) : (
+                referralData?.code ?? "—"
+              )}
             </p>
             <p className="text-xs text-text-tertiary mb-2">Lien de partage</p>
             <p className="text-sm text-text-secondary break-all font-mono">
-              {referralData?.shareableLink ?? "https://betanalytic.app/ref/XXXXXXXX"}
+              {isLoadingCode ? (
+                <span className="animate-pulse bg-bg-tertiary rounded-lg inline-block w-64 h-4" />
+              ) : (
+                referralData?.shareableLink ?? "—"
+              )}
             </p>
           </div>
 

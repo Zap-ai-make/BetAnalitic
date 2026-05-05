@@ -4,36 +4,9 @@
  */
 
 import { z } from "zod";
-import { createTRPCRouter, protectedProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, protectedProcedure, adminProcedure, moderatorProcedure } from "~/server/api/trpc";
 import { TRPCError } from "@trpc/server";
 import { UserRole, ContentReportType, ReportStatus, type Prisma } from "@prisma/client";
-
-// ============================================
-// Middleware: Admin Only
-// ============================================
-
-const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (ctx.session.user.role !== UserRole.ADMIN) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Admin access required",
-    });
-  }
-  return next({ ctx });
-});
-
-const moderatorProcedure = protectedProcedure.use(async ({ ctx, next }) => {
-  if (
-    ctx.session.user.role !== UserRole.ADMIN &&
-    ctx.session.user.role !== UserRole.MODERATOR
-  ) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: "Moderator or admin access required",
-    });
-  }
-  return next({ ctx });
-});
 
 // ============================================
 // Router

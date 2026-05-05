@@ -311,59 +311,46 @@ export const gamificationRouter = createTRPCRouter({
         ? { level: "desc" as const }
         : { lifetimePoints: "desc" as const }
 
-      // Get top users
-      const topUsers = await ctx.db.user.findMany({
-        select: {
-          id: true,
-          username: true,
-          displayName: true,
-          avatarUrl: true,
-          points: true,
-          level: true,
-          lifetimePoints: true,
-        },
-        orderBy,
-        take: input.limit,
-      })
+      const userSelect = {
+        id: true,
+        username: true,
+        displayName: true,
+        avatarUrl: true,
+        points: true,
+        level: true,
+        lifetimePoints: true,
+      } as const
 
-      // Find current user's rank
-      const currentUser = await ctx.db.user.findUnique({
-        where: { id: currentUserId },
-        select: {
-          id: true,
-          username: true,
-          displayName: true,
-          avatarUrl: true,
-          points: true,
-          level: true,
-          lifetimePoints: true,
-        },
-      })
+      // Get top users + current user in parallel
+      const [topUsers, currentUser] = await Promise.all([
+        ctx.db.user.findMany({ select: userSelect, orderBy, take: input.limit }),
+        ctx.db.user.findUnique({ where: { id: currentUserId }, select: userSelect }),
+      ])
 
       if (!currentUser) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "User not found",
-        })
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found" })
       }
 
-      // Calculate user's rank
-      const getValue = (user: typeof currentUser) => {
-        return input.type === "points"
+      const getValue = (user: typeof currentUser) =>
+        input.type === "points"
           ? user.points
           : input.type === "level"
           ? user.level
           : user.lifetimePoints
-      }
 
+      // Only count usersAbove if currentUser not already in topUsers (avoid 3rd query)
+      const inTopList = topUsers.some((u) => u.id === currentUserId)
       const currentValue = getValue(currentUser)
-      const usersAbove = await ctx.db.user.count({
-        where: input.type === "points"
-          ? { points: { gt: currentValue } }
-          : input.type === "level"
-          ? { level: { gt: currentValue } }
-          : { lifetimePoints: { gt: currentValue } },
-      })
+      const usersAbove = inTopList
+        ? topUsers.findIndex((u) => u.id === currentUserId)
+        : await ctx.db.user.count({
+            where:
+              input.type === "points"
+                ? { points: { gt: currentValue } }
+                : input.type === "level"
+                ? { level: { gt: currentValue } }
+                : { lifetimePoints: { gt: currentValue } },
+          })
 
       const currentUserRank = usersAbove + 1
       const isInTop100 = currentUserRank <= input.limit
