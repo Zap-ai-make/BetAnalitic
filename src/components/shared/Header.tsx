@@ -17,8 +17,8 @@ export function Header() {
   // Unread badge: sum open tickets across all joined rooms
   const { data: unreadCounts } = api.room.getUnreadCounts.useQuery(undefined, {
     enabled: !!session?.user?.id,
-    refetchInterval: 30_000,
-    staleTime: 20_000,
+    refetchInterval: 60_000,  // toutes les 60s suffit pour un badge
+    staleTime: 50_000,
   })
   const totalUnread = React.useMemo(
     () => (unreadCounts ?? []).reduce((s, r) => s + r.openTickets, 0),

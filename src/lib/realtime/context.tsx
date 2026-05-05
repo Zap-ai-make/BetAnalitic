@@ -72,14 +72,21 @@ export function useChannel(
   onPresenceUpdate?: (members: PresenceData[]) => void
 ) {
   const { provider } = useRealtime()
+  // Store latest callbacks in refs so the effect doesn't re-run when they change
+  const onMessageRef = React.useRef(onMessage)
+  const onPresenceRef = React.useRef(onPresenceUpdate)
+  React.useEffect(() => { onMessageRef.current = onMessage })
+  React.useEffect(() => { onPresenceRef.current = onPresenceUpdate })
 
   React.useEffect(() => {
     if (!channelId) return
 
     const subscription: ChannelSubscription = {
       channelId,
-      onMessage,
-      onPresenceUpdate,
+      onMessage: (msg) => onMessageRef.current(msg),
+      onPresenceUpdate: onPresenceRef.current
+        ? (members) => onPresenceRef.current!(members)
+        : undefined,
     }
 
     let unsubscribe: (() => void) | undefined
@@ -91,7 +98,7 @@ export function useChannel(
     return () => {
       if (unsubscribe) unsubscribe()
     }
-  }, [channelId, provider, onMessage, onPresenceUpdate])
+  }, [channelId, provider]) // callbacks stabilisés via refs
 }
 
 /**
@@ -110,7 +117,7 @@ export function usePresence(channelId: string | null) {
     const subscription: ChannelSubscription = {
       channelId,
       // eslint-disable-next-line @typescript-eslint/no-empty-function
-      onMessage: () => {}, // No-op for presence-only subscription
+      onMessage: () => {},
       onPresenceUpdate: setMembers,
     }
 
@@ -123,7 +130,7 @@ export function usePresence(channelId: string | null) {
     return () => {
       if (unsubscribe) unsubscribe()
     }
-  }, [channelId, provider])
+  }, [channelId, provider]) // setMembers est stable (setState)
 
   return members
 }

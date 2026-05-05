@@ -8,7 +8,6 @@ const PATH_TO_NAV_ITEM: Record<string, NavItem> = {
   "/dashboard": "home",
   "/matches": "matches",
   "/signaux": "analysis",
-  "/analyse": "analysis",
   "/analysis": "analysis",
   "/paris": "paris",
   "/coupons": "paris",
@@ -28,10 +27,10 @@ export function DashboardNav() {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Prefetch all tab routes so bundle JS is already cached when the user taps
+  // Prefetch all tab routes once on mount so JS is cached before the user taps
   useEffect(() => {
     Object.values(NAV_ITEM_TO_PATH).forEach(p => router.prefetch(p))
-  }, [router])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activeItem: NavItem = PATH_TO_NAV_ITEM[pathname] ?? "home"
 

@@ -8,6 +8,7 @@ import { useSession } from "next-auth/react"
 import { Hash, ArrowLeft, Settings, ChevronLeft } from "lucide-react"
 import { cn } from "~/lib/utils"
 import { RoomNavigationContext } from "./room-nav-context"
+import { RealtimeProvider } from "~/lib/realtime/context"
 
 // ── Types ──────────────────────────────────────────────────────────────────
 type Channel = {
@@ -194,6 +195,7 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
   )
 
   return (
+    <RealtimeProvider>
     <RoomNavigationContext.Provider value={navCtx}>
       <div className="flex overflow-hidden" style={{ height: "calc(100dvh - var(--header-h))" }}>
 
@@ -236,5 +238,6 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
 
       </div>
     </RoomNavigationContext.Provider>
+    </RealtimeProvider>
   )
 }
