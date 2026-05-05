@@ -368,7 +368,7 @@ export default function MatchesPage() {
       <Header />
 
       {/* Sticky filter bar */}
-      <div className="sticky top-14 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
+      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-bold text-text-primary">{t.matches.title}</h1>
           {activeFilters > 0 && (

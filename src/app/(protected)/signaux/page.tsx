@@ -195,7 +195,7 @@ export default function SignauxPage() {
       <Header />
 
       {/* ── Sticky sub-header — OUTSIDE main, direct child of flex ────────── */}
-      <div className="sticky top-14 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
+      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
 
         {/* Title row */}
         <div className="flex items-center justify-between">

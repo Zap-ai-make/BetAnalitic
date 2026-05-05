@@ -506,7 +506,7 @@ export default function ParisPage() {
         </div>
       )}
 
-      <div className="sticky top-14 z-10 bg-bg-primary">
+      <div className="sticky top-0 z-10 bg-bg-primary">
       <BalanceBar balance={balance} currency={currency} onSave={saveBalance} />
 
       {/* Tabs */}
