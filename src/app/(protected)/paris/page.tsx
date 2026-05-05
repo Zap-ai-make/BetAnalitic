@@ -496,7 +496,7 @@ export default function ParisPage() {
   ]
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
+    <div className="h-full bg-bg-primary flex flex-col">
       <Header />
 
       {/* Toast */}
@@ -506,7 +506,7 @@ export default function ParisPage() {
         </div>
       )}
 
-      <div className="sticky top-0 z-10 bg-bg-primary">
+      <div className="shrink-0 z-10 bg-bg-primary">
       <BalanceBar balance={balance} currency={currency} onSave={saveBalance} />
 
       {/* Tabs */}

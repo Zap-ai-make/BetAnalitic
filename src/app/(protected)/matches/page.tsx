@@ -364,11 +364,11 @@ export default function MatchesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
+    <div className="h-full bg-bg-primary flex flex-col">
       <Header />
 
-      {/* Sticky filter bar */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
+      {/* Sub-header — sits at top of flex column, never scrolls */}
+      <div className="shrink-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-bold text-text-primary">{t.matches.title}</h1>
           {activeFilters > 0 && (
@@ -525,7 +525,7 @@ export default function MatchesPage() {
       </div>
 
       {/* Content */}
-      <main className="flex-1 px-4 pb-24">
+      <main className="flex-1 overflow-y-auto px-4 pb-24">
         {/* Subtle refresh indicator — content already visible via placeholderData */}
         {isFetching && (
           <div className="flex items-center justify-center gap-2 py-2">

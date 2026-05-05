@@ -119,10 +119,18 @@ function AgentFace({ id, size = 36 }: { id: "Oracle" | AgentId; size?: number })
   )
 }
 
-// sessionStorage key: survives SPA navigation, cleared on tab close / reload
+// Module-level: persists in memory during SPA navigation (module stays loaded)
+// sessionStorage: backup for code-split edge cases
 const INTRO_KEY = "introShown"
-const introShownThisSession = () =>
-  typeof window !== "undefined" && sessionStorage.getItem(INTRO_KEY) === "1"
+let _introShownInMemory = false
+
+function introShownThisSession(): boolean {
+  if (_introShownInMemory) return true
+  if (typeof window === "undefined") return false
+  const stored = sessionStorage.getItem(INTRO_KEY) === "1"
+  if (stored) _introShownInMemory = true
+  return stored
+}
 
 // ── Intro splash ─────────────────────────────────────────────
 interface IntroSplashProps { onDone: () => void }
@@ -759,6 +767,11 @@ export default function DashboardPage() {
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
   const [pendingAgent, setPendingAgent] = useState<string | null>(null)
 
+  // Safety net: if SSR gave intro=true but client knows it was already shown, hide immediately
+  useEffect(() => {
+    if (intro && introShownThisSession()) setIntro(false)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     // Read match pushed by Matchs page or Rapport page
     const raw = sessionStorage.getItem("pending_match")
@@ -775,6 +788,7 @@ export default function DashboardPage() {
   }, [])
 
   const handleIntroDone = () => {
+    _introShownInMemory = true
     sessionStorage.setItem(INTRO_KEY, "1")
     setIntro(false)
   }

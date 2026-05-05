@@ -191,11 +191,11 @@ export default function SignauxPage() {
   // ─── JSX ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
+    <div className="h-full bg-bg-primary flex flex-col">
       <Header />
 
-      {/* ── Sticky sub-header — OUTSIDE main, direct child of flex ────────── */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
+      {/* Sub-header — sits at top of flex column, never scrolls */}
+      <div className="shrink-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
 
         {/* Title row */}
         <div className="flex items-center justify-between">
@@ -249,7 +249,7 @@ export default function SignauxPage() {
       </div>
 
       {/* ── Scrollable content ───────────────────────────────────────────────── */}
-      <div className="flex-1 pb-28">
+      <div className="flex-1 overflow-y-auto pb-28">
         <div className="p-4 space-y-4">
 
           {/* AI Performance card */}
