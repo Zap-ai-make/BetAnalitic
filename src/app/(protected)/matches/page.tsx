@@ -7,7 +7,7 @@ import { cn } from "~/lib/utils"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import {
   ChevronDown, Search, X, Brain, TicketPlus, Calendar,
-  Check, Loader2, ChevronRight,
+  Check, Loader2, ChevronRight, PenLine,
 } from "lucide-react"
 import { useLang } from "~/lib/lang"
 
@@ -267,6 +267,139 @@ function CompHeader({ country, competition }: { country: string; competition: st
   )
 }
 
+// ── Manual match entry ───────────────────────────────────────────────────────
+interface ManualForm { homeTeam: string; awayTeam: string; date: string; time: string; competition: string }
+const EMPTY_FORM: ManualForm = { homeTeam: "", awayTeam: "", date: fmtDate(new Date()), time: "", competition: "" }
+
+function ManualMatchModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const router = useRouter()
+  const [form, setForm] = useState<ManualForm>(EMPTY_FORM)
+  const { lang } = useLang()
+  const locale = lang === "FR" ? "fr-FR" : "en-US"
+
+  const canSubmit = form.homeTeam.trim() && form.awayTeam.trim() && form.competition.trim()
+
+  function reset() { setForm(EMPTY_FORM); onClose() }
+
+  function handleAnalyse() {
+    if (!canSubmit) return
+    const timeLabel = form.time
+      ? new Date(`${form.date}T${form.time}`).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
+      : "TBD"
+    sessionStorage.setItem("pending_match", JSON.stringify({
+      id: `custom-${Date.now()}`,
+      homeTeam: form.homeTeam.trim(),
+      awayTeam: form.awayTeam.trim(),
+      competition: form.competition.trim(),
+      country: "",
+      time: timeLabel,
+      status: "upcoming",
+    }))
+    reset()
+    router.push("/dashboard")
+  }
+
+  if (!open) return null
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm" onClick={reset} />
+
+      {/* Sheet */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 bg-bg-primary rounded-t-2xl border-t border-bg-tertiary pb-safe">
+        {/* Handle */}
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-10 h-1 rounded-full bg-bg-tertiary" />
+        </div>
+
+        <div className="px-4 pb-6 space-y-4">
+          {/* Title */}
+          <div className="flex items-center justify-between pt-1">
+            <h2 className="font-display font-bold text-lg text-text-primary">Saisir un match</h2>
+            <button onClick={reset} className="p-2 text-text-tertiary hover:text-text-primary transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Teams row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Équipe A</label>
+              <input
+                type="text"
+                value={form.homeTeam}
+                onChange={(e) => setForm((f) => ({ ...f, homeTeam: e.target.value }))}
+                placeholder="Ex: PSG"
+                className="w-full px-3 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-cyan focus:outline-none transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Équipe B</label>
+              <input
+                type="text"
+                value={form.awayTeam}
+                onChange={(e) => setForm((f) => ({ ...f, awayTeam: e.target.value }))}
+                placeholder="Ex: Monaco"
+                className="w-full px-3 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-cyan focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Date + Time row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Date</label>
+              <input
+                type="date"
+                value={form.date}
+                onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary focus:border-accent-cyan focus:outline-none transition-colors"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Heure (optionnel)</label>
+              <input
+                type="time"
+                value={form.time}
+                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+                className="w-full px-3 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary focus:border-accent-cyan focus:outline-none transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Championship */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-text-tertiary uppercase tracking-wide">Championnat</label>
+            <input
+              type="text"
+              value={form.competition}
+              onChange={(e) => setForm((f) => ({ ...f, competition: e.target.value }))}
+              placeholder="Ex: Ligue 1, Premier League…"
+              className="w-full px-3 py-2.5 rounded-xl bg-bg-secondary border border-bg-tertiary text-sm text-text-primary placeholder:text-text-tertiary focus:border-accent-cyan focus:outline-none transition-colors"
+            />
+          </div>
+
+          {/* Submit */}
+          <button
+            onClick={handleAnalyse}
+            disabled={!canSubmit}
+            className={cn(
+              "w-full flex items-center justify-center gap-2 py-3.5 rounded-xl font-semibold text-sm transition-all",
+              canSubmit
+                ? "bg-accent-cyan text-bg-primary hover:bg-accent-cyan/90"
+                : "bg-bg-tertiary text-text-tertiary cursor-not-allowed"
+            )}
+          >
+            <Brain className="w-4 h-4" />
+            Analyser ce match
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function MatchesPage() {
   const { t, lang } = useLang()
@@ -277,6 +410,7 @@ export default function MatchesPage() {
   const [selectedDate, setSelectedDate] = useState<string>(fmtDate(new Date()))
   const [showCountries, setShowCountries] = useState(false)
   const [showCompetitions, setShowCompetitions] = useState(false)
+  const [showManualForm, setShowManualForm] = useState(false)
 
   const {
     data: matches = MOCK_MATCHES,
@@ -367,15 +501,25 @@ export default function MatchesPage() {
       <div className="shrink-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-bold text-text-primary">{t.matches.title}</h1>
-          {activeFilters > 0 && (
+          <div className="flex items-center gap-2">
+            {activeFilters > 0 && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-1.5 text-xs text-accent-cyan"
+              >
+                <X className="w-3.5 h-3.5" />
+                {t.matches.clear} ({activeFilters})
+              </button>
+            )}
             <button
-              onClick={clearFilters}
-              className="flex items-center gap-1.5 text-xs text-accent-cyan"
+              onClick={() => setShowManualForm(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-tertiary text-text-secondary hover:text-text-primary text-xs font-medium transition-colors min-h-[44px]"
+              title="Saisir un match manuellement"
             >
-              <X className="w-3.5 h-3.5" />
-              {t.matches.clear} ({activeFilters})
+              <PenLine className="w-3.5 h-3.5" />
+              Saisir
             </button>
-          )}
+          </div>
         </div>
 
         {/* Search */}
@@ -537,16 +681,26 @@ export default function MatchesPage() {
         )}
 
         {totalFiltered === 0 && (
-          <div className="text-center py-16">
+          <div className="text-center py-16 space-y-4">
             <span className="text-5xl">⚽</span>
-            <p className="text-text-secondary mt-4 text-sm">
+            <p className="text-text-secondary text-sm">
               {searchQuery ? `${t.matches.noResults} "${searchQuery}"` : t.matches.noMatchesPeriod}
             </p>
             {activeFilters > 0 && (
-              <button onClick={clearFilters} className="mt-4 px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium">
+              <button onClick={clearFilters} className="px-4 py-2 bg-accent-cyan text-bg-primary rounded-lg text-sm font-medium">
                 {t.matches.clearFilters}
               </button>
             )}
+            <div className="pt-2">
+              <p className="text-xs text-text-tertiary mb-3">Match non listé ?</p>
+              <button
+                onClick={() => setShowManualForm(true)}
+                className="inline-flex items-center gap-2 px-5 py-3 bg-bg-secondary border border-bg-tertiary rounded-xl text-sm font-medium text-text-primary hover:border-accent-cyan/50 transition-colors"
+              >
+                <PenLine className="w-4 h-4 text-accent-cyan" />
+                Saisir manuellement
+              </button>
+            </div>
           </div>
         )}
 
@@ -560,6 +714,7 @@ export default function MatchesPage() {
         ))}
       </main>
 
+      <ManualMatchModal open={showManualForm} onClose={() => setShowManualForm(false)} />
     </div>
   )
 }
