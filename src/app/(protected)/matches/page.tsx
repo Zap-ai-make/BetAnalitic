@@ -501,25 +501,15 @@ export default function MatchesPage() {
       <div className="shrink-0 z-10 bg-bg-primary border-b border-bg-tertiary px-4 pt-4 pb-3 space-y-3">
         <div className="flex items-center justify-between">
           <h1 className="font-display text-xl font-bold text-text-primary">{t.matches.title}</h1>
-          <div className="flex items-center gap-2">
-            {activeFilters > 0 && (
-              <button
-                onClick={clearFilters}
-                className="flex items-center gap-1.5 text-xs text-accent-cyan"
-              >
-                <X className="w-3.5 h-3.5" />
-                {t.matches.clear} ({activeFilters})
-              </button>
-            )}
+          {activeFilters > 0 && (
             <button
-              onClick={() => setShowManualForm(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-bg-tertiary text-text-secondary hover:text-text-primary text-xs font-medium transition-colors min-h-[44px]"
-              title="Saisir un match manuellement"
+              onClick={clearFilters}
+              className="flex items-center gap-1.5 text-xs text-accent-cyan"
             >
-              <PenLine className="w-3.5 h-3.5" />
-              Saisir
+              <X className="w-3.5 h-3.5" />
+              {t.matches.clear} ({activeFilters})
             </button>
-          </div>
+          )}
         </div>
 
         {/* Search */}
@@ -662,6 +652,15 @@ export default function MatchesPage() {
             )}
           </div>
         </div>
+
+        {/* Manual entry shortcut */}
+        <button
+          onClick={() => setShowManualForm(true)}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-bg-tertiary text-text-tertiary hover:border-accent-cyan/40 hover:text-accent-cyan transition-colors text-xs font-medium"
+        >
+          <PenLine className="w-3.5 h-3.5" />
+          Match non listé ? Saisir manuellement
+        </button>
       </div>
 
       {/* Content */}
