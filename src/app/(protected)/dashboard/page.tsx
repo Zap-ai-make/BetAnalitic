@@ -761,13 +761,22 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
 // ── Main page ────────────────────────────────────────────────
 export default function DashboardPage() {
   const { data: session } = useSession()
-  const [intro, setIntro] = useState(() => !introShownThisSession())
+  const [intro, setIntro] = useState(() => {
+    if (typeof window === "undefined") return false // no intro on SSR
+    return !introShownThisSession()
+  })
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
   const [pendingAgent, setPendingAgent] = useState<string | null>(null)
 
-  // Safety net: if SSR gave intro=true but client knows it was already shown, hide immediately
+  // Mark as shown the moment intro starts — prevents replay if user navigates away mid-intro
   useEffect(() => {
-    if (intro && introShownThisSession()) setIntro(false)
+    if (intro) {
+      _introShownInMemory = true
+      sessionStorage.setItem(INTRO_KEY, "1")
+    } else if (introShownThisSession()) {
+      // Safety net: SSR may have set intro=true, client knows better
+      setIntro(false)
+    }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
