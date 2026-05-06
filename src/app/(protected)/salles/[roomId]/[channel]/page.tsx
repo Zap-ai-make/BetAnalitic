@@ -18,6 +18,8 @@ import type { AgentMetadata } from "~/lib/agents/types"
 // ── Constants ──────────────────────────────────────────────────────────────
 const ENABLED_AGENTS = getEnabledAgents()
 const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "🔥", "👏"]
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+const NOOP = () => {}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface ChatMessage {
@@ -181,7 +183,7 @@ function MessageItem({ msg, isOwn, currentUserId, canModerate, onReply, onReact,
           </span>
         )}
         {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-          <ReactionBar reactions={msg.reactions as Record<string, string[]>} currentUserId={currentUserId} onToggle={(e) => onReact(msg.id, e)} />
+          <ReactionBar reactions={msg.reactions} currentUserId={currentUserId} onToggle={(e) => onReact(msg.id, e)} />
         )}
       </div>
       {showActions && (
@@ -440,7 +442,7 @@ function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUse
     if (msg.userId !== currentUserId) void refetch()
   })
 
-  const dbMessages = (data?.messages ?? []) as ChatMessage[]
+  const dbMessages = React.useMemo(() => (data?.messages ?? []) as ChatMessage[], [data?.messages])
   const dbIds = React.useMemo(() => new Set(dbMessages.map((m) => m.id)), [dbMessages])
   const allMessages = React.useMemo(
     () => [...dbMessages, ...optimisticMessages.filter((m) => !dbIds.has(m.id))],
@@ -502,7 +504,7 @@ function ChannelChat({ roomId, channelId, channelName, currentUserId, currentUse
                   <span key={d} className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-bounce" style={{ animationDelay: `${d}ms` }} />
                 ))}
               </div>
-              <span className="text-xs text-text-tertiary italic">L'agent analyse…</span>
+              <span className="text-xs text-text-tertiary italic">L&apos;agent analyse…</span>
             </div>
           </div>
         )}
@@ -663,7 +665,7 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
     if (msg.userId !== currentUserId) void refetch()
   })
 
-  const dbMessages = (data?.messages ?? []) as ChatMessage[]
+  const dbMessages = React.useMemo(() => (data?.messages ?? []) as ChatMessage[], [data?.messages])
   const dbIds = React.useMemo(() => new Set(dbMessages.map((m) => m.id)), [dbMessages])
   const allMessages = React.useMemo(
     () => [...dbMessages, ...optimisticMessages.filter((m) => !dbIds.has(m.id))],
@@ -723,13 +725,13 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
       <div className="flex-1 overflow-y-auto py-2">
         {allMessages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-32 gap-2 text-center px-6">
-            <p className="text-xs text-text-tertiary">Tapez <strong className="text-accent-cyan">@NomAgent</strong> pour appeler un agent d'analyse</p>
+            <p className="text-xs text-text-tertiary">Tapez <strong className="text-accent-cyan">@NomAgent</strong> pour appeler un agent d&apos;analyse</p>
           </div>
         )}
         {allMessages.map((msg) => (
           <MessageItem key={msg.id} msg={msg} isOwn={msg.userId === currentUserId}
             currentUserId={currentUserId} canModerate={false}
-            onReply={() => {}} onReact={() => {}} onPin={() => {}} onEdit={() => {}} onDelete={() => {}}
+            onReply={NOOP} onReact={NOOP} onPin={NOOP} onEdit={NOOP} onDelete={NOOP}
           />
         ))}
         {invokeAgentMutation.isPending && (
@@ -740,7 +742,7 @@ function TicketChat({ roomId, channelId, ticket, currentUserId, currentUserName,
                   <span key={d} className="w-1.5 h-1.5 rounded-full bg-accent-cyan animate-bounce" style={{ animationDelay: `${d}ms` }} />
                 ))}
               </div>
-              <span className="text-xs text-text-tertiary italic">L'agent analyse…</span>
+              <span className="text-xs text-text-tertiary italic">L&apos;agent analyse…</span>
             </div>
           </div>
         )}

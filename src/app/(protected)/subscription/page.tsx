@@ -171,7 +171,7 @@ export default function SubscriptionPage() {
           <div className="space-y-3 divide-y divide-bg-tertiary">
             <div className="pt-0">
               <p className="text-sm font-medium text-text-primary">Puis-je annuler à tout moment ?</p>
-              <p className="text-xs text-text-tertiary mt-0.5">Oui, sans engagement. Votre accès reste actif jusqu'à la fin de la période.</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Oui, sans engagement. Votre accès reste actif jusqu&apos;à la fin de la période.</p>
             </div>
             <div className="pt-3">
               <p className="text-sm font-medium text-text-primary">Quels moyens de paiement ?</p>
@@ -179,7 +179,7 @@ export default function SubscriptionPage() {
             </div>
             <div className="pt-3">
               <p className="text-sm font-medium text-text-primary">Comment souscrire ?</p>
-              <p className="text-xs text-text-tertiary mt-0.5">Cliquez sur "Passer à Premium" — notre équipe vous contacte sous 24h.</p>
+              <p className="text-xs text-text-tertiary mt-0.5">Cliquez sur &quot;Passer à Premium&quot; — notre équipe vous contacte sous 24h.</p>
             </div>
           </div>
         </div>

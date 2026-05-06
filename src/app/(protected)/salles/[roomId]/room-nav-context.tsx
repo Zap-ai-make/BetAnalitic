@@ -3,5 +3,5 @@
 import * as React from "react"
 
 interface RoomNavCtx { goToChannels: () => void }
-export const RoomNavigationContext = React.createContext<RoomNavCtx>({ goToChannels: () => {} })
+export const RoomNavigationContext = React.createContext<RoomNavCtx>({ goToChannels: () => { /* noop default */ } })
 export function useRoomNavigation() { return React.useContext(RoomNavigationContext) }

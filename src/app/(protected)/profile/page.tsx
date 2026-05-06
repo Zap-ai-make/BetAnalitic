@@ -209,7 +209,7 @@ export default function ProfilePage() {
     return new Date(profile.createdAt).toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
   }, [profile?.createdAt])
 
-  const plan = PLAN_CONFIG[(profile?.subscriptionTier as PlanTier) ?? "FREE"] ?? PLAN_CONFIG.FREE
+  const plan = PLAN_CONFIG[((profile?.subscriptionTier ?? "FREE") as PlanTier)] ?? PLAN_CONFIG.FREE
 
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">

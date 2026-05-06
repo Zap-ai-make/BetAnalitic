@@ -11,6 +11,28 @@ import type { AgentMetadata } from "~/lib/agents/types"
 import type { FeedbackType } from "./AgentFeedback"
 import type { Citation } from "./CitationLink"
 
+const UserMessage = React.memo(function UserMessage({
+  content,
+  createdAt,
+}: {
+  content: string
+  createdAt: Date
+}) {
+  return (
+    <div className="flex justify-end">
+      <div className="bg-accent-cyan/10 rounded-lg px-4 py-2 max-w-[80%]">
+        <p className="text-text-primary whitespace-pre-wrap">{content}</p>
+        <span className="text-xs text-text-tertiary mt-1 block">
+          {createdAt.toLocaleTimeString("fr-FR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </span>
+      </div>
+    </div>
+  )
+})
+
 interface AgentChatProps {
   conversationId?: string
   agentType?: string
@@ -154,17 +176,16 @@ export function AgentChat({
   }
 
   // Handle feedback
-  const handleFeedback = (
-    responseId: string,
-    type: FeedbackType,
-    details?: string
-  ) => {
-    submitFeedback.mutate({
-      messageId: responseId,
-      rating: type === "positive" ? "THUMBS_UP" : "THUMBS_DOWN",
-      comment: details,
-    })
-  }
+  const handleFeedback = React.useCallback(
+    (responseId: string, type: FeedbackType, details?: string) => {
+      submitFeedback.mutate({
+        messageId: responseId,
+        rating: type === "positive" ? "THUMBS_UP" : "THUMBS_DOWN",
+        comment: details,
+      })
+    },
+    [submitFeedback]
+  )
 
   // Auto-scroll on new messages
   React.useEffect(() => {
@@ -206,24 +227,8 @@ export function AgentChat({
             )
           }
 
-          // User message
           return (
-            <div
-              key={msg.id}
-              className="flex justify-end"
-            >
-              <div className="bg-accent-cyan/10 rounded-lg px-4 py-2 max-w-[80%]">
-                <p className="text-text-primary whitespace-pre-wrap">
-                  {msg.content}
-                </p>
-                <span className="text-xs text-text-tertiary mt-1 block">
-                  {msg.createdAt.toLocaleTimeString("fr-FR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-            </div>
+            <UserMessage key={msg.id} content={msg.content} createdAt={msg.createdAt} />
           )
         })}
 

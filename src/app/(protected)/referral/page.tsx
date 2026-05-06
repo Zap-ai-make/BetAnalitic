@@ -222,7 +222,7 @@ export default function ReferralPage() {
             {(stats?.referrals?.length ?? 0) === 0 && !statsLoading && (
               <div className="text-center py-8">
                 <div className="text-4xl mb-3">🤝</div>
-                <p className="text-sm font-semibold text-text-primary">Aucun filleul pour l'instant</p>
+                <p className="text-sm font-semibold text-text-primary">Aucun filleul pour l&apos;instant</p>
                 <p className="text-xs text-text-tertiary mt-1">Partagez votre lien pour commencer à gagner des crédits</p>
               </div>
             )}

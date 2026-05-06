@@ -398,7 +398,7 @@ export default function AnalysisPage() {
     rec.lang = lang === "FR" ? "fr-FR" : "en-US"; rec.continuous = true; rec.interimResults = true
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
     rec.onresult = (event: any) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-return
       const t = Array.from(event.results).map((r: any) => r[0]?.transcript ?? "").join("")
       if (t.trim()) setAgentInput(t.trim().startsWith("@") ? t.trim() : `@${t.trim()}`)
     }

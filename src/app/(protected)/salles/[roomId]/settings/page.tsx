@@ -125,7 +125,7 @@ function CoverUpload({ value, color, badge, onChange }: {
       />
 
       <div className="flex items-center justify-between">
-        <p className="text-xs text-text-tertiary">Appuyez sur l'image pour choisir une photo · Max 3 Mo</p>
+        <p className="text-xs text-text-tertiary">Appuyez sur l&apos;image pour choisir une photo · Max 3 Mo</p>
         {value && (
           <button onClick={() => onChange("")} className="text-xs text-red-400 hover:text-red-300 transition-colors shrink-0">
             Supprimer
@@ -393,6 +393,7 @@ export default function RoomSettingsPage() {
         <Section title={`Agents IA (${agentMembers.length})`} icon={Users}>
           <div className="divide-y divide-bg-tertiary">
             {agentMembers.slice(0, 5).map((m) => (
+              // eslint-disable-next-line @typescript-eslint/no-empty-function
               <MemberRow key={m.userId} member={m} isMe={false} isOwner={false} onKick={() => {}} />
             ))}
           </div>

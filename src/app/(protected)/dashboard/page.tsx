@@ -251,7 +251,7 @@ function IntroSplash({ onDone }: IntroSplashProps) {
 function agentGreeting(id: "Oracle" | AgentId, username: string, lang: "FR" | "EN" = "FR"): string {
   if (lang === "EN") {
     if (id === "Oracle") return `Hi ${username}! I'm Oracle, your AI analytics assistant. I coordinate 14 specialized agents to give you a complete analysis of every match. Ask your question or pick an expert.`
-    const a = BY_ID[id as AgentId]!
+    const a = BY_ID[id]
     const en: Partial<Record<AgentId, string>> = {
       Scout: "exploring head-to-head records and team history",
       Insider: "analyzing team lineups and injury reports",
@@ -268,10 +268,10 @@ function agentGreeting(id: "Oracle" | AgentId, username: string, lang: "FR" | "E
       DebateArena: "hosting tactical debates and delivering the final verdict",
       Debrief: "analyzing post-match performance and key takeaways",
     }
-    return `Hi ${username}! I'm @${id}, specialist in ${a.cat}. I'll help you analyze by ${en[id as AgentId] ?? `covering ${a.cat}`}. What's your question?`
+    return `Hi ${username}! I'm @${id}, specialist in ${a.cat}. I'll help you analyze by ${en[id] ?? `covering ${a.cat}`}. What's your question?`
   }
   if (id === "Oracle") return `Salut ${username} ! Je suis Oracle, ton assistant analytique IA. Je coordonne les 14 agents spécialisés pour t'offrir une analyse complète de chaque match. Pose ta question ou sélectionne un expert.`
-  const a = BY_ID[id as AgentId]!
+  const a = BY_ID[id]
   const fr: Partial<Record<AgentId, string>> = {
     Scout: "explorant les confrontations directes et l'historique des équipes",
     Insider: "analysant les compositions et le suivi des blessures",
@@ -288,7 +288,7 @@ function agentGreeting(id: "Oracle" | AgentId, username: string, lang: "FR" | "E
     DebateArena: "animant les débats tactiques et rendant le verdict final",
     Debrief: "analysant les performances post-match et les enseignements clés",
   }
-  return `Salut ${username} ! Je suis @${id}, spécialiste en ${a.cat}. Je vais t'aider dans ton analyse en ${fr[id as AgentId] ?? `couvrant ${a.cat}`}. Quelle est ta question ?`
+  return `Salut ${username} ! Je suis @${id}, spécialiste en ${a.cat}. Je vais t'aider dans ton analyse en ${fr[id] ?? `couvrant ${a.cat}`}. Quelle est ta question ?`
 }
 
 // ── Pending match (from Matchs page) ─────────────────────────
@@ -442,7 +442,7 @@ function OracleConsole({ username, ready, pendingMatch, pendingAgent, onMatchCon
   }, [extra, typingGreeting])
 
   const isOracle = agent === "Oracle"
-  const cur = isOracle ? null : BY_ID[agent as AgentId]
+  const cur = isOracle ? null : BY_ID[agent]
 
   const pickAgent = (id: "Oracle" | AgentId) => {
     // Agent already active — do nothing, don't reset interface

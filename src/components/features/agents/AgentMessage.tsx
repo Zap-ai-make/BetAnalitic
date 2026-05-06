@@ -32,7 +32,7 @@ interface AgentMessageProps {
   className?: string
 }
 
-export function AgentMessage({
+function AgentMessageInner({
   agentId,
   agentName,
   agentEmoji,
@@ -176,3 +176,6 @@ export function AgentMessage({
     </div>
   )
 }
+
+export const AgentMessage = React.memo(AgentMessageInner)
+AgentMessage.displayName = "AgentMessage"
