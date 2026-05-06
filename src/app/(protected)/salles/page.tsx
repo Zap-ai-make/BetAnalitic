@@ -139,7 +139,7 @@ export default function SallesPage() {
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       {/* Tabs & Search */}
-      <div className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
+      <div className="sticky top-[var(--header-h)] z-10 bg-bg-primary border-b border-bg-tertiary">
         <div className="px-4 pt-4 space-y-3">
           <div className="flex items-center justify-between">
             <h1 className="font-display text-xl font-bold text-text-primary">{t.salles.title}</h1>

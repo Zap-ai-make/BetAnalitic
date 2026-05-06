@@ -107,7 +107,7 @@ export default function CreateContentPage() {
   return (
     <div className="min-h-screen bg-bg-primary pb-20">
       {/* Header */}
-      <div className="bg-bg-secondary border-b border-bg-tertiary sticky top-0 z-10">
+      <div className="bg-bg-secondary border-b border-bg-tertiary sticky top-[var(--header-h)] z-10">
         <div className="max-w-5xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <button

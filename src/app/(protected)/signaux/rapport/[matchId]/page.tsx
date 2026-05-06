@@ -223,7 +223,7 @@ export default function RapportPage() {
     <div className="min-h-screen bg-bg-primary flex flex-col">
       <main className="flex-1 overflow-y-auto pb-32">
         {/* ── Back header ─────────────────────────────────────────────────── */}
-        <div className="sticky top-0 z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-bg-tertiary px-4 py-3">
+        <div className="sticky top-[var(--header-h)] z-10 bg-bg-primary/95 backdrop-blur-sm border-b border-bg-tertiary px-4 py-3">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-1.5 text-text-secondary hover:text-text-primary transition-colors text-sm mb-2"

@@ -55,7 +55,7 @@ export default function LiveModePage() {
   return (
     <div className="flex flex-col min-h-screen bg-bg-primary">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-bg-secondary border-b border-bg-tertiary">
+      <header className="sticky top-[var(--header-h)] z-20 bg-bg-secondary border-b border-bg-tertiary">
         <div className="flex items-center justify-between px-4 py-3">
           <button onClick={() => router.back()} className="shrink-0">
             <ArrowLeft className="w-5 h-5 text-text-secondary" />

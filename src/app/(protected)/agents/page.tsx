@@ -17,7 +17,7 @@ export default function AgentsPage() {
   return (
     <div className="min-h-screen bg-bg-primary flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-bg-primary border-b border-bg-tertiary">
+      <header className="sticky top-[var(--header-h)] z-20 bg-bg-primary border-b border-bg-tertiary">
         <div className="flex items-center justify-between px-4 py-3">
           <button
             onClick={() => router.back()}

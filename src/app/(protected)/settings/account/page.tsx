@@ -115,7 +115,7 @@ export default function AccountSettingsPage() {
   return (
     <div className="min-h-screen bg-bg-primary">
       {/* Header */}
-      <header className="sticky top-0 z-10 bg-bg-primary border-b border-bg-tertiary">
+      <header className="sticky top-[var(--header-h)] z-10 bg-bg-primary border-b border-bg-tertiary">
         <div className="flex items-center justify-between p-4">
           <Link href="/profile" className="text-text-secondary hover:text-text-primary">
             ← Retour

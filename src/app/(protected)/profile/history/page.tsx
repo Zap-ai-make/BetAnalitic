@@ -112,7 +112,7 @@ export default function HistoryPage() {
   return (
     <main className="flex min-h-screen flex-col bg-bg-primary">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-bg-primary/95 backdrop-blur-sm border-b border-bg-tertiary">
+      <header className="sticky top-[var(--header-h)] z-20 bg-bg-primary/95 backdrop-blur-sm border-b border-bg-tertiary">
         <div className="container mx-auto max-w-2xl px-4 py-4">
           <div className="flex items-center gap-4">
             <button
