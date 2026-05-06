@@ -36,6 +36,7 @@ export function DashboardNav() {
 
   const handleNavigate = (item: NavItem) => {
     const path = NAV_ITEM_TO_PATH[item]
+    if (path !== pathname) window.dispatchEvent(new Event("nav-progress-start"))
     router.push(path)
   }
 

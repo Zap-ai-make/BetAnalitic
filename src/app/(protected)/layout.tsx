@@ -3,6 +3,7 @@ import { redirect } from "next/navigation"
 import { LangProvider } from "~/lib/lang"
 import { InstallBanner } from "~/components/shared/InstallBanner"
 import { AppShell } from "~/components/shared/AppShell"
+import { ScrollReset } from "~/components/shared/ScrollReset"
 
 export default async function ProtectedLayout({
   children,
@@ -22,7 +23,8 @@ export default async function ProtectedLayout({
       {/* Spacer that pushes content below the fixed header, accounting for safe-area-inset-top */}
       <div aria-hidden style={{ height: "var(--header-h)" }} />
       {/* Scroll container scoped to viewport minus header — prevents body scroll in PWA */}
-      <div style={{ height: "calc(100dvh - var(--header-h))", overflowY: "auto", overscrollBehavior: "none" }}>
+      <div id="main-scroll" style={{ height: "calc(100dvh - var(--header-h))", overflowY: "auto", overscrollBehavior: "none" }}>
+        <ScrollReset />
         {children}
       </div>
       <InstallBanner />
