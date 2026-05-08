@@ -128,20 +128,63 @@ export class BetAnalyticAgentClient {
   }
 
   /**
-   * Invoke a single agent and simulate SSE streaming.
-   * BetAnalytic doesn't support streaming yet — we fetch the full response
-   * and yield it as a single chunk so the SSE contract is maintained.
-   * Replace this with a real streaming call once VPS supports it.
+   * Stream agent response via VPS SSE endpoint.
+   * Falls back to word-by-word simulation if SSE fails.
    */
   async *invokeStream(
     userToken: string,
     req: BetaAgentRequest
   ): AsyncGenerator<string, void, unknown> {
-    const result = await this.invoke(userToken, req)
-    // Emit words progressively to preserve the typing effect until real SSE is available
-    const words = result.content.split(" ")
-    for (const word of words) {
-      yield word + " "
+    const params = new URLSearchParams({
+      home_team: req.homeTeam,
+      away_team: req.awayTeam,
+      ...(req.competition ? { competition: req.competition } : {}),
+    })
+
+    let res: Response
+    try {
+      res = await betaFetch(
+        `/api/matches/${req.matchId}/analyze/stream?${params.toString()}`,
+        userToken,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            agent_type: req.agentType,
+            question: req.question ?? "",
+          }),
+        }
+      )
+    } catch {
+      // Network failure — fallback
+      const result = await this.invoke(userToken, req)
+      for (const word of result.content.split(" ")) yield word + " "
+      return
+    }
+
+    if (!res.ok || !res.body) {
+      const result = await this.invoke(userToken, req)
+      for (const word of result.content.split(" ")) yield word + " "
+      return
+    }
+
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ""
+
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const lines = buffer.split("\n")
+      buffer = lines.pop() ?? ""
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue
+        try {
+          const event = JSON.parse(line.slice(6)) as { type: string; content?: string }
+          if (event.type === "token" && event.content) yield event.content
+        } catch { /* skip malformed event */ }
+      }
     }
   }
 
