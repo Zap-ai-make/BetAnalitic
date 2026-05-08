@@ -420,10 +420,10 @@ export default function MatchesPage() {
   } = useQuery({
     queryKey: ["beta-matches"],
     queryFn: async (): Promise<VpsMatch[]> => {
-      const res = await fetch("/api/beta/matches?days=7")
+      const res = await fetch("/api/beta/matches?days=7&flat=true")
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json() as { matches_by_competition?: Record<string, VpsMatch[]> }
-      const flat = Object.values(data.matches_by_competition ?? {}).flat()
+      const data = await res.json() as { matches?: VpsMatch[]; matches_by_competition?: Record<string, VpsMatch[]> }
+      const flat = data.matches ?? Object.values(data.matches_by_competition ?? {}).flat()
       if (flat.length === 0) throw new Error("no_data")
       return flat
     },
