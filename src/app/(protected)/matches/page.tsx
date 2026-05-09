@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { useQuery } from "@tanstack/react-query"
 import { useRouter } from "next/navigation"
+import { api } from "~/trpc/react"
 import { cn } from "~/lib/utils"
 import { useCouponStore } from "~/lib/stores/couponStore"
 import {
@@ -353,22 +353,31 @@ export default function MatchesPage() {
   const [showCompetitions, setShowCompetitions] = useState(false)
   const [showManualForm, setShowManualForm] = useState(false)
 
-  const {
-    data: matches = [],
-    isFetching,
-    isError,
-    refetch,
-  } = useQuery({
-    queryKey: ["beta-matches"],
-    queryFn: async (): Promise<VpsMatch[]> => {
-      const res = await fetch("/api/beta/matches?days=7&flat=true")
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json() as { matches?: VpsMatch[]; matches_by_competition?: Record<string, VpsMatch[]> }
-      return data.matches ?? Object.values(data.matches_by_competition ?? {}).flat()
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: 1,
-  })
+  const rangeFrom = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d }, [])
+  const rangeTo = useMemo(() => { const d = new Date(); d.setDate(d.getDate() + 7); d.setHours(23,59,59,999); return d }, [])
+
+  const { data: rawMatches = [], isFetching, isError, refetch } = api.match.getMatchesByDateRange.useQuery(
+    { from: rangeFrom, to: rangeTo },
+    { staleTime: 5 * 60 * 1000, retry: 1 }
+  )
+
+  const STATUS_TO_VPS: Record<string, string> = {
+    SCHEDULED: "upcoming", LIVE: "inprogress", HALFTIME: "inprogress",
+    FINISHED: "final", POSTPONED: "postponed", CANCELLED: "cancelled",
+  }
+
+  const matches: VpsMatch[] = useMemo(() => rawMatches.map((m) => ({
+    match_id: m.externalId,
+    home_team: m.homeTeam.name,
+    away_team: m.awayTeam.name,
+    competition: m.competition.name,
+    country: m.competition.country,
+    date_iso: m.kickoffTime.toISOString(),
+    status: STATUS_TO_VPS[m.status] ?? "upcoming",
+    odds: (() => { const o = m.odds as Record<string, number | null> | null; return { "1": o?.["1"] ?? null, X: o?.X ?? null, "2": o?.["2"] ?? null } })(),
+    home_score: m.homeScore ?? undefined,
+    away_score: m.awayScore ?? undefined,
+  })), [rawMatches])
 
   // Derive unique countries sorted
   const countries = useMemo(() => {
