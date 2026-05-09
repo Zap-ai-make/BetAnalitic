@@ -26,65 +26,6 @@ interface VpsMatch {
   away_score?: number
 }
 
-// ── Mock data (fallback / dev) ───────────────────────────────────────────────
-const TODAY = new Date().toISOString().split("T")[0]!
-const MOCK_MATCHES: VpsMatch[] = [
-  {
-    match_id: "mock-1",
-    home_team: "PSG",
-    away_team: "Olympique de Marseille",
-    competition: "Ligue 1",
-    country: "France",
-    date_iso: `${TODAY}T20:00:00Z`,
-    status: "upcoming",
-    odds: { "1": 1.85, X: 3.40, "2": 4.20 },
-  },
-  {
-    match_id: "mock-2",
-    home_team: "Manchester City",
-    away_team: "Arsenal",
-    competition: "Premier League",
-    country: "Angleterre",
-    date_iso: `${TODAY}T16:30:00Z`,
-    status: "inprogress",
-    odds: { "1": 1.70, X: 3.60, "2": 4.80 },
-    home_score: 1,
-    away_score: 0,
-  },
-  {
-    match_id: "mock-3",
-    home_team: "Real Madrid",
-    away_team: "FC Barcelona",
-    competition: "La Liga",
-    country: "Espagne",
-    date_iso: `${TODAY}T19:00:00Z`,
-    status: "upcoming",
-    odds: { "1": 2.10, X: 3.30, "2": 3.50 },
-  },
-  {
-    match_id: "mock-4",
-    home_team: "Bayern Munich",
-    away_team: "Borussia Dortmund",
-    competition: "Bundesliga",
-    country: "Allemagne",
-    date_iso: `${TODAY}T17:30:00Z`,
-    status: "final",
-    odds: { "1": 1.60, X: 3.80, "2": 5.50 },
-    home_score: 2,
-    away_score: 1,
-  },
-  {
-    match_id: "mock-5",
-    home_team: "Inter Milan",
-    away_team: "Juventus",
-    competition: "Serie A",
-    country: "Italie",
-    date_iso: `${TODAY}T20:45:00Z`,
-    status: "upcoming",
-    odds: { "1": 2.20, X: 3.20, "2": 3.40 },
-  },
-]
-
 // Competition priority: special comps first, then by country
 const COMP_PRIORITY: Record<string, number> = {
   "Ligue des Champions": 0,
@@ -413,9 +354,9 @@ export default function MatchesPage() {
   const [showManualForm, setShowManualForm] = useState(false)
 
   const {
-    data: matches = MOCK_MATCHES,
+    data: matches = [],
     isFetching,
-    isPlaceholderData,
+    isError,
     refetch,
   } = useQuery({
     queryKey: ["beta-matches"],
@@ -423,13 +364,10 @@ export default function MatchesPage() {
       const res = await fetch("/api/beta/matches?days=7&flat=true")
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json() as { matches?: VpsMatch[]; matches_by_competition?: Record<string, VpsMatch[]> }
-      const flat = data.matches ?? Object.values(data.matches_by_competition ?? {}).flat()
-      if (flat.length === 0) throw new Error("no_data")
-      return flat
+      return data.matches ?? Object.values(data.matches_by_competition ?? {}).flat()
     },
     staleTime: 5 * 60 * 1000,
-    placeholderData: MOCK_MATCHES,
-    retry: false,
+    retry: 1,
   })
 
   // Derive unique countries sorted
@@ -665,17 +603,24 @@ export default function MatchesPage() {
 
       {/* Content */}
       <main className="flex-1 overflow-y-auto px-4 pb-24">
-        {/* Subtle refresh indicator — content already visible via placeholderData */}
-        {isFetching && (
+        {isFetching && matches.length === 0 && (
+          <div className="space-y-3 py-2">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-24 rounded-xl bg-bg-secondary animate-pulse" />
+            ))}
+          </div>
+        )}
+        {isFetching && matches.length > 0 && (
           <div className="flex items-center justify-center gap-2 py-2">
             <Loader2 className="w-3.5 h-3.5 text-accent-cyan animate-spin" />
             <p className="text-xs text-text-tertiary">{t.matches.refreshing}</p>
           </div>
         )}
 
-        {isPlaceholderData && !isFetching && (
+        {isError && !isFetching && (
           <div className="mt-3 mb-1 px-3 py-2 bg-bg-tertiary rounded-lg text-xs text-text-tertiary text-center">
-            {t.matches.demoData} · <button onClick={() => void refetch()} className="text-accent-cyan underline">{t.matches.retry}</button>
+            Impossible de charger les matchs ·{" "}
+            <button onClick={() => void refetch()} className="text-accent-cyan underline">Réessayer</button>
           </div>
         )}
 
